@@ -1,3 +1,5 @@
-import App from "./src/App";
+import SplashScreen from "./src/screens/SplashScreen";
 
-export default App;
+export default function App() {
+  return <SplashScreen />;
+}
