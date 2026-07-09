@@ -1,6 +1,12 @@
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 const messages = [
   "Your Digital Shield",
@@ -19,14 +25,12 @@ export default function App() {
   useEffect(() => {
     const currentMessage = messages[messageIndex];
 
-    const speed = isDeleting ? 50 : 100;
-
     const timer = setTimeout(() => {
       if (!isDeleting) {
         setDisplayText(currentMessage.substring(0, displayText.length + 1));
 
         if (displayText === currentMessage) {
-          setTimeout(() => setIsDeleting(true), 2000);
+          setTimeout(() => setIsDeleting(true), 1800);
         }
       } else {
         setDisplayText(currentMessage.substring(0, displayText.length - 1));
@@ -36,34 +40,36 @@ export default function App() {
           setMessageIndex((prev) => (prev + 1) % messages.length);
         }
       }
-    }, speed);
+    }, isDeleting ? 45 : 85);
 
     return () => clearTimeout(timer);
   }, [displayText, isDeleting, messageIndex]);
 
   return (
-    <View style={styles.container}>
-      <Image
-        source={require("../assets/images/logo.png")}
-        style={styles.logo}
-        resizeMode="contain"
-      />
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        <Image
+          source={require("../assets/images/logo.png")}
+          style={styles.logo}
+          resizeMode="contain"
+        />
 
-      <Text style={styles.tagline}>
-        {displayText}
-        <Text style={styles.cursor}>|</Text>
-      </Text>
+        <Text style={styles.typewriter}>
+          {displayText}
+          <Text style={styles.cursor}>|</Text>
+        </Text>
 
-      <Text style={styles.subtitle}>
-        Secure • Learn • Protect
-      </Text>
+        <Text style={styles.subtitle}>
+          Secure • Learn • Protect
+        </Text>
+      </View>
 
       <Text style={styles.version}>
         Version 0.1.0
       </Text>
 
       <StatusBar style="dark" />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -71,24 +77,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
+  },
+
+  content: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
+
+    // Move everything slightly upward
+    paddingBottom: 70,
+    paddingHorizontal: 25,
   },
 
   logo: {
     width: 400,
     height: 600,
-    marginBottom: 12,
+    marginBottom: 50,
   },
 
-  tagline: {
-    fontSize: 22,
+  typewriter: {
+    fontSize: 24,
     fontWeight: "700",
     color: "#1F2937",
-    minHeight: 34,
     textAlign: "center",
-    paddingHorizontal: 20,
+    minHeight: 34,
   },
 
   cursor: {
@@ -97,17 +109,17 @@ const styles = StyleSheet.create({
   },
 
   subtitle: {
-    marginTop: 10,
+    marginTop: 12,
     fontSize: 16,
-    color: "#6B7280",
-    letterSpacing: 0.5,
+    color: "#8A8A8A",
     textAlign: "center",
+    letterSpacing: 0.5,
   },
 
   version: {
-    position: "absolute",
-    bottom: 40,
-    fontSize: 14,
-    color: "#9CA3AF",
+    textAlign: "center",
+    color: "#B0B0B0",
+    marginBottom: 25,
+    fontSize: 13,
   },
 });
