@@ -1,53 +1,125 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  Animated,
   Image,
-  SafeAreaView,
-  StatusBar,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
-import Typewriter from "../components/Typewriter";
 import LoadingBar from "../components/LoadingBar";
+import { RootStackParamList } from "../navigation/AppNavigator";
 
-export default function SplashScreen() {
+type Props = NativeStackScreenProps<
+  RootStackParamList,
+  "Splash"
+>;
+
+const messages = [
+  "Your Digital Shield",
+  "Secure • Learn • Protect",
+  "Cybersecurity Starts Here",
+  "Protecting Your Digital World",
+];
+
+export default function SplashScreen({
+  navigation,
+}: Props) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  const navigationDone = useRef(false);
+
+  const [text, setText] = useState("");
+
   useEffect(() => {
-    const timer = setTimeout(() => {
-      console.log("Navigate to Login Screen");
-      // Navigation will be added later.
-    }, 4500);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 1200,
+      useNativeDriver: true,
+    }).start();
 
-    return () => clearTimeout(timer);
-  }, []);
+    let charIndex = 0;
+    let deleting = false;
+    let currentMessage = 0;
+
+    const typingInterval = setInterval(() => {
+      const fullText = messages[currentMessage];
+
+      if (!deleting) {
+        charIndex++;
+
+        setText(fullText.substring(0, charIndex));
+
+        if (charIndex >= fullText.length) {
+          deleting = true;
+        }
+      } else {
+        charIndex--;
+
+        setText(fullText.substring(0, charIndex));
+
+        if (charIndex <= 0) {
+          deleting = false;
+
+          currentMessage =
+            (currentMessage + 1) % messages.length;
+        }
+      }
+    }, 90);
+
+    return () => {
+      clearInterval(typingInterval);
+    };
+  }, [fadeAnim]);
+
+  const handleLoadingComplete = () => {
+    if (navigationDone.current) return;
+
+    navigationDone.current = true;
+
+    navigation.replace("Login");
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="#FFFFFF"
-      />
+    <View style={styles.container}>
+      <StatusBar style="dark" />
 
-      <View style={styles.content}>
+      <Animated.View
+        style={[
+          styles.content,
+          {
+            opacity: fadeAnim,
+          },
+        ]}
+      >
         <Image
           source={require("../../assets/images/logo.png")}
-          resizeMode="contain"
           style={styles.logo}
+          resizeMode="contain"
         />
 
-        <Typewriter />
-
-        <Text style={styles.subtitle}>
-          Secure • Learn • Protect
+        <Text style={styles.tagline}>
+          {text}
+          <Text style={styles.cursor}>|</Text>
         </Text>
 
-        <LoadingBar />
-      </View>
+        <LoadingBar
+          onComplete={handleLoadingComplete}
+        />
+      </Animated.View>
 
-      <Text style={styles.version}>
-        Version 0.1.0
-      </Text>
-    </SafeAreaView>
+      <View style={styles.footer}>
+        <Text style={styles.powered}>
+          Powered by SoloSecurities
+        </Text>
+
+        <Text style={styles.version}>
+          Version 1.0.0
+        </Text>
+      </View>
+    </View>
   );
 }
 
@@ -55,36 +127,51 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   content: {
-    flex: 1,
+    width: "100%",
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 25,
-
-    // Move everything slightly upward
-    paddingBottom: 60,
+    paddingHorizontal: 24,
   },
 
   logo: {
-    width: 400,
-    height: 600,
+    width: 260,
+    height: 260,
+    marginBottom: 24,
+  },
+
+  tagline: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#111111",
+    textAlign: "center",
+    minHeight: 32,
     marginBottom: 30,
   },
 
-  subtitle: {
-    marginTop: 12,
-    fontSize: 16,
-    color: "#7A7A7A",
-    textAlign: "center",
-    letterSpacing: 0.5,
+  cursor: {
+    color: "#C62828",
+    fontWeight: "bold",
+  },
+
+  footer: {
+    position: "absolute",
+    bottom: 30,
+    alignItems: "center",
+  },
+
+  powered: {
+    fontSize: 14,
+    color: "#666666",
+    marginBottom: 4,
   },
 
   version: {
-    textAlign: "center",
-    marginBottom: 25,
-    color: "#B0B0B0",
-    fontSize: 13,
+    fontSize: 12,
+    color: "#999999",
   },
 });
