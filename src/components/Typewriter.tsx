@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { StyleSheet, Text } from "react-native";
 
 const messages = [
-  "Your Digital Shield",
   "Learn Cybersecurity",
   "Practice Real Scenarios",
   "Bug Hunting & Reports",

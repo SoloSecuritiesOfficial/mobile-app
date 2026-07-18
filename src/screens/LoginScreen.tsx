@@ -11,12 +11,13 @@ import {
   Image,
   Alert,
 } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import InputField from "../components/InputField";
 import PrimaryButton from "../components/PrimaryButton";
 import { RootStackParamList } from "../navigation/AppNavigator";
+import { loginUser } from "../services/authService";
 
 type Props = NativeStackScreenProps<
   RootStackParamList,
@@ -27,9 +28,8 @@ export default function LoginScreen({
   navigation,
 }: Props) {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
 
-  const [rememberMe, setRememberMe] = useState(false);
+  const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
 
@@ -72,19 +72,36 @@ export default function LoginScreen({
     return valid;
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!validate()) return;
 
     setLoading(true);
 
-    setTimeout(() => {
+    try {
+     const response = await loginUser({
+  email,
+  password,
+});
+
+      setLoading(false);
+
+      if (response.success) {
+        navigation.replace("Dashboard");
+      } else {
+        Alert.alert(
+          "Login Failed",
+          response.message ||
+            "Invalid email or password."
+        );
+      }
+    } catch (error) {
       setLoading(false);
 
       Alert.alert(
-        "Success",
-        "Login backend will be connected later."
+        "Error",
+        "Something went wrong. Please try again."
       );
-    }, 1500);
+    }
   };
 
   return (
@@ -92,7 +109,9 @@ export default function LoginScreen({
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={
-          Platform.OS === "ios" ? "padding" : undefined
+          Platform.OS === "ios"
+            ? "padding"
+            : undefined
         }
       >
         <ScrollView
@@ -101,7 +120,7 @@ export default function LoginScreen({
           showsVerticalScrollIndicator={false}
         >
           <Image
-            source={require("../../assets/icon.png")}
+            source={require("../../assets/logo.png")}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -135,20 +154,18 @@ export default function LoginScreen({
               error={errors.password}
             />
 
-            <View style={styles.optionsRow}>
-             
-              <TouchableOpacity
-                onPress={() =>
-                  navigation.navigate(
-                    "ForgotPassword"
-                  )
-                }
-              >
-                <Text style={styles.forgotText}>
-                  Forgot Password?
-                </Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={styles.forgotContainer}
+              onPress={() =>
+                navigation.navigate(
+                  "ForgotPassword"
+                )
+              }
+            >
+              <Text style={styles.forgotText}>
+                Forgot Password?
+              </Text>
+            </TouchableOpacity>
 
             <View style={{ marginTop: 25 }}>
               <PrimaryButton
@@ -165,7 +182,9 @@ export default function LoginScreen({
 
               <TouchableOpacity
                 onPress={() =>
-                  navigation.navigate("Register")
+                  navigation.navigate(
+                    "Register"
+                  )
                 }
               >
                 <Text style={styles.registerText}>
@@ -174,7 +193,7 @@ export default function LoginScreen({
               </TouchableOpacity>
             </View>
           </View>
-        </ScrollView>
+                  </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -220,26 +239,13 @@ const styles = StyleSheet.create({
     width: "100%",
   },
 
-  optionsRow: {
+  forgotContainer: {
+    alignItems: "flex-end",
     marginTop: 8,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  checkboxRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  rememberText: {
-    marginLeft: 8,
-    fontSize: 15,
-    color: "#555555",
   },
 
   forgotText: {
-    color: "#E53935",
+    color: "#C62828",
     fontWeight: "600",
     fontSize: 15,
   },
@@ -260,7 +266,7 @@ const styles = StyleSheet.create({
   registerText: {
     marginLeft: 6,
     fontSize: 15,
-    color: "#E53935",
+    color: "#C62828",
     fontWeight: "700",
   },
 });

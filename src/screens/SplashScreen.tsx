@@ -11,6 +11,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import LoadingBar from "../components/LoadingBar";
 import { RootStackParamList } from "../navigation/AppNavigator";
+import { isLoggedIn } from "../services/authService";
 
 type Props = NativeStackScreenProps<
   RootStackParamList,
@@ -18,7 +19,6 @@ type Props = NativeStackScreenProps<
 >;
 
 const messages = [
-  "Your Digital Shield",
   "Secure • Learn • Protect",
   "Cybersecurity Starts Here",
   "Protecting Your Digital World",
@@ -62,7 +62,6 @@ export default function SplashScreen({
 
         if (charIndex <= 0) {
           deleting = false;
-
           currentMessage =
             (currentMessage + 1) % messages.length;
         }
@@ -72,14 +71,24 @@ export default function SplashScreen({
     return () => {
       clearInterval(typingInterval);
     };
-  }, [fadeAnim]);
+  }, []);
 
-  const handleLoadingComplete = () => {
+  const handleLoadingComplete = async () => {
     if (navigationDone.current) return;
 
     navigationDone.current = true;
 
-    navigation.replace("Login");
+    try {
+      const loggedIn = await isLoggedIn();
+
+      if (loggedIn) {
+        navigation.replace("Dashboard");
+      } else {
+        navigation.replace("Login");
+      }
+    } catch (error) {
+      navigation.replace("Login");
+    }
   };
 
   return (
@@ -139,8 +148,8 @@ const styles = StyleSheet.create({
   },
 
   logo: {
-    width: 260,
-    height: 260,
+    width: 400,
+    height: 500,
     marginBottom: 24,
   },
 

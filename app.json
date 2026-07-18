@@ -6,12 +6,10 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-
     "ios": {
       "supportsTablet": true,
       "icon": "./assets/icon.png"
     },
-
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -21,17 +19,19 @@
       "package": "com.solosecurities.app",
       "predictiveBackGestureEnabled": false
     },
-
     "web": {
       "favicon": "./assets/favicon.png"
     },
-
     "extra": {
       "eas": {
         "projectId": "77f1b468-080f-40ef-a4fd-167151d08d04"
       }
     },
-
-    "owner": "reshavji"
+    "owner": "reshavji",
+    "plugins": [
+      "expo-secure-store",
+      "expo-font",
+      "expo-status-bar"
+    ]
   }
 }

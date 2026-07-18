@@ -9,7 +9,6 @@ import {
 } from "react-native";
 
 const messages = [
-  "Your Digital Shield",
   "Protecting Every Click",
   "Learn Cybersecurity",
   "Think Like a Hacker",
