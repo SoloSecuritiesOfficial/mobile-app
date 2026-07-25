@@ -158,7 +158,7 @@ const handleProfileImage = async () => {
   {user?.profileImage ? (
     <Image
       source={{
-        uri: `http://192.168.1.10:5000${user.profileImage}`,
+        uri: `http://192.168.1.7:5000${user.profileImage}`,
       }}
       style={styles.profileImage}
     />
