@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "SoloSecurities",
+    "slug": "mobile-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "icon": "./assets/icon.png"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF",
+        "monochromeImage": "./assets/monochrome-icon.png"
+      },
+      "package": "com.solosecurities.app",
+      "googleServicesFile": "./google-services.json",
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "77f1b468-080f-40ef-a4fd-167151d08d04"
+      }
+    },
+    "owner": "reshavji",
+    "plugins": [
+      "expo-secure-store",
+      "expo-font",
+      "expo-status-bar"
+    ]
+  }
+}
