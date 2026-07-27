@@ -1,19 +1,24 @@
 import { Platform } from "react-native";
 
-// Set your Render backend domain here once deployed (e.g. "https://solosecurities-api.onrender.com")
-export const RENDER_BACKEND_URL = process.env.EXPO_PUBLIC_API_URL || "";
+// Live Render production backend
+export const RENDER_BACKEND_URL =
+  process.env.EXPO_PUBLIC_API_URL ||
+  "https://backend-api-1-tf7p.onrender.com";
 
-// Change this to your computer's Wi-Fi IP address if testing locally on a physical Android/iOS device
+// Your computer's Wi-Fi IP for local physical-device testing
 export const LOCAL_IP = "192.168.1.7";
 
 // Default host resolution for local development
 const LOCAL_HOST =
   Platform.OS === "android"
-    ? "10.0.2.2"
+    ? "10.0.2.2" // Android Emulator
     : Platform.OS === "web"
-    ? "localhost"
-    : LOCAL_IP;
+    ? "localhost" // Web / iOS Simulator
+    : LOCAL_IP; // Physical Android/iOS device
 
-// Uses Render Production URL if provided; otherwise falls back to local dev server
-export const BASE_URL = RENDER_BACKEND_URL ? RENDER_BACKEND_URL : `http://${LOCAL_HOST}:5000`;
+// Use the live Render backend by default
+export const BASE_URL =
+  RENDER_BACKEND_URL || `http://${LOCAL_HOST}:5000`;
+
+// API base URL
 export const API_URL = `${BASE_URL}/api`;
