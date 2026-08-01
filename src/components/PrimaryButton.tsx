@@ -25,14 +25,13 @@ export default function PrimaryButton({
       activeOpacity={0.85}
       style={[
         styles.button,
-        disabled && styles.disabledButton,
-        loading && styles.disabledButton,
+        (disabled || loading) && styles.disabledButton,
       ]}
       onPress={onPress}
       disabled={disabled || loading}
     >
       {loading ? (
-        <ActivityIndicator color="#FFFFFF" size="small" />
+        <ActivityIndicator size="small" color="#FFFFFF" />
       ) : (
         <Text style={styles.buttonText}>{title}</Text>
       )}

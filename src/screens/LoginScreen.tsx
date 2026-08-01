@@ -16,8 +16,10 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import InputField from "../components/InputField";
 import PrimaryButton from "../components/PrimaryButton";
+
 import { RootStackParamList } from "../navigation/AppNavigator";
-import { loginUser, loginWithGoogle } from "../services/authService";
+
+import { loginUser } from "../services/authService";
 
 type Props = NativeStackScreenProps<
   RootStackParamList,
@@ -28,38 +30,16 @@ export default function LoginScreen({
   navigation,
 }: Props) {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const [password, setPassword] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(false);
 
   const [errors, setErrors] = useState({
     email: "",
     password: "",
   });
-
-  const handleGoogleLogin = async () => {
-    try {
-      setGoogleLoading(true);
-      // Calls backend endpoint for Google auth payload verification
-      const res = await loginWithGoogle({
-        googleUser: {
-          email: "demo_user@gmail.com",
-          name: "Security Demo User",
-          photoUrl: "",
-        },
-      });
-
-      setGoogleLoading(false);
-      if (res.success) {
-        navigation.replace("Dashboard");
-      } else {
-        Alert.alert("Google Login Failed", res.message || "Could not authenticate with Google.");
-      }
-    } catch (err: any) {
-      setGoogleLoading(false);
-      Alert.alert("Google Auth Error", err.message || "Firebase Google Auth connection error.");
-    }
-  };
 
   const validate = () => {
     let valid = true;
@@ -74,15 +54,17 @@ export default function LoginScreen({
       valid = false;
     } else if (
       !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(
-        email
+        email.trim()
       )
     ) {
-      newErrors.email = "Enter a valid email";
+      newErrors.email =
+        "Enter a valid email";
       valid = false;
     }
 
     if (!password.trim()) {
-      newErrors.password = "Password is required";
+      newErrors.password =
+        "Password is required";
       valid = false;
     } else if (password.length < 6) {
       newErrors.password =
@@ -98,39 +80,55 @@ export default function LoginScreen({
   const handleLogin = async () => {
     if (!validate()) return;
 
+    if (loading) return;
+
     setLoading(true);
 
     try {
-      const response = await loginUser({
-        email,
-        password,
-      });
+      const response =
+        await loginUser({
+          email: email.trim(),
+          password,
+        });
 
-      setLoading(false);
-
-      if (response.success) {
-        navigation.replace("Dashboard");
-      } else {
-        Alert.alert(
-          "Login Failed",
-          response.message || "Invalid email or password."
+      if (response?.success) {
+        navigation.replace(
+          "Dashboard"
         );
+        return;
       }
-    } catch (error: any) {
-      setLoading(false);
-      const serverErr =
-        error.response?.data?.message ||
-        error.message ||
-        "Could not connect to backend server. Ensure backend-api is running on port 5000.";
 
-      Alert.alert("Connection Error", serverErr);
+      Alert.alert(
+        "Login Failed",
+        response?.message ||
+          "Invalid email or password."
+      );
+    } catch (error: any) {
+      console.error(
+        "Email Login Error:",
+        error
+      );
+
+      const serverError =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Could not connect to backend server.";
+
+      Alert.alert(
+        "Connection Error",
+        serverError
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+    >
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={styles.keyboardView}
         behavior={
           Platform.OS === "ios"
             ? "padding"
@@ -138,9 +136,13 @@ export default function LoginScreen({
         }
       >
         <ScrollView
-          contentContainerStyle={styles.scroll}
+          contentContainerStyle={
+            styles.scroll
+          }
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+          showsVerticalScrollIndicator={
+            false
+          }
         >
           <Image
             source={require("../../assets/logo.png")}
@@ -153,7 +155,8 @@ export default function LoginScreen({
           </Text>
 
           <Text style={styles.subtitle}>
-            Login to your SoloSecurities account
+            Login to your
+            SoloSecurities account
           </Text>
 
           <View style={styles.form}>
@@ -162,8 +165,21 @@ export default function LoginScreen({
               icon="email-outline"
               placeholder="Enter your email"
               keyboardType="email-address"
+              autoComplete="email"
+              textContentType="emailAddress"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(value) => {
+                setEmail(value);
+
+                if (errors.email) {
+                  setErrors(
+                    (previous) => ({
+                      ...previous,
+                      email: "",
+                    })
+                  );
+                }
+              }}
               error={errors.email}
             />
 
@@ -172,49 +188,70 @@ export default function LoginScreen({
               icon="lock-outline"
               placeholder="Enter your password"
               password
+              autoComplete="password"
+              textContentType="password"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(value) => {
+                setPassword(value);
+
+                if (errors.password) {
+                  setErrors(
+                    (previous) => ({
+                      ...previous,
+                      password: "",
+                    })
+                  );
+                }
+              }}
               error={errors.password}
             />
 
             <TouchableOpacity
-              style={styles.forgotContainer}
+              style={
+                styles.forgotContainer
+              }
               onPress={() =>
                 navigation.navigate(
                   "ForgotPassword"
                 )
               }
+              disabled={loading}
             >
-              <Text style={styles.forgotText}>
+              <Text
+                style={
+                  styles.forgotText
+                }
+              >
                 Forgot Password?
               </Text>
             </TouchableOpacity>
 
-            <View style={{ marginTop: 25 }}>
+            <View
+              style={
+                styles.loginButtonContainer
+              }
+            >
               <PrimaryButton
                 title="LOGIN"
                 loading={loading}
-                onPress={handleLogin}
+                onPress={
+                  handleLogin
+                }
               />
             </View>
 
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <TouchableOpacity
-              style={styles.googleButton}
-              onPress={handleGoogleLogin}
-              disabled={googleLoading}
+            <View
+              style={
+                styles.bottomRow
+              }
             >
-              <Text style={styles.googleButtonText}>🌐  Sign in with Google</Text>
-            </TouchableOpacity>
-
-            <View style={styles.bottomRow}>
-              <Text style={styles.bottomText}>
-                Don't have an account?
+              <Text
+                style={
+                  styles.bottomText
+                }
+              >
+                Don't have an
+                account?
               </Text>
 
               <TouchableOpacity
@@ -223,14 +260,19 @@ export default function LoginScreen({
                     "Register"
                   )
                 }
+                disabled={loading}
               >
-                <Text style={styles.registerText}>
+                <Text
+                  style={
+                    styles.registerText
+                  }
+                >
                   Create Account
                 </Text>
               </TouchableOpacity>
             </View>
           </View>
-                  </ScrollView>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -239,12 +281,18 @@ export default function LoginScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor:
+      "#FFFFFF",
+  },
+
+  keyboardView: {
+    flex: 1,
   },
 
   scroll: {
     flexGrow: 1,
-    justifyContent: "center",
+    justifyContent:
+      "center",
     paddingHorizontal: 24,
     paddingVertical: 40,
   },
@@ -287,45 +335,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 
-  dividerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 18,
-  },
-
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#E0E0E0",
-  },
-
-  dividerText: {
-    marginHorizontal: 12,
-    color: "#888888",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-
-  googleButton: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#DDDDDD",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    elevation: 1,
-  },
-
-  googleButtonText: {
-    color: "#333333",
-    fontSize: 15,
-    fontWeight: "700",
+  loginButtonContainer: {
+    marginTop: 25,
   },
 
   bottomRow: {
     marginTop: 35,
     flexDirection: "row",
-    justifyContent: "center",
+    justifyContent:
+      "center",
     alignItems: "center",
     flexWrap: "wrap",
   },
