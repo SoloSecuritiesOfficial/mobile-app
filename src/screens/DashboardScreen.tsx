@@ -1,337 +1,886 @@
-import React, { useEffect, useState } from "react";
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
+
 import {
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Alert,
   Image,
-  RefreshControl,
-  Modal,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 
 import {
-  pickProfileImage,
-  uploadProfileImage,
-} from "../services/uploadService";
+  SafeAreaView,
+} from "react-native-safe-area-context";
+
+import {
+  NativeStackScreenProps,
+} from "@react-navigation/native-stack";
+
+import {
+  RootStackParamList,
+} from "../navigation/AppNavigator";
+
 import Colors from "../theme/colors";
 import Spacing from "../theme/spacing";
 import Typography from "../theme/typography";
 
-import { BASE_URL } from "../config/api";
 import {
-  getCurrentUser,
   fetchCurrentUser,
+  getCurrentUser,
   logout,
 } from "../services/authService";
-import { getSecurityDashboard } from "../services/securityService";
 
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../navigation/AppNavigator";
+import {
+  getSecurityDashboard,
+} from "../services/securityService";
 
-type Props = NativeStackScreenProps<
-  RootStackParamList,
-  "Dashboard"
->;
+import {
+  getCertificates,
+} from "../services/certificateService";
+
+import {
+  getUnreadNotificationCount,
+} from "../services/notificationService";
+
+type Props =
+  NativeStackScreenProps<
+    RootStackParamList,
+    "Dashboard"
+  >;
+
+interface User {
+  _id?: string;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  profileImage?: string;
+}
+
+interface DashboardData {
+  securityScore?: number;
+  reports?: number;
+  rank?: string;
+  streak?: number;
+
+  learningCompleted?: number;
+  learningTotal?: number;
+
+  labCompleted?: number;
+  labTotal?: number;
+}
 
 export default function DashboardScreen({
   navigation,
 }: Props) {
-  const [user, setUser] = useState<any>(null);
-  const [dashboardData, setDashboardData] = useState<any>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const [profileModalVisible, setProfileModalVisible] = useState(false);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [user, setUser] =
+    useState<User | null>(null);
+
+  const [dashboard, setDashboard] =
+    useState<DashboardData>({});
+
+  const [certificateCount,
+    setCertificateCount] =
+    useState(0);
+
+  const [notificationCount,
+    setNotificationCount] =
+    useState(0);
+
+  const loadDashboard =
+    useCallback(async () => {
+
+      try {
+
+        // Latest user from backend
+
+        const latestUser =
+          await fetchCurrentUser();
+
+        if (latestUser) {
+          setUser(latestUser);
+        } else {
+          const cachedUser =
+            await getCurrentUser();
+
+          setUser(cachedUser);
+        }
+
+        // Dashboard
+
+        const dashboardResponse =
+          await getSecurityDashboard();
+
+        setDashboard(
+          dashboardResponse.data ??
+          dashboardResponse ??
+          {}
+        );
+
+        // Certificates
+
+        const certificates =
+          await getCertificates();
+
+        setCertificateCount(
+
+          certificates.data?.length ??
+
+          certificates.length ??
+
+          0
+
+        );
+
+        // Notifications
+
+        const notification =
+          await getUnreadNotificationCount();
+
+        setNotificationCount(
+
+          notification.data?.count ??
+
+          notification.count ??
+
+          0
+
+        );
+
+      } catch (error) {
+
+        console.log(
+          "Dashboard Error:",
+          error
+        );
+
+      } finally {
+
+        setLoading(false);
+
+      }
+
+    }, []);
 
   useEffect(() => {
-    loadData();
-  }, []);
 
-  const loadData = async () => {
-    try {
-      const latestUser = await fetchCurrentUser();
-      if (latestUser) {
-        setUser(latestUser);
-      } else {
-        const cachedUser = await getCurrentUser();
-        setUser(cachedUser);
-      }
+    loadDashboard();
 
-      const dashRes = await getSecurityDashboard();
-      if (dashRes.success && dashRes.data) {
-        setDashboardData(dashRes.data);
-      }
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const handleProfileImage = async () => {
-    setProfileModalVisible(false);
-    try {
-      const image = await pickProfileImage();
-      if (!image) return;
-
-      const response = await uploadProfileImage(image);
-      if (response.success) {
-        await loadData();
-        Alert.alert("Success", "Profile picture updated.");
-      }
-    } catch (error: any) {
-      console.log(error);
-      Alert.alert("Upload Failed", error.message);
-    }
-  };
+  }, [loadDashboard]);
 
   const handleLogout = () => {
-    setProfileModalVisible(false);
+
     Alert.alert(
       "Logout",
       "Are you sure you want to logout?",
       [
-        { text: "Cancel", style: "cancel" },
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
         {
           text: "Logout",
           style: "destructive",
           onPress: async () => {
+
             await logout();
+
             navigation.replace("Login");
+
           },
         },
       ]
     );
+
   };
 
-  const actions = [
-    {
-      icon: "🔑",
-      title: "Password Checker",
-      screen: "PasswordChecker" as const,
-    },
-    {
-      icon: "🔐",
-      title: "Hash Generator",
-      screen: "HashGenerator" as const,
-    },
-    {
-      icon: "🐞",
-      title: "Bug Reports",
-      screen: "BugReports" as const,
-    },
-    {
-      icon: "🛡️",
-      title: "Security Scan",
-      screen: "SecurityScan" as const,
-    },
-    {
-      icon: "📚",
-      title: "Learning",
-      screen: "Learning" as const,
-    },
-    {
-      icon: "📢",
-      title: "CVE Updates",
-      screen: "CVEUpdates" as const,
-    },
-    {
-      icon: "🎯",
-      title: "Labs",
-      screen: "Labs" as const,
-    },
-    {
-      icon: "⚙️",
-      title: "Settings",
-      screen: "Settings" as const,
-    },
-  ];
+  if (loading) {
 
-  const scorePercentage = dashboardData?.score || 85;
-  const recentActivities = dashboardData?.recentActivity || [];
+    return (
 
-  return (
-    <View style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => {
-              setRefreshing(true);
-              loadData();
-            }}
-            tintColor={Colors.primary}
-          />
+      <SafeAreaView
+        style={styles.loader}
+      >
+
+        <ActivityIndicator
+          size="large"
+          color={Colors.primary}
+        />
+
+      </SafeAreaView>
+
+    );
+
+  }
+
+  return ( <SafeAreaView style={styles.container}>
+
+  <ScrollView
+    contentContainerStyle={styles.content}
+    showsVerticalScrollIndicator={false}
+  >
+
+    {/* ================= HEADER ================= */}
+
+    <View style={styles.header}>
+
+      <View>
+
+        <Text style={styles.welcome}>
+          Welcome Back 👋
+        </Text>
+
+        <Text style={styles.username}>
+          {
+            user?.firstName ||
+            user?.username ||
+            "User"
+          }
+        </Text>
+
+        <Text style={styles.email}>
+          {user?.email ?? ""}
+        </Text>
+
+      </View>
+
+      <TouchableOpacity
+        style={styles.profile}
+        activeOpacity={0.8}
+        onPress={() =>
+          navigation.navigate("Profile")
         }
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.welcome}>Welcome Back 👋</Text>
-            <Text style={styles.username}>{user?.username || "Security Analyst"}</Text>
-            <Text style={styles.email}>{user?.email || ""}</Text>
+
+        {
+          user?.profileImage ? (
+
+            <Image
+              source={{
+                uri: user.profileImage,
+              }}
+              style={styles.profileImage}
+            />
+
+          ) : (
+
+            <Text style={styles.profileText}>
+              {
+                user?.username
+                  ? user.username
+                      .charAt(0)
+                      .toUpperCase()
+                  : "U"
+              }
+            </Text>
+
+          )
+        }
+
+      </TouchableOpacity>
+
+    </View>
+
+    {/* ================= SECURITY SCORE ================= */}
+
+    <View style={styles.scoreCard}>
+
+      <Text style={styles.scoreTitle}>
+        Security Score
+      </Text>
+
+      <Text style={styles.score}>
+        {dashboard.securityScore ?? 0}%
+      </Text>
+
+      <Text style={styles.scoreDescription}>
+        Complete labs and learning
+        modules to improve your
+        security score.
+      </Text>
+
+      <View style={styles.progressTrack}>
+
+        <View
+          style={[
+            styles.progress,
+            {
+              width: `${
+                dashboard.securityScore ?? 0
+              }%`,
+            },
+          ]}
+        />
+
+      </View>
+
+    </View>
+
+    {/* ================= QUICK ACTIONS ================= */}
+
+    <Text style={styles.sectionTitle}>
+      Quick Actions
+    </Text>
+
+    <View style={styles.actions}>
+
+      {/* Row 1 */}
+
+      <TouchableOpacity
+        style={styles.actionCard}
+        activeOpacity={0.85}
+        onPress={() =>
+          navigation.navigate(
+            "BugReports"
+          )
+        }
+      >
+
+        <Text style={styles.actionIcon}>
+          🐞
+        </Text>
+
+        <Text style={styles.actionText}>
+          Bug Reports
+        </Text>
+
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.actionCard}
+        activeOpacity={0.85}
+        onPress={() =>
+          navigation.navigate(
+            "SecurityScan"
+          )
+        }
+      >
+
+        <Text style={styles.actionIcon}>
+          🛡️
+        </Text>
+
+        <Text style={styles.actionText}>
+          Security Scan
+        </Text>
+
+      </TouchableOpacity> 
+            {/* Row 2 */}
+
+      <TouchableOpacity
+        style={styles.actionCard}
+        activeOpacity={0.85}
+        onPress={() =>
+          navigation.navigate(
+            "Learning"
+          )
+        }
+      >
+        <Text style={styles.actionIcon}>
+          📚
+        </Text>
+
+        <Text style={styles.actionText}>
+          Learning
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.actionCard}
+        activeOpacity={0.85}
+        onPress={() =>
+          navigation.navigate(
+            "CVEUpdates"
+          )
+        }
+      >
+        <Text style={styles.actionIcon}>
+          📢
+        </Text>
+
+        <Text style={styles.actionText}>
+          CVE Updates
+        </Text>
+      </TouchableOpacity>
+
+      {/* Row 3 */}
+
+      <TouchableOpacity
+        style={styles.actionCard}
+        activeOpacity={0.85}
+        onPress={() =>
+          navigation.navigate(
+            "Labs"
+          )
+        }
+      >
+        <Text style={styles.actionIcon}>
+          🎯
+        </Text>
+
+        <Text style={styles.actionText}>
+          Labs
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.actionCard}
+        activeOpacity={0.85}
+        onPress={() =>
+          navigation.navigate(
+            "Certificates"
+          )
+        }
+      >
+        <Text style={styles.actionIcon}>
+          🏆
+        </Text>
+
+        <Text style={styles.actionText}>
+          Certificates
+        </Text>
+      </TouchableOpacity>
+
+      {/* Row 4 */}
+
+      <TouchableOpacity
+        style={styles.actionCard}
+        activeOpacity={0.85}
+        onPress={() =>
+          navigation.navigate(
+            "Notifications"
+          )
+        }
+      >
+        <Text style={styles.actionIcon}>
+          🔔
+        </Text>
+
+        <Text style={styles.actionText}>
+          Notifications
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.actionCard}
+        activeOpacity={0.85}
+        onPress={() =>
+          navigation.navigate(
+            "Settings"
+          )
+        }
+      >
+        <Text style={styles.actionIcon}>
+          ⚙️
+        </Text>
+
+        <Text style={styles.actionText}>
+          Settings
+        </Text>
+      </TouchableOpacity>
+
+    </View>
+
+    {/* ================= RECENT ACTIVITY ================= */}
+
+    <Text style={styles.sectionTitle}>
+      Recent Activity
+    </Text>
+
+    <View style={styles.activityCard}>
+
+      <Text style={styles.activityTitle}>
+        Dashboard Overview
+      </Text>
+
+      <Text style={styles.activityDescription}>
+        Security Score :
+        {" "}
+        {dashboard.securityScore ?? 0}
+        %
+
+        {"\n\n"}
+
+        Reports Submitted :
+        {" "}
+        {dashboard.reports ?? 0}
+
+        {"\n\n"}
+
+        Certificates Earned :
+        {" "}
+        {certificateCount}
+
+        {"\n\n"}
+
+        Learning Progress :
+        {" "}
+        {dashboard.learningCompleted ?? 0}
+        /
+        {dashboard.learningTotal ?? 0}
+
+        {"\n\n"}
+
+        Labs Completed :
+        {" "}
+        {dashboard.labCompleted ?? 0}
+        /
+        {dashboard.labTotal ?? 0}
+      </Text>
+
+    </View> 
+        {/* ================= CYBER SECURITY TIP ================= */}
+
+    <Text style={styles.sectionTitle}>
+      Cyber Security Tip
+    </Text>
+
+    <View style={styles.tipCard}>
+
+      <Text style={styles.tipTitle}>
+        💡 Stay Secure
+      </Text>
+
+      <Text style={styles.tipText}>
+        Never trust user input.
+        Always validate and sanitize
+        every request before processing
+        it. Small mistakes can lead to
+        critical security
+        vulnerabilities.
+      </Text>
+
+    </View>
+
+
+        {/* ================= PROGRESS ================= */}
+
+        <Text style={styles.sectionTitle}>
+          Progress
+        </Text>
+
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <Text style={styles.statIcon}>📚</Text>
+
+            <Text style={styles.statValue}>
+              {dashboard.learningCompleted || 0}/
+              {dashboard.learningTotal || 0}
+            </Text>
+
+            <Text style={styles.statLabel}>
+              Learning
+            </Text>
           </View>
 
-          <TouchableOpacity
-            style={styles.profile}
-            onPress={() => setProfileModalVisible(true)}
-          >
-            {user?.profileImage ? (
-              <Image
-                source={{
-                  uri: `${BASE_URL}${user.profileImage}`,
-                }}
-                style={styles.profileImage}
-              />
-            ) : (
-              <Text style={styles.profileText}>
-                {user?.username ? user.username.charAt(0).toUpperCase() : "S"}
-              </Text>
-            )}
-          </TouchableOpacity>
+          <View style={styles.statCard}>
+            <Text style={styles.statIcon}>🎯</Text>
+
+            <Text style={styles.statValue}>
+              {dashboard.labCompleted || 0}/
+              {dashboard.labTotal || 0}
+            </Text>
+
+            <Text style={styles.statLabel}>
+              Labs
+            </Text>
+          </View>
         </View>
 
-        {/* Security Score */}
-        <View style={styles.scoreCard}>
-          <Text style={styles.scoreTitle}>Security Posture Score</Text>
-          <Text style={styles.score}>{scorePercentage}%</Text>
-          <Text style={styles.scoreDescription}>
-            {scorePercentage >= 80
-              ? "Your security rating is strong. Continue performing scans and learning."
-              : "Security checks required. Run a domain scan or check CVEs."}
+
+        {/* ================= CYBER SECURITY TIP ================= */}
+
+        <Text style={styles.sectionTitle}>
+          Cyber Security Tip
+        </Text>
+
+        <View style={styles.tipCard}>
+          <Text style={styles.tipTitle}>
+            💡 Stay Secure
           </Text>
 
-          <View style={styles.progressTrack}>
-            <View style={[styles.progress, { width: `${scorePercentage}%` }]} />
-          </View>
+          <Text style={styles.tipText}>
+            Never trust user input. Always validate and sanitize every request
+            before processing it. Small mistakes can lead to critical security
+            vulnerabilities.
+          </Text>
         </View>
 
-        {/* Quick Actions */}
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.actions}>
-          {actions.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.actionCard}
-              onPress={() => navigation.navigate(item.screen)}
-            >
-              <Text style={styles.actionIcon}>{item.icon}</Text>
-              <Text style={styles.actionText}>{item.title}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
 
-        {/* Activity */}
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
-        <View style={styles.activityCard}>
-          {recentActivities.length === 0 ? (
-            <View>
-              <Text style={styles.activityTitle}>No security activity yet</Text>
-              <Text style={styles.activityDescription}>
-                Perform domain security scans or submit bug reports to view live logs here.
-              </Text>
-            </View>
-          ) : (
-            recentActivities.map((act: any, idx: number) => (
-              <View
-                key={idx}
-                style={[
-                  styles.activityItem,
-                  idx < recentActivities.length - 1 && styles.activityItemBorder,
-                ]}
-              >
-                <View style={styles.activityRow}>
-                  <Text style={styles.actTitle}>{act.title}</Text>
-                  <Text style={styles.actType}>{act.type}</Text>
-                </View>
-                <Text style={styles.actDetail}>{act.detail}</Text>
-                <Text style={styles.actDate}>
-                  {new Date(act.date).toLocaleDateString()} at {new Date(act.date).toLocaleTimeString()}
-                </Text>
-              </View>
-            ))
-          )}
-        </View>
-      </ScrollView>
 
-      {/* Profile Popup Modal (ONLY Profile Picture Change & Logout) */}
-      <Modal visible={profileModalVisible} transparent animationType="fade">
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setProfileModalVisible(false)}
-        >
-          <View style={styles.profileMenuCard}>
-            <View style={styles.menuHeader}>
-              <View style={styles.menuAvatar}>
-                <Text style={styles.menuAvatarText}>
-                  {user?.username ? user.username.charAt(0).toUpperCase() : "U"}
-                </Text>
-              </View>
-              <View>
-                <Text style={styles.menuUsername}>{user?.username || "User"}</Text>
-                <Text style={styles.menuEmail}>{user?.email || ""}</Text>
-                <View style={styles.roleBadge}>
-                  <Text style={styles.roleBadgeText}>ROLE: {user?.role ? user.role.toUpperCase() : "USER"}</Text>
-                </View>
-              </View>
-            </View>
+    {/* ================= STATISTICS ================= */}
 
-            <View style={styles.menuDivider} />
+    <Text style={styles.sectionTitle}>
+      Statistics
+    </Text>
 
-            <TouchableOpacity style={styles.menuItem} onPress={handleProfileImage}>
-              <Text style={styles.menuItemText}>🖼️  Change Profile Picture</Text>
-            </TouchableOpacity>
+    <View style={styles.statsContainer}>
 
-            <View style={styles.menuDivider} />
+      <View style={styles.statCard}>
+        <Text style={styles.statIcon}>
+          🐞
+        </Text>
 
-            <TouchableOpacity
-              style={[styles.menuItem, { marginTop: 4 }]}
-              onPress={handleLogout}
-            >
-              <Text style={[styles.menuItemText, { color: "#EF4444", fontWeight: "700" }]}>
-                🚪  Logout
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+        <Text style={styles.statValue}>
+          {dashboard?.reports || 0}
+        </Text>
+
+        <Text style={styles.statLabel}>
+          Reports
+        </Text>
+      </View>
+
+      <View style={styles.statCard}>
+        <Text style={styles.statIcon}>
+          🏆
+        </Text>
+
+        <Text style={styles.statValue}>
+          {certificateCount}
+        </Text>
+
+        <Text style={styles.statLabel}>
+          Certificates
+        </Text>
+      </View>
+
     </View>
-  );
-}
 
+    <View style={styles.statsContainer}>
+
+      <View style={styles.statCard}>
+        <Text style={styles.statIcon}>
+          🥇
+        </Text>
+
+        <Text style={styles.statValue}>
+          {dashboard?.rank || "#0"}
+        </Text>
+
+        <Text style={styles.statLabel}>
+          Rank
+        </Text>
+      </View>
+
+      <View style={styles.statCard}>
+        <Text style={styles.statIcon}>
+          🔥
+        </Text>
+
+        <Text style={styles.statValue}>
+          {dashboard?.streak || 0}
+        </Text>
+
+        <Text style={styles.statLabel}>
+          Day Streak
+        </Text>
+      </View>
+
+    </View>
+
+
+    {/* ================= LEARNING PROGRESS ================= */}
+
+    <Text style={styles.sectionTitle}>
+      Learning Progress
+    </Text>
+
+    <View style={styles.scoreCard}>
+
+      <Text style={styles.scoreTitle}>
+        Completed Modules
+      </Text>
+
+      <Text style={styles.score}>
+        {dashboard?.learningCompleted || 0}/
+        {dashboard?.learningTotal || 0}
+      </Text>
+
+      <Text style={styles.scoreDescription}>
+        Continue learning to improve
+        your cyber security skills.
+      </Text>
+
+      <View style={styles.progressTrack}>
+
+        <View
+          style={[
+            styles.progress,
+            {
+              width: `${
+                dashboard?.learningTotal
+                  ? (
+                      (dashboard.learningCompleted || 0) /
+                      dashboard.learningTotal
+                    ) * 100
+                  : 0
+              }%`,
+            },
+          ]}
+        />
+
+      </View>
+
+    </View>
+        {/* ================= LABS PROGRESS ================= */}
+
+    <Text style={styles.sectionTitle}>
+      Labs Progress
+    </Text>
+
+    <View style={styles.scoreCard}>
+
+      <Text style={styles.scoreTitle}>
+        Completed Labs
+      </Text>
+
+      <Text style={styles.score}>
+        {dashboard?.labCompleted || 0}/
+        {dashboard?.labTotal || 0}
+      </Text>
+
+      <Text style={styles.scoreDescription}>
+        Complete practical labs to
+        strengthen your penetration
+        testing skills.
+      </Text>
+
+      <View style={styles.progressTrack}>
+
+        <View
+          style={[
+            styles.progress,
+            {
+              width: `${
+                dashboard?.labTotal
+                  ? (
+                      (dashboard.labCompleted || 0) /
+                      dashboard.labTotal
+                    ) * 100
+                  : 0
+              }%`,
+            },
+          ]}
+        />
+
+      </View>
+
+    </View>
+
+    {/* ================= NOTIFICATIONS ================= */}
+
+    <Text style={styles.sectionTitle}>
+      Notifications
+    </Text>
+
+    <View style={styles.activityCard}>
+
+      <Text style={styles.activityTitle}>
+        Unread Notifications
+      </Text>
+
+      <Text style={styles.activityDescription}>
+        You currently have{" "}
+        <Text
+          style={{
+            fontWeight: "700",
+            color: Colors.primary,
+          }}
+        >
+          {notificationCount}
+        </Text>{" "}
+        unread notification
+        {notificationCount === 1 ? "" : "s"}.
+      </Text>
+
+    </View>
+
+    {/* ================= LOGOUT ================= */}
+
+    <TouchableOpacity
+      style={styles.logoutButton}
+      activeOpacity={0.9}
+      onPress={handleLogout}
+    >
+      <Text style={styles.logoutText}>
+        Logout
+      </Text>
+    </TouchableOpacity>
+
+  </ScrollView>
+
+</SafeAreaView>
+
+);
+}
 const styles = StyleSheet.create({
+
+  /* ================= CONTAINER ================= */
+
   container: {
     flex: 1,
     backgroundColor: Colors.background,
   },
+
+
+  loader: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: Colors.background,
+  },
+
+
   content: {
     padding: Spacing.screen,
-    paddingTop: 50,
     paddingBottom: Spacing.xxl,
   },
+
+
+  /* ================= HEADER ================= */
+
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginTop: Spacing.lg,
     marginBottom: Spacing.xxl,
   },
+
+
   welcome: {
     ...Typography.bodyMedium,
     color: Colors.textSecondary,
   },
+
+
   username: {
     ...Typography.h1,
     color: Colors.text,
     marginTop: Spacing.xs,
   },
+
+
   email: {
     ...Typography.bodySmall,
     color: Colors.textSecondary,
     marginTop: Spacing.xs,
   },
+
+
+  /* ================= PROFILE ================= */
+
   profile: {
     width: Spacing.avatarMedium,
     height: Spacing.avatarMedium,
@@ -341,34 +890,53 @@ const styles = StyleSheet.create({
     alignItems: "center",
     overflow: "hidden",
   },
+
+
   profileText: {
     ...Typography.h3,
     color: Colors.textWhite,
   },
+
+
   profileImage: {
     width: "100%",
     height: "100%",
+    borderRadius: 100,
   },
+
+
+  /* ================= SECURITY SCORE ================= */
+
+
   scoreCard: {
     backgroundColor: Colors.dashboardHeader,
     borderRadius: Spacing.radiusXL,
     padding: Spacing.cardPadding,
     marginBottom: Spacing.xxl,
   },
+
+
   scoreTitle: {
     ...Typography.bodyMedium,
     color: Colors.textWhite,
   },
+
+
   score: {
     ...Typography.score,
     color: Colors.textWhite,
     marginTop: Spacing.sm,
   },
+
+
   scoreDescription: {
     ...Typography.bodySmall,
     color: Colors.textMuted,
     marginTop: Spacing.sm,
+    lineHeight: 20,
   },
+
+
   progressTrack: {
     height: 8,
     backgroundColor: "#444444",
@@ -376,154 +944,193 @@ const styles = StyleSheet.create({
     marginTop: Spacing.lg,
     overflow: "hidden",
   },
+
+
   progress: {
     height: "100%",
     backgroundColor: Colors.primary,
     borderRadius: Spacing.radiusCircle,
   },
-  sectionTitle: {
-    ...Typography.h3,
-    color: Colors.text,
-    marginBottom: Spacing.md,
+  /* ================= QUICK ACTION CARDS ================= */
+
+actions: {
+  flexDirection: "row",
+  flexWrap: "wrap",
+  justifyContent: "space-between",
+  marginBottom: Spacing.xxl,
+},
+
+
+actionCard: {
+  width: "48%",
+  backgroundColor: Colors.surface,
+  borderRadius: Spacing.radiusLarge,
+  padding: Spacing.cardPadding,
+  marginBottom: Spacing.md,
+
+  elevation: 2,
+
+  shadowColor: "#000",
+  shadowOpacity: 0.05,
+  shadowRadius: 5,
+  shadowOffset: {
+    width: 0,
+    height: 2,
   },
-  actions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    marginBottom: Spacing.xxl,
+},
+
+
+actionIcon: {
+  fontSize: 28,
+  marginBottom: Spacing.md,
+},
+
+
+actionText: {
+  ...Typography.labelMedium,
+  color: Colors.text,
+},
+
+
+
+/* ================= RECENT ACTIVITY ================= */
+
+
+activityCard: {
+  backgroundColor: Colors.surface,
+  borderRadius: Spacing.radiusLarge,
+  padding: Spacing.cardPadding,
+  marginBottom: Spacing.xxl,
+
+  elevation: 2,
+
+  shadowColor: "#000",
+  shadowOpacity: 0.05,
+  shadowRadius: 5,
+  shadowOffset: {
+    width: 0,
+    height: 2,
   },
-  actionCard: {
-    width: "48%",
-    backgroundColor: Colors.surface,
-    borderRadius: Spacing.radiusLarge,
-    padding: Spacing.cardPadding,
-    marginBottom: Spacing.md,
-    elevation: 2,
+},
+
+
+activityTitle: {
+  ...Typography.labelLarge,
+  color: Colors.text,
+},
+
+
+activityDescription: {
+  ...Typography.bodySmall,
+  color: Colors.textSecondary,
+  marginTop: Spacing.sm,
+  lineHeight: 20,
+},
+
+
+
+/* ================= CYBER SECURITY TIP ================= */
+
+
+tipCard: {
+  backgroundColor: "#E8F5E9",
+  borderRadius: Spacing.radiusLarge,
+  padding: Spacing.cardPadding,
+  marginBottom: Spacing.xxl,
+},
+
+
+tipTitle: {
+  fontSize: 18,
+  fontWeight: "700",
+  color: "#2E7D32",
+  marginBottom: Spacing.sm,
+},
+
+
+tipText: {
+  ...Typography.bodySmall,
+  color: Colors.textSecondary,
+  lineHeight: 22,
+},
+
+
+
+/* ================= STATISTICS ================= */
+
+
+statsContainer: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  marginBottom: Spacing.md,
+},
+
+
+statCard: {
+  width: "48%",
+  backgroundColor: Colors.surface,
+  borderRadius: Spacing.radiusLarge,
+  paddingVertical: 20,
+  alignItems: "center",
+
+  elevation: 2,
+
+  shadowColor: "#000",
+  shadowOpacity: 0.05,
+  shadowRadius: 5,
+  shadowOffset: {
+    width: 0,
+    height: 2,
   },
-  actionIcon: {
-    fontSize: 28,
-    marginBottom: Spacing.md,
-  },
-  actionText: {
-    ...Typography.labelMedium,
-    color: Colors.text,
-  },
-  activityCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: Spacing.radiusLarge,
-    padding: Spacing.cardPadding,
-  },
-  activityTitle: {
-    ...Typography.labelLarge,
-    color: Colors.text,
-  },
-  activityDescription: {
-    ...Typography.bodySmall,
-    color: Colors.textSecondary,
-    marginTop: Spacing.sm,
-    lineHeight: 20,
-  },
-  activityItem: {
-    paddingVertical: 8,
-  },
-  activityItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  activityRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  actTitle: {
-    ...Typography.labelMedium,
-    color: Colors.text,
-    flex: 1,
-  },
-  actType: {
-    ...Typography.bodySmall,
-    color: Colors.primary,
-    fontWeight: "700",
-  },
-  actDetail: {
-    ...Typography.bodySmall,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  actDate: {
-    ...Typography.bodySmall,
-    color: Colors.textMuted,
-    fontSize: 11,
-    marginTop: 4,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.65)",
-    justifyContent: "flex-start",
-    alignItems: "flex-end",
-    paddingTop: 80,
-    paddingRight: 20,
-  },
-  profileMenuCard: {
-    width: 260,
-    backgroundColor: Colors.surface,
-    borderRadius: Spacing.radiusLarge,
-    padding: Spacing.cardPadding,
-    elevation: 10,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  menuHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  menuAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
-  },
-  menuAvatarText: {
-    color: "#FFF",
-    fontWeight: "700",
-    fontSize: 18,
-  },
-  menuUsername: {
-    ...Typography.labelLarge,
-    color: Colors.text,
-  },
-  menuEmail: {
-    ...Typography.bodySmall,
-    color: Colors.textSecondary,
-    fontSize: 11,
-  },
-  roleBadge: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    alignSelf: "flex-start",
-    marginTop: 4,
-  },
-  roleBadgeText: {
-    color: "#FFF",
-    fontSize: 9,
-    fontWeight: "800",
-  },
-  menuDivider: {
-    height: 1,
-    backgroundColor: Colors.border,
-    marginVertical: 10,
-  },
-  menuItem: {
-    paddingVertical: 10,
-  },
-  menuItemText: {
-    ...Typography.bodyMedium,
-    color: Colors.text,
-  },
+},
+
+
+statIcon: {
+  fontSize: 28,
+  marginBottom: 8,
+},
+
+
+statValue: {
+  ...Typography.h2,
+  color: Colors.text,
+  marginBottom: 4,
+},
+
+
+statLabel: {
+  ...Typography.bodySmall,
+  color: Colors.textSecondary,
+},
+/* ================= LOGOUT ================= */
+
+logoutButton: {
+  marginTop: Spacing.lg,
+
+  backgroundColor: Colors.primary,
+
+  paddingVertical: 16,
+
+  borderRadius: Spacing.radiusLarge,
+
+  alignItems: "center",
+
+  marginBottom: Spacing.xxl,
+},
+
+
+logoutText: {
+  fontSize: 16,
+
+  fontWeight: "700",
+
+  color: Colors.textWhite,
+},
+
+sectionTitle: {
+  ...Typography.h3,
+  color: Colors.text,
+  marginBottom: Spacing.md,
+  marginTop: Spacing.lg,
+},
 });

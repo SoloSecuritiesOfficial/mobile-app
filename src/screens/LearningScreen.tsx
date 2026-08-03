@@ -1,4 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+
 import {
   StyleSheet,
   Text,
@@ -6,175 +11,814 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
-import { getLearningModules } from "../services/securityService";
+
+import {
+  NativeStackScreenProps,
+} from "@react-navigation/native-stack";
+
+import {
+  RootStackParamList,
+} from "../navigation/AppNavigator";
+
+import {
+  getLearningModules,
+  getLearningProgress,
+} from "../services/securityService";
+
+import ProgressCard from "../components/ProgressCard";
+
 import Colors from "../theme/colors";
 import Spacing from "../theme/spacing";
 import Typography from "../theme/typography";
 
-export default function LearningScreen() {
-  const [modules, setModules] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedModule, setSelectedModule] = useState<any>(null);
 
-  useEffect(() => {
-    fetchModules();
-  }, []);
+type Props =
+  NativeStackScreenProps<
+    RootStackParamList,
+    "Learning"
+  >;
 
-  const fetchModules = async () => {
-    try {
-      setLoading(true);
-      const res = await getLearningModules();
-      if (res.success && res.data) {
-        setModules(res.data);
-      }
-    } catch (err) {
-      console.log("Error loading learning modules:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  if (selectedModule) {
-    return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => setSelectedModule(null)}
-        >
-          <Text style={styles.backText}>← Back to Lessons</Text>
-        </TouchableOpacity>
+interface LearningModule {
 
-        <Text style={styles.headerTitle}>{selectedModule.title}</Text>
-        <View style={styles.metaRow}>
-          <Text style={styles.metaBadge}>{selectedModule.category}</Text>
-          <Text style={styles.metaText}> • {selectedModule.level} • {selectedModule.readTime}</Text>
-        </View>
+  _id: string;
 
-        <View style={styles.articleCard}>
-          <Text style={styles.articleBody}>{selectedModule.content}</Text>
-        </View>
-      </ScrollView>
-    );
-  }
+  title: string;
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.headerTitle}>Cybersecurity Academy 📚</Text>
-      <Text style={styles.headerSubtitle}>Master web & network defense fundamentals</Text>
+  summary: string;
 
-      {loading ? (
-        <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 40 }} />
-      ) : (
-        modules.map((item, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.card}
-            onPress={() => setSelectedModule(item)}
-          >
-            <View style={styles.cardHeader}>
-              <Text style={styles.category}>{item.category}</Text>
-              <Text style={styles.level}>{item.level}</Text>
-            </View>
-            <Text style={styles.cardTitle}>{item.title}</Text>
-            <Text style={styles.summary}>{item.summary}</Text>
-            <Text style={styles.readTime}>⏱️ {item.readTime} read</Text>
-          </TouchableOpacity>
-        ))
-      )}
-    </ScrollView>
-  );
+  content?: string;
+
+  category: string;
+
+  level: string;
+
+  readTime: string;
+
+  completed?: boolean;
+
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    paddingTop: 50,
-    paddingHorizontal: Spacing.screen,
-    paddingBottom: Spacing.xxl,
-  },
-  headerTitle: {
-    ...Typography.h1,
-    color: Colors.text,
-  },
-  headerSubtitle: {
-    ...Typography.bodySmall,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.lg,
-  },
-  card: {
-    backgroundColor: Colors.surface,
-    borderRadius: Spacing.radiusLarge,
-    padding: Spacing.cardPadding,
-    marginBottom: Spacing.md,
-    elevation: 2,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  category: {
-    color: Colors.primary,
-    fontWeight: "700",
-    fontSize: 12,
-  },
-  level: {
-    color: Colors.textMuted,
-    fontSize: 12,
-  },
-  cardTitle: {
-    ...Typography.h3,
-    color: Colors.text,
-    marginBottom: 6,
-  },
-  summary: {
-    ...Typography.bodySmall,
-    color: Colors.textSecondary,
-    marginBottom: 10,
-    lineHeight: 18,
-  },
-  readTime: {
-    ...Typography.bodySmall,
-    color: Colors.textMuted,
-  },
-  backButton: {
-    marginBottom: Spacing.md,
-  },
-  backText: {
-    color: Colors.primary,
-    fontWeight: "700",
-    fontSize: 15,
-  },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: Spacing.lg,
-  },
-  metaBadge: {
-    backgroundColor: Colors.primary,
-    color: "#FFF",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  metaText: {
-    color: Colors.textSecondary,
-    fontSize: 13,
-  },
-  articleCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: Spacing.radiusLarge,
-    padding: Spacing.cardPadding,
-  },
-  articleBody: {
-    ...Typography.bodyMedium,
-    color: Colors.text,
-    lineHeight: 24,
-  },
+
+
+interface LearningProgress {
+
+  progress: number;
+
+  completed: number;
+
+  total: number;
+
+}
+
+
+
+export default function LearningScreen({
+  navigation,
+}: Props) {
+
+
+  const [modules, setModules] =
+    useState<LearningModule[]>([]);
+
+
+
+  const [progress, setProgress] =
+    useState<LearningProgress>({
+      progress: 0,
+      completed: 0,
+      total: 0,
+    });
+
+
+
+  const [loading, setLoading] =
+    useState(true);
+
+
+
+  const [refreshing, setRefreshing] =
+    useState(false);
+
+
+
+  const loadLearningData =
+    useCallback(async()=>{
+
+
+      try {
+
+
+       const [
+  modulesResponse,
+  progressResponse,
+] =
+await Promise.all([
+  getLearningModules(),
+  getLearningProgress(),
+]);
+
+
+
+        const moduleData =
+          modulesResponse.data ??
+          modulesResponse.modules ??
+          [];
+
+
+
+        const progressData =
+          progressResponse.data ??
+          progressResponse;
+
+
+
+        const completedIds =
+          progressData.completedLessons ||
+          [];
+
+
+
+        const updatedModules =
+          moduleData.map(
+            (item: LearningModule)=>({
+
+              ...item,
+
+              completed:
+                completedIds.includes(
+                  item._id
+                ),
+
+            })
+          );
+
+
+
+        setModules(
+          updatedModules
+        );
+
+
+
+        setProgress({
+
+          progress:
+            progressData.learning
+              ?.percentage || 0,
+
+
+          completed:
+            progressData.learning
+              ?.completed || 0,
+
+
+          total:
+            progressData.learning
+              ?.total || moduleData.length,
+
+        });
+
+
+
+      }
+      catch(error){
+
+
+        console.log(
+          "Learning Error:",
+          error
+        );
+
+
+      }
+      finally{
+
+
+        setLoading(false);
+
+        setRefreshing(false);
+
+
+      }
+
+
+    },[]);
+
+
+
+
+  useEffect(()=>{
+
+    loadLearningData();
+
+  },[
+    loadLearningData
+  ]);
+
+
+
+
+  const onRefresh = ()=>{
+
+    setRefreshing(true);
+
+    loadLearningData();
+
+  };
+
+
+
+
+  if(loading){
+
+    return (
+
+      <View
+        style={styles.loader}
+      >
+
+        <ActivityIndicator
+          size="large"
+          color={Colors.primary}
+        />
+
+      </View>
+
+    );
+
+  }
+
+
+
+
+
+  return (
+
+    <ScrollView
+
+      style={styles.container}
+
+      contentContainerStyle={
+        styles.content
+      }
+
+
+      refreshControl={
+
+        <RefreshControl
+
+          refreshing={
+            refreshing
+          }
+
+          onRefresh={
+            onRefresh
+          }
+
+        />
+
+      }
+
+
+      showsVerticalScrollIndicator={
+        false
+      }
+
+    >
+
+
+      <Text
+        style={styles.headerTitle}
+      >
+        Cybersecurity Academy 📚
+      </Text>
+
+
+
+      <Text
+        style={styles.headerSubtitle}
+      >
+        Master security skills through
+        structured learning modules.
+      </Text>
+
+
+
+
+
+      <ProgressCard
+
+        title="Learning Progress"
+
+        completed={
+          progress.completed
+        }
+
+        total={
+          progress.total
+        }
+
+        color={
+          Colors.primary
+        }
+
+      />
+
+
+
+
+
+      <View
+        style={styles.section}
+      >
+
+
+        <Text
+          style={styles.sectionTitle}
+        >
+          Available Modules
+        </Text>
+
+
+
+
+
+        {
+          modules.length === 0 ?
+
+          (
+
+            <View
+              style={styles.emptyCard}
+            >
+
+              <Text
+                style={styles.emptyTitle}
+              >
+                No Learning Modules
+              </Text>
+
+
+              <Text
+                style={styles.emptyText}
+              >
+                New modules will appear here
+                once they are added.
+              </Text>
+
+
+            </View>
+
+          )
+
+
+          :
+
+
+          modules.map(
+            (item)=>(
+
+
+              <TouchableOpacity
+
+                key={
+                  item._id
+                }
+
+
+                style={
+                  styles.card
+                }
+
+
+                activeOpacity={
+                  0.85
+                }
+
+
+                onPress={()=>
+
+
+                  navigation.navigate(
+                    "LearningDetails",
+                    {
+                      id:item._id
+                    }
+                  )
+
+
+                }
+
+
+              >
+
+
+                <View
+                  style={styles.cardHeader}
+                >
+
+                  <Text
+                    style={styles.category}
+                  >
+                    {item.category}
+                  </Text>
+
+
+
+                  <Text
+                    style={styles.level}
+                  >
+                    {item.level}
+                  </Text>
+
+
+                </View>
+
+
+
+
+
+                <Text
+                  style={styles.cardTitle}
+                >
+                  {item.title}
+                </Text>
+
+
+
+
+                <Text
+                  style={styles.summary}
+                >
+                  {item.summary}
+                </Text>
+
+
+
+
+
+                <View
+                  style={styles.bottomRow}
+                >
+
+
+                  <Text
+                    style={styles.readTime}
+                  >
+                    ⏱ {item.readTime}
+                  </Text>
+
+
+
+                  {
+                    item.completed &&
+
+                    <View
+                      style={
+                        styles.completedBadge
+                      }
+                    >
+
+                      <Text
+                        style={
+                          styles.completedText
+                        }
+                      >
+                        ✓ Completed
+                      </Text>
+
+
+                    </View>
+
+                  }
+
+
+
+                </View>
+
+
+
+              </TouchableOpacity>
+
+
+            )
+
+          )
+
+        }
+
+
+
+      </View>
+
+
+
+
+    </ScrollView>
+
+  );
+
+}
+
+
+
+
+const styles =
+StyleSheet.create({
+
+
+container:{
+
+  flex:1,
+
+  backgroundColor:
+    Colors.background,
+
+},
+
+
+
+loader:{
+
+  flex:1,
+
+  justifyContent:
+    "center",
+
+  alignItems:
+    "center",
+
+  backgroundColor:
+    Colors.background,
+
+},
+
+
+
+content:{
+
+  paddingTop:50,
+
+  paddingHorizontal:
+    Spacing.screen,
+
+  paddingBottom:
+    Spacing.xxl,
+
+},
+
+
+
+headerTitle:{
+
+  ...Typography.h1,
+
+  color:
+    Colors.text,
+
+  marginBottom:
+    8,
+
+},
+
+
+
+headerSubtitle:{
+
+  ...Typography.bodySmall,
+
+  color:
+    Colors.textSecondary,
+
+  marginBottom:
+    Spacing.xl,
+
+  lineHeight:
+    22,
+
+},
+
+
+
+section:{
+
+  marginTop:
+    Spacing.xl,
+
+},
+
+
+
+sectionTitle:{
+
+  ...Typography.h2,
+
+  color:
+    Colors.text,
+
+  marginBottom:
+    Spacing.lg,
+
+},
+
+
+
+emptyCard:{
+
+  backgroundColor:
+    Colors.surface,
+
+  borderRadius:
+    Spacing.radiusLarge,
+
+  padding:
+    Spacing.cardPadding,
+
+  alignItems:
+    "center",
+
+},
+
+
+
+emptyTitle:{
+
+  ...Typography.h3,
+
+  color:
+    Colors.text,
+
+  marginBottom:
+    8,
+
+},
+
+
+
+emptyText:{
+
+  ...Typography.bodySmall,
+
+  color:
+    Colors.textSecondary,
+
+  textAlign:
+    "center",
+
+},
+
+
+
+card:{
+
+  backgroundColor:
+    Colors.surface,
+
+  borderRadius:
+    Spacing.radiusLarge,
+
+  padding:
+    Spacing.cardPadding,
+
+  marginBottom:
+    Spacing.md,
+
+  elevation:
+    2,
+
+},
+
+
+
+cardHeader:{
+
+  flexDirection:
+    "row",
+
+  justifyContent:
+    "space-between",
+
+  marginBottom:
+    8,
+
+},
+
+
+
+category:{
+
+  color:
+    Colors.primary,
+
+  fontSize:
+    12,
+
+  fontWeight:
+    "700",
+
+},
+
+
+
+level:{
+
+  color:
+    Colors.textMuted,
+
+  fontSize:
+    12,
+
+},
+
+
+
+cardTitle:{
+
+  ...Typography.h3,
+
+  color:
+    Colors.text,
+
+  marginBottom:
+    8,
+
+},
+
+
+
+summary:{
+
+  ...Typography.bodySmall,
+
+  color:
+    Colors.textSecondary,
+
+  marginBottom:
+    14,
+
+},
+
+
+
+bottomRow:{
+
+  flexDirection:
+    "row",
+
+  justifyContent:
+    "space-between",
+
+  alignItems:
+    "center",
+
+},
+
+
+
+readTime:{
+
+  ...Typography.bodySmall,
+
+  color:
+    Colors.textMuted,
+
+},
+
+
+
+completedBadge:{
+
+  backgroundColor:
+    "#E8F5E9",
+
+  paddingHorizontal:
+    10,
+
+  paddingVertical:
+    4,
+
+  borderRadius:
+    20,
+
+},
+
+
+
+completedText:{
+
+  color:
+    "#2E7D32",
+
+  fontSize:
+    12,
+
+  fontWeight:
+    "700",
+
+},
+
+
 });

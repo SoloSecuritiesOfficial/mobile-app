@@ -1,5 +1,6 @@
 import api from "./api";
 
+
 import {
   saveToken,
   saveUser,
@@ -8,96 +9,404 @@ import {
   removeToken,
 } from "../utils/storage";
 
-/**
- * Register User
- */
-export const registerUser = async (data: {
-  username: string;
-  email: string;
-  password: string;
-}) => {
-  const response = await api.post("/auth/register", data);
 
-  if (response.data.token) {
-    await saveToken(response.data.token);
-  }
 
-  if (response.data.user) {
-    await saveUser(response.data.user);
-  }
 
-  return response.data;
+export const registerUser = async(
+data:{
+  username:string;
+  email:string;
+  password:string;
+}
+)=>{
+
+
+try{
+
+
+const response =
+await api.post(
+"/auth/register",
+data
+);
+
+
+
+if(
+response.data.token
+){
+
+await saveToken(
+response.data.token
+);
+
+}
+
+
+
+if(
+response.data.user
+){
+
+await saveUser(
+response.data.user
+);
+
+}
+
+
+
+return response.data;
+
+
+
+}
+catch(error:any){
+
+
+console.log(
+"Register Error:",
+error.response?.data ||
+error.message
+);
+
+
+throw error;
+
+
+}
+
+
 };
 
-/**
- * Login User
- */
-export const loginUser = async (data: {
-  email: string;
-  password: string;
-}) => {
-  const response = await api.post("/auth/login", data);
 
-  if (response.data.token) {
-    await saveToken(response.data.token);
-  }
 
-  if (response.data.user) {
-    await saveUser(response.data.user);
-  }
 
-  return response.data;
+
+
+
+export const loginUser = async(
+data:{
+email:string;
+password:string;
+}
+)=>{
+
+
+try{
+
+
+const response =
+await api.post(
+"/auth/login",
+data
+);
+
+
+
+if(
+response.data.token
+){
+
+await saveToken(
+response.data.token
+);
+
+}
+
+
+
+if(
+response.data.user
+){
+
+await saveUser(
+response.data.user
+);
+
+}
+
+
+
+return response.data;
+
+
+
+}
+catch(error:any){
+
+
+console.log(
+"Login Error:",
+error.response?.data ||
+error.message
+);
+
+
+throw error;
+
+
+}
+
+
 };
 
-/**
- * Get Current User Profile
- */
-export const getProfile = async () => {
-  const response = await api.get("/user/profile");
 
-  return response.data;
+
+
+
+
+
+
+export const getProfile = async()=>{
+
+
+try{
+
+
+const response =
+await api.get(
+"/user/profile"
+);
+
+
+
+return response.data;
+
+
+
+}
+catch(error:any){
+
+
+console.log(
+"Get Profile Error:",
+error.response?.data ||
+error.message
+);
+
+
+throw error;
+
+
+}
+
+
 };
 
-/**
- * Refresh Current User
- */
-export const fetchCurrentUser = async () => {
-  try {
-    const response = await api.get("/user/profile");
 
-    if (response.data.success && response.data.user) {
-      await saveUser(response.data.user);
 
-      return response.data.user;
-    }
 
-    return null;
-  } catch (error) {
-    console.log("Fetch Profile Error:", error);
 
-    return null;
-  }
+
+
+
+export const updateProfile = async(
+data:any
+)=>{
+
+
+try{
+
+
+const response =
+await api.put(
+"/user/profile",
+data
+);
+
+
+
+if(
+response.data.user
+){
+
+await saveUser(
+response.data.user
+);
+
+}
+
+
+
+return response.data;
+
+
+
+}
+catch(error:any){
+
+
+console.log(
+"Update Profile Error:",
+error.response?.data ||
+error.message
+);
+
+
+throw error;
+
+
+}
+
+
 };
 
-/**
- * Get Cached User
- */
-export const getCurrentUser = async () => {
-  return await getUser();
+
+
+
+
+
+
+
+export const changePassword = async(
+data:{
+oldPassword:string;
+newPassword:string;
+}
+)=>{
+
+
+try{
+
+
+const response =
+await api.put(
+"/user/password",
+data
+);
+
+
+
+return response.data;
+
+
+
+}
+catch(error:any){
+
+
+console.log(
+"Change Password Error:",
+error.response?.data ||
+error.message
+);
+
+
+throw error;
+
+
+}
+
+
 };
 
-/**
- * Logout
- */
-export const logout = async () => {
-  await removeToken();
+
+
+
+
+
+
+
+export const fetchCurrentUser = async()=>{
+
+
+try{
+
+
+const response =
+await api.get(
+"/user/profile"
+);
+
+
+
+if(
+response.data.success &&
+response.data.user
+){
+
+await saveUser(
+response.data.user
+);
+
+
+
+return response.data.user;
+
+
+}
+
+
+
+return null;
+
+
+
+}
+catch(error){
+
+
+console.log(
+"Fetch Current User Error:",
+error
+);
+
+
+return null;
+
+
+}
+
+
 };
 
-/**
- * Check Login Status
- */
-export const isLoggedIn = async () => {
-  const token = await getToken();
 
-  return !!token;
+
+
+
+
+
+
+export const getCurrentUser = async()=>{
+
+
+return await getUser();
+
+
+};
+
+
+
+
+
+
+
+
+export const logout = async()=>{
+
+
+await removeToken();
+
+
+};
+
+
+
+
+
+
+
+
+export const isLoggedIn = async()=>{
+
+
+const token =
+await getToken();
+
+
+
+return !!token;
+
+
 };
