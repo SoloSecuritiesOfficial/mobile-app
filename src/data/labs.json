@@ -1,0 +1,330 @@
+[
+  {
+    "title": "SQL Injection Basics",
+    "slug": "sql-injection-basics",
+    "description": "Learn how SQL Injection attacks happen and how developers can prevent unsafe database queries.",
+    "category": "Web Security",
+    "difficulty": "Beginner",
+    "level": "Level 1",
+    "estimatedTime": "30 minutes",
+    "points": 100,
+    "content": "Understand SQL Injection vulnerabilities, unsafe query handling, parameterized queries, and secure database practices.",
+    "steps": [
+      {
+        "title": "Identify Vulnerability",
+        "description": "Learn how user input can modify SQL queries."
+      },
+      {
+        "title": "Exploit Understanding",
+        "description": "Understand how attackers manipulate database queries."
+      },
+      {
+        "title": "Prevent Attack",
+        "description": "Implement prepared statements and input validation."
+      }
+    ],
+    "objectives": [
+      "Understand SQL Injection",
+      "Learn secure database queries",
+      "Understand parameterized statements"
+    ],
+    "tags": [
+      "sql",
+      "database",
+      "web-security",
+      "owasp"
+    ],
+    "isPublished": true,
+    "isFeatured": true
+  },
+
+  {
+    "title": "Cross Site Scripting (XSS)",
+    "slug": "cross-site-scripting-xss",
+    "description": "Learn how attackers inject malicious scripts into websites.",
+    "category": "Web Security",
+    "difficulty": "Beginner",
+    "level": "Level 1",
+    "estimatedTime": "25 minutes",
+    "points": 100,
+    "content": "Learn reflected, stored, and DOM based XSS attacks with prevention techniques.",
+    "steps": [
+      {
+        "title": "Understand XSS",
+        "description": "Learn how scripts execute in victim browsers."
+      },
+      {
+        "title": "Find Unsafe Input",
+        "description": "Identify vulnerable input fields."
+      },
+      {
+        "title": "Fix XSS",
+        "description": "Use encoding and sanitization."
+      }
+    ],
+    "objectives": [
+      "Understand XSS attacks",
+      "Learn browser security",
+      "Apply prevention methods"
+    ],
+    "tags": [
+      "xss",
+      "javascript",
+      "web-security"
+    ],
+    "isPublished": true,
+    "isFeatured": false
+  },
+
+  {
+    "title": "API Authentication Security",
+    "slug": "api-authentication-security",
+    "description": "Learn how to secure REST APIs using authentication methods.",
+    "category": "Web Security",
+    "difficulty": "Intermediate",
+    "level": "Level 2",
+    "estimatedTime": "45 minutes",
+    "points": 150,
+    "content": "Explore JWT authentication, API keys, sessions, and access control.",
+    "steps": [
+      {
+        "title": "Authentication Basics",
+        "description": "Understand user verification."
+      },
+      {
+        "title": "JWT Security",
+        "description": "Learn secure token handling."
+      }
+    ],
+    "objectives": [
+      "Understand API authentication",
+      "Secure API endpoints"
+    ],
+    "tags": [
+      "api",
+      "jwt",
+      "authentication"
+    ],
+    "isPublished": true,
+    "isFeatured": true
+  },
+
+  {
+    "title": "Network Scanning Fundamentals",
+    "slug": "network-scanning-fundamentals",
+    "description": "Learn basic network discovery and scanning concepts.",
+    "category": "Network Security",
+    "difficulty": "Beginner",
+    "level": "Level 1",
+    "estimatedTime": "35 minutes",
+    "points": 100,
+    "content": "Introduction to ports, services, and network discovery.",
+    "steps": [
+      {
+        "title": "Port Discovery",
+        "description": "Understand open ports."
+      },
+      {
+        "title": "Service Detection",
+        "description": "Identify running services."
+      }
+    ],
+    "objectives": [
+      "Understand network scanning",
+      "Learn port concepts"
+    ],
+    "tags": [
+      "network",
+      "ports",
+      "scanning"
+    ],
+    "isPublished": true,
+    "isFeatured": false
+  },
+
+  {
+    "title": "Password Security & Hashing",
+    "slug": "password-security-hashing",
+    "description": "Learn password storage and hashing techniques.",
+    "category": "Cryptography",
+    "difficulty": "Beginner",
+    "level": "Level 1",
+    "estimatedTime": "30 minutes",
+    "points": 100,
+    "content": "Understand hashing algorithms, salts, and password protection.",
+    "steps": [
+      {
+        "title": "Hashing Basics",
+        "description": "Learn one way encryption concepts."
+      },
+      {
+        "title": "Secure Storage",
+        "description": "Understand password storage practices."
+      }
+    ],
+    "objectives": [
+      "Understand hashing",
+      "Learn password protection"
+    ],
+    "tags": [
+      "hashing",
+      "password",
+      "cryptography"
+    ],
+    "isPublished": true,
+    "isFeatured": false
+  },
+
+  {
+    "title": "Mobile App Security Testing",
+    "slug": "mobile-app-security-testing",
+    "description": "Learn basic Android and mobile application security testing.",
+    "category": "Mobile Security",
+    "difficulty": "Intermediate",
+    "level": "Level 2",
+    "estimatedTime": "60 minutes",
+    "points": 200,
+    "content": "Learn mobile security concepts including permissions, storage, and API communication.",
+    "steps": [
+      {
+        "title": "Analyze Permissions",
+        "description": "Review mobile app permissions."
+      },
+      {
+        "title": "Secure Data",
+        "description": "Understand local storage risks."
+      }
+    ],
+    "objectives": [
+      "Understand mobile risks",
+      "Learn secure development"
+    ],
+    "tags": [
+      "android",
+      "mobile",
+      "security"
+    ],
+    "isPublished": true,
+    "isFeatured": true
+  },
+
+  {
+    "title": "Cloud Security Fundamentals",
+    "slug": "cloud-security-fundamentals",
+    "description": "Learn cloud security concepts and common misconfigurations.",
+    "category": "Cloud Security",
+    "difficulty": "Intermediate",
+    "level": "Level 2",
+    "estimatedTime": "50 minutes",
+    "points": 200,
+    "content": "Understand cloud permissions, storage security, and identity management.",
+    "steps": [
+      {
+        "title": "Cloud IAM",
+        "description": "Learn identity and access management."
+      }
+    ],
+    "objectives": [
+      "Understand cloud security",
+      "Learn access control"
+    ],
+    "tags": [
+      "cloud",
+      "aws",
+      "iam"
+    ],
+    "isPublished": true,
+    "isFeatured": false
+  },
+
+  {
+    "title": "Session Management Security",
+    "slug": "session-management-security",
+    "description": "Learn how session attacks happen and how to prevent them.",
+    "category": "Web Security",
+    "difficulty": "Advanced",
+    "level": "Level 3",
+    "estimatedTime": "60 minutes",
+    "points": 250,
+    "content": "Explore cookies, sessions, expiration, and session attacks.",
+    "steps": [
+      {
+        "title": "Session Analysis",
+        "description": "Understand secure session handling."
+      }
+    ],
+    "objectives": [
+      "Learn session security",
+      "Prevent session attacks"
+    ],
+    "tags": [
+      "session",
+      "cookies",
+      "web"
+    ],
+    "isPublished": true,
+    "isFeatured": false
+  },
+
+  {
+    "title": "Linux Security Basics",
+    "slug": "linux-security-basics",
+    "description": "Learn Linux security permissions and hardening.",
+    "category": "Other",
+    "difficulty": "Beginner",
+    "level": "Level 1",
+    "estimatedTime": "40 minutes",
+    "points": 120,
+    "content": "Understand Linux permissions, users, and security practices.",
+    "steps": [
+      {
+        "title": "File Permissions",
+        "description": "Learn Linux permission system."
+      }
+    ],
+    "objectives": [
+      "Understand Linux security",
+      "Learn system hardening"
+    ],
+    "tags": [
+      "linux",
+      "security",
+      "hardening"
+    ],
+    "isPublished": true,
+    "isFeatured": false
+  },
+
+  {
+    "title": "OWASP Top 10 Overview",
+    "slug": "owasp-top-10-overview",
+    "description": "Learn the most common web application security risks.",
+    "category": "Web Security",
+    "difficulty": "Advanced",
+    "level": "Level 3",
+    "estimatedTime": "90 minutes",
+    "points": 300,
+    "content": "Complete overview of OWASP Top 10 vulnerabilities.",
+    "steps": [
+      {
+        "title": "Study Vulnerabilities",
+        "description": "Learn major web security risks."
+      },
+      {
+        "title": "Apply Knowledge",
+        "description": "Understand secure coding practices."
+      }
+    ],
+    "objectives": [
+      "Understand OWASP risks",
+      "Improve security knowledge"
+    ],
+    "tags": [
+      "owasp",
+      "web-security",
+      "pentesting"
+    ],
+    "isPublished": true,
+    "isFeatured": true
+  }
+]
