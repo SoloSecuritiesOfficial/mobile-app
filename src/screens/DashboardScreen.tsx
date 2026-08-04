@@ -12,13 +12,12 @@ import {
   View,
   Image,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 
 import {
   SafeAreaView,
 } from "react-native-safe-area-context";
-
+import LogoutButton from "../components/LogoutButton";
 import {
   NativeStackScreenProps,
 } from "@react-navigation/native-stack";
@@ -34,7 +33,6 @@ import Typography from "../theme/typography";
 import {
   fetchCurrentUser,
   getCurrentUser,
-  logout,
 } from "../services/authService";
 
 import {
@@ -48,7 +46,8 @@ import {
 import {
   getUnreadNotificationCount,
 } from "../services/notificationService";
-
+import SecurityTipCard from "../components/SecurityTipCard";
+import QuickActions from "../components/QuickAction";
 type Props =
   NativeStackScreenProps<
     RootStackParamList,
@@ -179,31 +178,6 @@ export default function DashboardScreen({
 
   }, [loadDashboard]);
 
-  const handleLogout = () => {
-
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Logout",
-          style: "destructive",
-          onPress: async () => {
-
-            await logout();
-
-            navigation.replace("Login");
-
-          },
-        },
-      ]
-    );
-
-  };
 
   if (loading) {
 
@@ -291,6 +265,7 @@ export default function DashboardScreen({
       </TouchableOpacity>
 
     </View>
+    
 
     {/* ================= SECURITY SCORE ================= */}
 
@@ -329,168 +304,7 @@ export default function DashboardScreen({
 
     {/* ================= QUICK ACTIONS ================= */}
 
-    <Text style={styles.sectionTitle}>
-      Quick Actions
-    </Text>
-
-    <View style={styles.actions}>
-
-      {/* Row 1 */}
-
-      <TouchableOpacity
-        style={styles.actionCard}
-        activeOpacity={0.85}
-        onPress={() =>
-          navigation.navigate(
-            "BugReports"
-          )
-        }
-      >
-
-        <Text style={styles.actionIcon}>
-          🐞
-        </Text>
-
-        <Text style={styles.actionText}>
-          Bug Reports
-        </Text>
-
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.actionCard}
-        activeOpacity={0.85}
-        onPress={() =>
-          navigation.navigate(
-            "SecurityScan"
-          )
-        }
-      >
-
-        <Text style={styles.actionIcon}>
-          🛡️
-        </Text>
-
-        <Text style={styles.actionText}>
-          Security Scan
-        </Text>
-
-      </TouchableOpacity> 
-            {/* Row 2 */}
-
-      <TouchableOpacity
-        style={styles.actionCard}
-        activeOpacity={0.85}
-        onPress={() =>
-          navigation.navigate(
-            "Learning"
-          )
-        }
-      >
-        <Text style={styles.actionIcon}>
-          📚
-        </Text>
-
-        <Text style={styles.actionText}>
-          Learning
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.actionCard}
-        activeOpacity={0.85}
-        onPress={() =>
-          navigation.navigate(
-            "CVEUpdates"
-          )
-        }
-      >
-        <Text style={styles.actionIcon}>
-          📢
-        </Text>
-
-        <Text style={styles.actionText}>
-          CVE Updates
-        </Text>
-      </TouchableOpacity>
-
-      {/* Row 3 */}
-
-      <TouchableOpacity
-        style={styles.actionCard}
-        activeOpacity={0.85}
-        onPress={() =>
-          navigation.navigate(
-            "Labs"
-          )
-        }
-      >
-        <Text style={styles.actionIcon}>
-          🎯
-        </Text>
-
-        <Text style={styles.actionText}>
-          Labs
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.actionCard}
-        activeOpacity={0.85}
-        onPress={() =>
-          navigation.navigate(
-            "Certificates"
-          )
-        }
-      >
-        <Text style={styles.actionIcon}>
-          🏆
-        </Text>
-
-        <Text style={styles.actionText}>
-          Certificates
-        </Text>
-      </TouchableOpacity>
-
-      {/* Row 4 */}
-
-      <TouchableOpacity
-        style={styles.actionCard}
-        activeOpacity={0.85}
-        onPress={() =>
-          navigation.navigate(
-            "Notifications"
-          )
-        }
-      >
-        <Text style={styles.actionIcon}>
-          🔔
-        </Text>
-
-        <Text style={styles.actionText}>
-          Notifications
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.actionCard}
-        activeOpacity={0.85}
-        onPress={() =>
-          navigation.navigate(
-            "Settings"
-          )
-        }
-      >
-        <Text style={styles.actionIcon}>
-          ⚙️
-        </Text>
-
-        <Text style={styles.actionText}>
-          Settings
-        </Text>
-      </TouchableOpacity>
-
-    </View>
+     <QuickActions navigation={navigation} />
 
     {/* ================= RECENT ACTIVITY ================= */}
 
@@ -540,29 +354,9 @@ export default function DashboardScreen({
       </Text>
 
     </View> 
-        {/* ================= CYBER SECURITY TIP ================= */}
+         {/* ================= CYBER SECURITY TIP ================= */}
 
-    <Text style={styles.sectionTitle}>
-      Cyber Security Tip
-    </Text>
-
-    <View style={styles.tipCard}>
-
-      <Text style={styles.tipTitle}>
-        💡 Stay Secure
-      </Text>
-
-      <Text style={styles.tipText}>
-        Never trust user input.
-        Always validate and sanitize
-        every request before processing
-        it. Small mistakes can lead to
-        critical security
-        vulnerabilities.
-      </Text>
-
-    </View>
-
+<SecurityTipCard />
 
         {/* ================= PROGRESS ================= */}
 
@@ -599,23 +393,7 @@ export default function DashboardScreen({
         </View>
 
 
-        {/* ================= CYBER SECURITY TIP ================= */}
-
-        <Text style={styles.sectionTitle}>
-          Cyber Security Tip
-        </Text>
-
-        <View style={styles.tipCard}>
-          <Text style={styles.tipTitle}>
-            💡 Stay Secure
-          </Text>
-
-          <Text style={styles.tipText}>
-            Never trust user input. Always validate and sanitize every request
-            before processing it. Small mistakes can lead to critical security
-            vulnerabilities.
-          </Text>
-        </View>
+      
 
 
 
@@ -808,15 +586,7 @@ export default function DashboardScreen({
 
     {/* ================= LOGOUT ================= */}
 
-    <TouchableOpacity
-      style={styles.logoutButton}
-      activeOpacity={0.9}
-      onPress={handleLogout}
-    >
-      <Text style={styles.logoutText}>
-        Logout
-      </Text>
-    </TouchableOpacity>
+ <LogoutButton />
 
   </ScrollView>
 
