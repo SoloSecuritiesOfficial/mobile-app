@@ -5,8 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/AppNavigator";
 
 import Colors from "../theme/colors";
@@ -37,14 +37,19 @@ const actions = [
     screen: "Learning",
   },
   {
-    title: "CVE Updates",
-    icon: "📢",
-    screen: "CVEUpdates",
+    title: "Quiz",
+    icon: "📝",
+    screen: "Quiz",
   },
   {
     title: "Labs",
     icon: "🎯",
     screen: "Labs",
+  },
+  {
+    title: "CVE Updates",
+    icon: "📢",
+    screen: "CVEUpdates",
   },
   {
     title: "Certificates",
