@@ -1,221 +1,172 @@
 import React from "react";
-
 import {
   View,
   Text,
   StyleSheet,
 } from "react-native";
 
+import Colors from "../theme/colors";
+import Spacing from "../theme/spacing";
+import Typography from "../theme/typography";
 
-interface ProgressCardProps {
-
-  title: string;
-
-  completed: number;
-
-  total: number;
-
-  color: string;
-
+interface Props {
+  learningCompleted?: number;
+  learningTotal?: number;
+  labCompleted?: number;
+  labTotal?: number;
 }
-
-
 
 export default function ProgressCard({
-
-  title,
-
-  completed,
-
-  total,
-
-  color,
-
-}: ProgressCardProps) {
-
-
-  const percentage =
-    total > 0
-      ? (completed / total) * 100
-      : 0;
-
-
-
+  learningCompleted = 0,
+  learningTotal = 0,
+  labCompleted = 0,
+  labTotal = 0,
+}: Props) {
   return (
-
-    <View style={styles.card}>
-
-
-      <View style={styles.header}>
-
-
-        <Text style={styles.title}>
-          {title}
-        </Text>
-
-
-
-        <Text style={styles.count}>
-          {completed}/{total}
-        </Text>
-
-
-      </View>
-
-
-
-
-
-      <View style={styles.progressBackground}>
-
-
-        <View
-
-          style={[
-            styles.progressFill,
-
-            {
-              width: `${Math.min(
-                percentage,
-                100
-              )}%`,
-
-              backgroundColor: color,
-
-            },
-
-          ]}
-
-        />
-
-
-      </View>
-
-
-
-
-
-      <Text style={styles.percent}>
-
-        {percentage.toFixed(0)}% Completed
-
+    <>
+      <Text style={styles.sectionTitle}>
+        Progress
       </Text>
 
+      <View style={styles.container}>
+        {/* Learning */}
 
-    </View>
+        <View style={styles.card}>
+          <Text style={styles.icon}>
+            📚
+          </Text>
 
+          <Text style={styles.value}>
+            {learningCompleted}/
+            {learningTotal}
+          </Text>
+
+          <Text style={styles.label}>
+            Learning
+          </Text>
+
+          <View style={styles.progressTrack}>
+            <View
+              style={[
+                styles.progress,
+                {
+                  width: `${
+                    learningTotal > 0
+                      ? (learningCompleted /
+                          learningTotal) *
+                        100
+                      : 0
+                  }%`,
+                },
+              ]}
+            />
+          </View>
+        </View>
+
+        {/* Labs */}
+
+        <View style={styles.card}>
+          <Text style={styles.icon}>
+            🎯
+          </Text>
+
+          <Text style={styles.value}>
+            {labCompleted}/{labTotal}
+          </Text>
+
+          <Text style={styles.label}>
+            Labs
+          </Text>
+
+          <View style={styles.progressTrack}>
+            <View
+              style={[
+                styles.progress,
+                {
+                  width: `${
+                    labTotal > 0
+                      ? (labCompleted /
+                          labTotal) *
+                        100
+                      : 0
+                  }%`,
+                },
+              ]}
+            />
+          </View>
+        </View>
+      </View>
+    </>
   );
-
 }
 
-
-
 const styles = StyleSheet.create({
-
-
-  card: {
-
-    backgroundColor: "#FFFFFF",
-
-    padding: 20,
-
-    borderRadius: 18,
-
-    marginBottom: 18,
-
-    elevation: 3,
-
-    shadowColor: "#000",
-
-    shadowOpacity: 0.08,
-
-    shadowRadius: 8,
-
-    shadowOffset: {
-
-      width: 0,
-
-      height: 3,
-
-    },
-
+  sectionTitle: {
+    ...Typography.h3,
+    color: Colors.text,
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.md,
   },
 
-
-
-  header: {
-
+  container: {
     flexDirection: "row",
-
     justifyContent: "space-between",
+    marginBottom: Spacing.xxl,
+  },
+
+  card: {
+    width: "48%",
+
+    backgroundColor: Colors.surface,
+
+    borderRadius: Spacing.radiusLarge,
+
+    padding: Spacing.cardPadding,
 
     alignItems: "center",
 
-    marginBottom: 15,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
 
+    elevation: 2,
   },
 
-
-
-  title: {
-
-    fontSize: 17,
-
-    fontWeight: "700",
-
-    color: "#222222",
-
+  icon: {
+    fontSize: 30,
+    marginBottom: 10,
   },
 
-
-
-  count: {
-
-    fontSize: 16,
-
-    fontWeight: "700",
-
-    color: "#C62828",
-
+  value: {
+    ...Typography.h2,
+    color: Colors.text,
+    marginBottom: 4,
   },
 
+  label: {
+    ...Typography.bodySmall,
+    color: Colors.textSecondary,
+    marginBottom: 14,
+  },
 
+  progressTrack: {
+    width: "100%",
+    height: 6,
 
-  progressBackground: {
+    backgroundColor: "#E5E7EB",
 
-    height: 12,
-
-    backgroundColor: "#ECECEC",
-
-    borderRadius: 10,
+    borderRadius: 20,
 
     overflow: "hidden",
-
   },
 
-
-
-  progressFill: {
-
+  progress: {
     height: "100%",
-
-    borderRadius: 10,
-
+    backgroundColor: Colors.primary,
+    borderRadius: 20,
   },
-
-
-
-  percent: {
-
-    marginTop: 10,
-
-    fontSize: 14,
-
-    color: "#666666",
-
-    fontWeight: "600",
-
-  },
-
-
 });
