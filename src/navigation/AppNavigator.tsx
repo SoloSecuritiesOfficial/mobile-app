@@ -10,6 +10,7 @@ import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
 
 import DashboardScreen from "../screens/DashboardScreen";
 import QuizScreen from "../screens/QuizScreen";
+import QuizQuestionScreen from "../screens/QuizQuestionScreen";
 
 import CVEUpdatesScreen from "../screens/CVEUpdatesScreen";
 
@@ -47,6 +48,10 @@ export type RootStackParamList = {
 
   Quiz: undefined;
 
+  QuizQuestion: {
+    quizId: string;
+  };
+
   CVEUpdates: undefined;
 
   SecurityScan: undefined;
@@ -79,7 +84,8 @@ export type RootStackParamList = {
   HashGenerator: undefined;
 };
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+const Stack =
+  createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
   return (
@@ -122,6 +128,11 @@ export default function AppNavigator() {
         <Stack.Screen
           name="Quiz"
           component={QuizScreen}
+        />
+
+        <Stack.Screen
+          name="QuizQuestion"
+          component={QuizQuestionScreen}
         />
 
         <Stack.Screen

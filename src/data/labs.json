@@ -1,330 +1,226 @@
 [
   {
     "title": "SQL Injection Basics",
-    "slug": "sql-injection-basics",
-    "description": "Learn how SQL Injection attacks happen and how developers can prevent unsafe database queries.",
-    "category": "Web Security",
+    "description": "Learn the fundamentals of SQL Injection attacks.",
+    "module": "Web Security",
     "difficulty": "Beginner",
-    "level": "Level 1",
-    "estimatedTime": "30 minutes",
-    "points": 100,
-    "content": "Understand SQL Injection vulnerabilities, unsafe query handling, parameterized queries, and secure database practices.",
-    "steps": [
+    "duration": 15,
+    "isDailyQuiz": false,
+    "isActive": true,
+    "questions": [
       {
-        "title": "Identify Vulnerability",
-        "description": "Learn how user input can modify SQL queries."
+        "question": "What does SQL stand for?",
+        "options": ["Structured Query Language", "Secure Query Logic", "System Query Language", "Server Query Link"],
+        "correctAnswer": 0,
+        "explanation": "SQL stands for Structured Query Language.",
+        "points": 1
       },
       {
-        "title": "Exploit Understanding",
-        "description": "Understand how attackers manipulate database queries."
+        "question": "SQL Injection targets which component?",
+        "options": ["Database", "Firewall", "Operating System", "Router"],
+        "correctAnswer": 0,
+        "explanation": "SQL Injection targets database queries.",
+        "points": 1
       },
       {
-        "title": "Prevent Attack",
-        "description": "Implement prepared statements and input validation."
+        "question": "Which character is commonly used in SQL Injection?",
+        "options": ["'", "@", "#", "&"],
+        "correctAnswer": 0,
+        "points": 1
+      },
+      {
+        "question": "Prepared statements prevent?",
+        "options": ["SQL Injection", "XSS", "CSRF", "DDoS"],
+        "correctAnswer": 0,
+        "points": 1
+      },
+      {
+        "question": "Which database is commonly targeted?",
+        "options": ["MySQL", "Photoshop", "Windows", "Docker"],
+        "correctAnswer": 0,
+        "points": 1
+      },
+      {
+        "question": "Best defense against SQLi?",
+        "options": ["Parameterized Queries", "Disable Firewall", "Open Ports", "Store Passwords in Plain Text"],
+        "correctAnswer": 0,
+        "points": 1
+      },
+      {
+        "question": "SQLi affects?",
+        "options": ["Web Applications", "Printers", "BIOS", "Bluetooth"],
+        "correctAnswer": 0,
+        "points": 1
+      },
+      {
+        "question": "SQL Injection belongs to?",
+        "options": ["OWASP Top 10", "OSI Layer", "CIA Triad", "MITRE D3FEND"],
+        "correctAnswer": 0,
+        "points": 1
+      },
+      {
+        "question": "Can SQLi steal data?",
+        "options": ["Yes", "No", "Only Images", "Only Cookies"],
+        "correctAnswer": 0,
+        "points": 1
+      },
+      {
+        "question": "Should database errors be shown to users?",
+        "options": ["No", "Yes", "Always", "Sometimes"],
+        "correctAnswer": 0,
+        "points": 1
       }
-    ],
-    "objectives": [
-      "Understand SQL Injection",
-      "Learn secure database queries",
-      "Understand parameterized statements"
-    ],
-    "tags": [
-      "sql",
-      "database",
-      "web-security",
-      "owasp"
-    ],
-    "isPublished": true,
-    "isFeatured": true
+    ]
   },
-
   {
     "title": "Cross Site Scripting (XSS)",
-    "slug": "cross-site-scripting-xss",
-    "description": "Learn how attackers inject malicious scripts into websites.",
-    "category": "Web Security",
+    "description": "Understand reflected, stored, and DOM XSS.",
+    "module": "Web Security",
     "difficulty": "Beginner",
-    "level": "Level 1",
-    "estimatedTime": "25 minutes",
-    "points": 100,
-    "content": "Learn reflected, stored, and DOM based XSS attacks with prevention techniques.",
-    "steps": [
+    "duration": 15,
+    "isDailyQuiz": false,
+    "isActive": true,
+    "questions": [
       {
-        "title": "Understand XSS",
-        "description": "Learn how scripts execute in victim browsers."
+        "question": "What does XSS stand for?",
+        "options": ["Cross Site Scripting", "Cross Server Security", "Extra Secure Script", "Cross Site Service"],
+        "correctAnswer": 0,
+        "points": 1
       },
       {
-        "title": "Find Unsafe Input",
-        "description": "Identify vulnerable input fields."
+        "question": "Stored XSS is saved where?",
+        "options": ["Database", "Firewall", "Browser Cache", "CPU"],
+        "correctAnswer": 0,
+        "points": 1
       },
       {
-        "title": "Fix XSS",
-        "description": "Use encoding and sanitization."
+        "question": "Which language is executed during XSS?",
+        "options": ["JavaScript", "Python", "Java", "PHP"],
+        "correctAnswer": 0,
+        "points": 1
+      },
+      {
+        "question": "Output encoding helps prevent?",
+        "options": ["XSS", "SQLi", "SSRF", "RCE"],
+        "correctAnswer": 0,
+        "points": 1
+      },
+      {
+        "question": "DOM XSS occurs in?",
+        "options": ["Browser", "Database", "Firewall", "Kernel"],
+        "correctAnswer": 0,
+        "points": 1
+      },
+      {
+        "question": "HttpOnly protects?",
+        "options": ["Cookies", "Passwords", "Database", "IP"],
+        "correctAnswer": 0,
+        "points": 1
+      },
+      {
+        "question": "Input validation is?",
+        "options": ["Important", "Optional", "Not Required", "Deprecated"],
+        "correctAnswer": 0,
+        "points": 1
+      },
+      {
+        "question": "Stored XSS is generally?",
+        "options": ["More Dangerous", "Less Dangerous", "Impossible", "Safe"],
+        "correctAnswer": 0,
+        "points": 1
+      },
+      {
+        "question": "Can XSS steal cookies?",
+        "options": ["Yes", "No", "Only Images", "Only CSS"],
+        "correctAnswer": 0,
+        "points": 1
+      },
+      {
+        "question": "CSP helps prevent?",
+        "options": ["XSS", "SQLi", "MITM", "ARP"],
+        "correctAnswer": 0,
+        "points": 1
       }
-    ],
-    "objectives": [
-      "Understand XSS attacks",
-      "Learn browser security",
-      "Apply prevention methods"
-    ],
-    "tags": [
-      "xss",
-      "javascript",
-      "web-security"
-    ],
-    "isPublished": true,
-    "isFeatured": false
+    ]
   },
-
   {
-    "title": "API Authentication Security",
-    "slug": "api-authentication-security",
-    "description": "Learn how to secure REST APIs using authentication methods.",
-    "category": "Web Security",
+    "title": "OWASP Top 10",
+    "description": "Learn the most critical web security risks.",
+    "module": "OWASP",
     "difficulty": "Intermediate",
-    "level": "Level 2",
-    "estimatedTime": "45 minutes",
-    "points": 150,
-    "content": "Explore JWT authentication, API keys, sessions, and access control.",
-    "steps": [
-      {
-        "title": "Authentication Basics",
-        "description": "Understand user verification."
-      },
-      {
-        "title": "JWT Security",
-        "description": "Learn secure token handling."
-      }
-    ],
-    "objectives": [
-      "Understand API authentication",
-      "Secure API endpoints"
-    ],
-    "tags": [
-      "api",
-      "jwt",
-      "authentication"
-    ],
-    "isPublished": true,
-    "isFeatured": true
+    "duration": 20,
+    "isDailyQuiz": true,
+    "isActive": true,
+    "questions": []
   },
-
   {
-    "title": "Network Scanning Fundamentals",
-    "slug": "network-scanning-fundamentals",
-    "description": "Learn basic network discovery and scanning concepts.",
-    "category": "Network Security",
+    "title": "Authentication Security",
+    "description": "Secure authentication best practices.",
+    "module": "Authentication",
     "difficulty": "Beginner",
-    "level": "Level 1",
-    "estimatedTime": "35 minutes",
-    "points": 100,
-    "content": "Introduction to ports, services, and network discovery.",
-    "steps": [
-      {
-        "title": "Port Discovery",
-        "description": "Understand open ports."
-      },
-      {
-        "title": "Service Detection",
-        "description": "Identify running services."
-      }
-    ],
-    "objectives": [
-      "Understand network scanning",
-      "Learn port concepts"
-    ],
-    "tags": [
-      "network",
-      "ports",
-      "scanning"
-    ],
-    "isPublished": true,
-    "isFeatured": false
+    "duration": 15,
+    "isDailyQuiz": false,
+    "isActive": true,
+    "questions": []
   },
-
   {
-    "title": "Password Security & Hashing",
-    "slug": "password-security-hashing",
-    "description": "Learn password storage and hashing techniques.",
-    "category": "Cryptography",
+    "title": "Password Security",
+    "description": "Password management and hashing.",
+    "module": "Authentication",
     "difficulty": "Beginner",
-    "level": "Level 1",
-    "estimatedTime": "30 minutes",
-    "points": 100,
-    "content": "Understand hashing algorithms, salts, and password protection.",
-    "steps": [
-      {
-        "title": "Hashing Basics",
-        "description": "Learn one way encryption concepts."
-      },
-      {
-        "title": "Secure Storage",
-        "description": "Understand password storage practices."
-      }
-    ],
-    "objectives": [
-      "Understand hashing",
-      "Learn password protection"
-    ],
-    "tags": [
-      "hashing",
-      "password",
-      "cryptography"
-    ],
-    "isPublished": true,
-    "isFeatured": false
+    "duration": 15,
+    "isDailyQuiz": false,
+    "isActive": true,
+    "questions": []
   },
-
   {
-    "title": "Mobile App Security Testing",
-    "slug": "mobile-app-security-testing",
-    "description": "Learn basic Android and mobile application security testing.",
-    "category": "Mobile Security",
+    "title": "Linux Fundamentals",
+    "description": "Basic Linux commands for security professionals.",
+    "module": "Linux",
+    "difficulty": "Beginner",
+    "duration": 20,
+    "isDailyQuiz": false,
+    "isActive": true,
+    "questions": []
+  },
+  {
+    "title": "Network Security",
+    "description": "Networking fundamentals and attacks.",
+    "module": "Networking",
     "difficulty": "Intermediate",
-    "level": "Level 2",
-    "estimatedTime": "60 minutes",
-    "points": 200,
-    "content": "Learn mobile security concepts including permissions, storage, and API communication.",
-    "steps": [
-      {
-        "title": "Analyze Permissions",
-        "description": "Review mobile app permissions."
-      },
-      {
-        "title": "Secure Data",
-        "description": "Understand local storage risks."
-      }
-    ],
-    "objectives": [
-      "Understand mobile risks",
-      "Learn secure development"
-    ],
-    "tags": [
-      "android",
-      "mobile",
-      "security"
-    ],
-    "isPublished": true,
-    "isFeatured": true
+    "duration": 20,
+    "isDailyQuiz": false,
+    "isActive": true,
+    "questions": []
   },
-
   {
-    "title": "Cloud Security Fundamentals",
-    "slug": "cloud-security-fundamentals",
-    "description": "Learn cloud security concepts and common misconfigurations.",
-    "category": "Cloud Security",
+    "title": "Cryptography Basics",
+    "description": "Encryption, hashing, and digital signatures.",
+    "module": "Cryptography",
     "difficulty": "Intermediate",
-    "level": "Level 2",
-    "estimatedTime": "50 minutes",
-    "points": 200,
-    "content": "Understand cloud permissions, storage security, and identity management.",
-    "steps": [
-      {
-        "title": "Cloud IAM",
-        "description": "Learn identity and access management."
-      }
-    ],
-    "objectives": [
-      "Understand cloud security",
-      "Learn access control"
-    ],
-    "tags": [
-      "cloud",
-      "aws",
-      "iam"
-    ],
-    "isPublished": true,
-    "isFeatured": false
+    "duration": 20,
+    "isDailyQuiz": false,
+    "isActive": true,
+    "questions": []
   },
-
   {
-    "title": "Session Management Security",
-    "slug": "session-management-security",
-    "description": "Learn how session attacks happen and how to prevent them.",
-    "category": "Web Security",
-    "difficulty": "Advanced",
-    "level": "Level 3",
-    "estimatedTime": "60 minutes",
-    "points": 250,
-    "content": "Explore cookies, sessions, expiration, and session attacks.",
-    "steps": [
-      {
-        "title": "Session Analysis",
-        "description": "Understand secure session handling."
-      }
-    ],
-    "objectives": [
-      "Learn session security",
-      "Prevent session attacks"
-    ],
-    "tags": [
-      "session",
-      "cookies",
-      "web"
-    ],
-    "isPublished": true,
-    "isFeatured": false
+    "title": "Mobile Security",
+    "description": "Android and iOS security basics.",
+    "module": "Mobile Security",
+    "difficulty": "Intermediate",
+    "duration": 20,
+    "isDailyQuiz": false,
+    "isActive": true,
+    "questions": []
   },
-
   {
-    "title": "Linux Security Basics",
-    "slug": "linux-security-basics",
-    "description": "Learn Linux security permissions and hardening.",
-    "category": "Other",
+    "title": "Bug Bounty Fundamentals",
+    "description": "Introduction to bug bounty hunting.",
+    "module": "Bug Bounty",
     "difficulty": "Beginner",
-    "level": "Level 1",
-    "estimatedTime": "40 minutes",
-    "points": 120,
-    "content": "Understand Linux permissions, users, and security practices.",
-    "steps": [
-      {
-        "title": "File Permissions",
-        "description": "Learn Linux permission system."
-      }
-    ],
-    "objectives": [
-      "Understand Linux security",
-      "Learn system hardening"
-    ],
-    "tags": [
-      "linux",
-      "security",
-      "hardening"
-    ],
-    "isPublished": true,
-    "isFeatured": false
-  },
-
-  {
-    "title": "OWASP Top 10 Overview",
-    "slug": "owasp-top-10-overview",
-    "description": "Learn the most common web application security risks.",
-    "category": "Web Security",
-    "difficulty": "Advanced",
-    "level": "Level 3",
-    "estimatedTime": "90 minutes",
-    "points": 300,
-    "content": "Complete overview of OWASP Top 10 vulnerabilities.",
-    "steps": [
-      {
-        "title": "Study Vulnerabilities",
-        "description": "Learn major web security risks."
-      },
-      {
-        "title": "Apply Knowledge",
-        "description": "Understand secure coding practices."
-      }
-    ],
-    "objectives": [
-      "Understand OWASP risks",
-      "Improve security knowledge"
-    ],
-    "tags": [
-      "owasp",
-      "web-security",
-      "pentesting"
-    ],
-    "isPublished": true,
-    "isFeatured": true
+    "duration": 20,
+    "isDailyQuiz": true,
+    "isActive": true,
+    "questions": []
   }
 ]
