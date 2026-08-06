@@ -1,7 +1,9 @@
 import React, {
   useEffect,
   useState,
+  useCallback,
 } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 
 import {
   StyleSheet,
@@ -27,136 +29,75 @@ import {
 
 
 interface Lab {
-
   _id: string;
-
   title: string;
-
   description: string;
-
   category: string;
-
   difficulty: string;
-
   level: string;
-
   estimatedTime: string;
-
   points: number;
-
   objectives?: string[];
-
   steps?: {
-
     title:string;
-
     description:string;
-
   }[];
-
   tags?: string[];
-
+  completed?: boolean;
 }
-
-
 
 interface Progress {
-
   completed:number;
-
   total:number;
-
   percentage:number;
-
   points:number;
-
   dailyStreak:number;
-
+  completedLabIds?: string[];
 }
-
-
 
 export default function LabsScreen(){
-
-const [labs,setLabs] =
-useState<Lab[]>([]);
-
-
-const [progress,setProgress] =
-useState<Progress | null>(null);
-
-
-const [selectedLab,setSelectedLab] =
-useState<Lab | null>(null);
-
-
-const [loading,setLoading] =
-useState(true);
-
-
-const [completing,setCompleting] =
-useState(false);
+  const [labs,setLabs] = useState<Lab[]>([]);
+  const [activeTab, setActiveTab] = useState<"all" | "completed" | "available">("all");
+  const [progress,setProgress] = useState<Progress | null>(null);
+  const [selectedLab,setSelectedLab] = useState<Lab | null>(null);
+  const [loading,setLoading] = useState(true);
+  const [completing,setCompleting] = useState(false);
 
 
 
-useEffect(()=>{
+  const loadLabs = useCallback(async () => {
+    try {
+      setLoading(true);
+      const labsResponse = await getLabs();
+      const progressResponse = await getLabProgress();
 
-loadLabs();
+      const progressData = progressResponse.data ?? progressResponse;
+      const completedIds = Array.isArray(progressData?.completedLabIds)
+        ? progressData.completedLabIds
+        : Array.isArray(progressData?.completedLabs)
+        ? progressData.completedLabs
+        : [];
+      const rawLabs = Array.isArray(labsResponse.data) ? labsResponse.data : Array.isArray(labsResponse) ? labsResponse : [];
 
-},[]);
+      const updatedLabs = rawLabs.map((l: Lab) => ({
+        ...l,
+        completed: completedIds.includes(l._id),
+      }));
 
+      setLabs(updatedLabs);
+      setProgress(progressData);
+    } catch (error) {
+      console.log("Labs Fetch Error:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-
-const loadLabs = async()=>{
-
-try{
-
-
-setLoading(true);
-
-
-
-const labsResponse =
-await getLabs();
-
-
-const progressResponse =
-await getLabProgress();
-
-
-
-setLabs(
-labsResponse.data ??
-labsResponse ??
-[]
-);
-
-
-
-setProgress(
-progressResponse.data ??
-progressResponse
-);
-
-
-
-}
-catch(error){
-
-console.log(
-"Labs Fetch Error:",
-error
-);
-
-
-}
-finally{
-
-setLoading(false);
-
-}
-
-};
+  useFocusEffect(
+    useCallback(() => {
+      loadLabs();
+    }, [loadLabs])
+  );
 
 
 
@@ -296,263 +237,155 @@ days
 
 </View>
 
+{!selectedLab && (
+  <View style={styles.tabsRow}>
+    <TouchableOpacity
+      style={[styles.tabBtn, activeTab === "all" && styles.tabBtnActive]}
+      onPress={() => setActiveTab("all")}
+    >
+      <Text style={[styles.tabBtnText, activeTab === "all" && styles.tabBtnTextActive]}>
+        All ({labs.length})
+      </Text>
+    </TouchableOpacity>
 
+    <TouchableOpacity
+      style={[styles.tabBtn, activeTab === "completed" && styles.tabBtnActive]}
+      onPress={() => setActiveTab("completed")}
+    >
+      <Text style={[styles.tabBtnText, activeTab === "completed" && styles.tabBtnTextActive]}>
+        Completed ({labs.filter(l => l.completed).length})
+      </Text>
+    </TouchableOpacity>
 
+    <TouchableOpacity
+      style={[styles.tabBtn, activeTab === "available" && styles.tabBtnActive]}
+      onPress={() => setActiveTab("available")}
+    >
+      <Text style={[styles.tabBtnText, activeTab === "available" && styles.tabBtnTextActive]}>
+        Available ({labs.filter(l => !l.completed).length})
+      </Text>
+    </TouchableOpacity>
+  </View>
+)}
 
-
-{
-selectedLab ? (
-
-
-
+{selectedLab ? (
 <View style={styles.labCard}>
-
-
 <TouchableOpacity
 onPress={()=>setSelectedLab(null)}
 >
-
 <Text style={styles.backText}>
 ← Back To Labs
 </Text>
-
-
 </TouchableOpacity>
-
-
-
-
 
 <Text style={styles.labTitle}>
 {selectedLab.title}
 </Text>
 
-
-
 <View style={styles.badge}>
-
 <Text style={styles.badgeText}>
 {selectedLab.category}
 </Text>
-
 </View>
-
-
-
 
 <Text style={styles.description}>
 {selectedLab.description}
 </Text>
 
-
-
-
-
 <Text style={styles.section}>
 Details
 </Text>
 
-
 <Text style={styles.info}>
-Difficulty:
-
-{selectedLab.difficulty}
-
+Difficulty: {selectedLab.difficulty}
 </Text>
 
-
 <Text style={styles.info}>
-Level:
-
-{selectedLab.level}
-
+Level: {selectedLab.level}
 </Text>
 
-
 <Text style={styles.info}>
-Time:
-
-{selectedLab.estimatedTime}
-
+Time: {selectedLab.estimatedTime}
 </Text>
 
-
 <Text style={styles.info}>
-Reward:
-
-{selectedLab.points} XP
-
+Reward: {selectedLab.points} XP
 </Text>
 
-
-
-
-
-{
-selectedLab.objectives?.map(
-(item,index)=>(
-
-<Text
-key={index}
-style={styles.list}
->
+{selectedLab.objectives?.map((item,index)=>(
+<Text key={index} style={styles.list}>
 • {item}
 </Text>
-
-)
-
-)
-
-}
-
-
-
-
+))}
 
 <Text style={styles.section}>
 Steps
 </Text>
 
-
-
-{
-selectedLab.steps?.map(
-(step,index)=>(
-
-<View
-key={index}
-style={styles.step}
->
-
+{selectedLab.steps?.map((step,index)=>(
+<View key={index} style={styles.step}>
 <Text style={styles.stepTitle}>
 {step.title}
 </Text>
-
-
 <Text style={styles.stepText}>
 {step.description}
 </Text>
-
-
 </View>
-
-)
-
-)
-
-}
-
-
-
-
+))}
 
 <TouchableOpacity
-
-style={styles.completeBtn}
-
-onPress={
-handleCompleteLab
-}
-
-disabled={completing}
-
+style={[styles.completeBtn, selectedLab.completed && { backgroundColor: Colors.scoreExcellent }]}
+onPress={handleCompleteLab}
+disabled={completing || selectedLab.completed}
 >
-
-
 <Text style={styles.completeText}>
-
-{
-completing
-?
-"Completing..."
-:
-"Complete Lab + XP"
-}
-
+{completing ? "Completing..." : selectedLab.completed ? "✓ Lab Completed (+XP Earned)" : "Complete Lab + XP"}
 </Text>
-
-
 </TouchableOpacity>
-
-
-
 </View>
+) : (
+  labs
+    .filter(lab => {
+      if (activeTab === "completed") return lab.completed;
+      if (activeTab === "available") return !lab.completed;
+      return true;
+    })
+    .map((lab) => (
+      <TouchableOpacity
+        key={lab._id}
+        style={styles.card}
+        onPress={() => setSelectedLab(lab)}
+      >
+        <View style={styles.cardHeader}>
+          <Text style={styles.category}>
+            {lab.category}
+          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            {lab.completed && (
+              <View style={styles.completedBadge}>
+                <Text style={styles.completedBadgeText}>✓ Completed</Text>
+              </View>
+            )}
+            <Text style={styles.points}>
+              +{lab.points} XP
+            </Text>
+          </View>
+        </View>
 
+        <Text style={styles.title}>
+          {lab.title}
+        </Text>
 
+        <Text style={styles.description}>
+          {lab.description}
+        </Text>
 
-)
-
-:
-
-(
-
-
-
-labs.map((lab)=>(
-
-
-<TouchableOpacity
-
-key={lab._id}
-
-style={styles.card}
-
-onPress={()=>setSelectedLab(lab)}
-
->
-
-
-
-<View style={styles.cardHeader}>
-
-
-<Text style={styles.category}>
-{lab.category}
-</Text>
-
-
-<Text style={styles.points}>
-+{lab.points} XP
-</Text>
-
-
-
-</View>
-
-
-
-<Text style={styles.title}>
-{lab.title}
-</Text>
-
-
-
-<Text style={styles.description}>
-{lab.description}
-</Text>
-
-
-
-<Text style={styles.small}>
-{lab.difficulty}
- • 
-{lab.estimatedTime}
-</Text>
-
-
-
-</TouchableOpacity>
-
-
-
-))
-
-)
-
-}
-
-
-
+        <Text style={styles.small}>
+          {lab.difficulty} • {lab.estimatedTime}
+        </Text>
+      </TouchableOpacity>
+    ))
+)}
 </ScrollView>
 
 
@@ -759,6 +592,51 @@ color:"#fff",
 fontWeight:"700",
 },
 
+  tabsRow: {
+    flexDirection: "row",
+    marginBottom: Spacing.md,
+    gap: 8,
+  },
+
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: Spacing.radiusMedium,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: "center",
+  },
+
+  tabBtnActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+
+  tabBtnText: {
+    ...Typography.bodySmall,
+    color: Colors.textSecondary,
+    fontWeight: "600",
+  },
+
+  tabBtnTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+
+  completedBadge: {
+    backgroundColor: "#E8F5E9",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+
+  completedBadgeText: {
+    color: "#2E7D32",
+    fontSize: 11,
+    fontWeight: "700",
+  },
 
 });
 

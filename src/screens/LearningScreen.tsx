@@ -14,6 +14,7 @@ import {
   RefreshControl,
 } from "react-native";
 
+import { useFocusEffect } from "@react-navigation/native";
 import {
   NativeStackScreenProps,
 } from "@react-navigation/native-stack";
@@ -27,7 +28,7 @@ import {
   getLearningProgress,
 } from "../services/securityService";
 
-import ProgressCard from "../components/ProgressCard";
+import LearningProgressCard from "../components/LearningProgressCard";
 
 import Colors from "../theme/colors";
 import Spacing from "../theme/spacing";
@@ -83,7 +84,8 @@ export default function LearningScreen({
   const [modules, setModules] =
     useState<LearningModule[]>([]);
 
-
+  const [activeTab, setActiveTab] =
+    useState<"all" | "completed" | "remaining">("all");
 
   const [progress, setProgress] =
     useState<LearningProgress>({
@@ -135,23 +137,17 @@ await Promise.all([
 
 
 
-        const completedIds =
-          progressData.completedLessons ||
-          [];
-
-
+        const completedIds = Array.isArray(progressData.completedLessonIds)
+          ? progressData.completedLessonIds
+          : Array.isArray(progressData.completedLessons)
+          ? progressData.completedLessons
+          : [];
 
         const updatedModules =
           moduleData.map(
             (item: LearningModule)=>({
-
               ...item,
-
-              completed:
-                completedIds.includes(
-                  item._id
-                ),
-
+              completed: completedIds.includes(item._id),
             })
           );
 
@@ -210,13 +206,11 @@ await Promise.all([
 
 
 
-  useEffect(()=>{
-
-    loadLearningData();
-
-  },[
-    loadLearningData
-  ]);
+  useFocusEffect(
+    useCallback(() => {
+      loadLearningData();
+    }, [loadLearningData])
+  );
 
 
 
@@ -309,77 +303,75 @@ await Promise.all([
 
 
 
-      <ProgressCard
-
-        title="Learning Progress"
-
+      <LearningProgressCard
         completed={
           progress.completed
         }
-
         total={
           progress.total
         }
-
-        color={
-          Colors.primary
-        }
-
       />
 
 
 
 
 
-      <View
-        style={styles.section}
-      >
+      <View style={styles.section}>
+        <View style={styles.tabsRow}>
+          <TouchableOpacity
+            style={[styles.tabBtn, activeTab === "all" && styles.tabBtnActive]}
+            onPress={() => setActiveTab("all")}
+          >
+            <Text style={[styles.tabBtnText, activeTab === "all" && styles.tabBtnTextActive]}>
+              All ({modules.length})
+            </Text>
+          </TouchableOpacity>
 
+          <TouchableOpacity
+            style={[styles.tabBtn, activeTab === "completed" && styles.tabBtnActive]}
+            onPress={() => setActiveTab("completed")}
+          >
+            <Text style={[styles.tabBtnText, activeTab === "completed" && styles.tabBtnTextActive]}>
+              Completed ({modules.filter(m => m.completed).length})
+            </Text>
+          </TouchableOpacity>
 
-        <Text
-          style={styles.sectionTitle}
-        >
-          Available Modules
+          <TouchableOpacity
+            style={[styles.tabBtn, activeTab === "remaining" && styles.tabBtnActive]}
+            onPress={() => setActiveTab("remaining")}
+          >
+            <Text style={[styles.tabBtnText, activeTab === "remaining" && styles.tabBtnTextActive]}>
+              Remaining ({modules.filter(m => !m.completed).length})
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.sectionTitle}>
+          {activeTab === "all" ? "Available Modules" : activeTab === "completed" ? "Completed Modules" : "Remaining Modules"}
         </Text>
 
-
-
-
-
         {
-          modules.length === 0 ?
-
-          (
-
-            <View
-              style={styles.emptyCard}
-            >
-
-              <Text
-                style={styles.emptyTitle}
-              >
-                No Learning Modules
+          modules.filter(m => {
+            if (activeTab === "completed") return m.completed;
+            if (activeTab === "remaining") return !m.completed;
+            return true;
+          }).length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyTitle}>
+                {activeTab === "completed" ? "No Completed Modules Yet" : activeTab === "remaining" ? "All Modules Completed! 🎉" : "No Learning Modules"}
               </Text>
-
-
-              <Text
-                style={styles.emptyText}
-              >
-                New modules will appear here
-                once they are added.
+              <Text style={styles.emptyText}>
+                {activeTab === "completed" ? "Select a module and tap 'Mark as Completed' to track your progress." : "Check back later for newly added security lessons."}
               </Text>
-
-
             </View>
-
-          )
-
-
-          :
-
-
-          modules.map(
-            (item)=>(
+          ) : (
+            modules
+              .filter(m => {
+                if (activeTab === "completed") return m.completed;
+                if (activeTab === "remaining") return !m.completed;
+                return true;
+              })
+              .map((item) => (
 
 
               <TouchableOpacity
@@ -498,20 +490,10 @@ await Promise.all([
 
 
                 </View>
-
-
-
               </TouchableOpacity>
-
-
-            )
-
+            ))
           )
-
         }
-
-
-
       </View>
 
 
@@ -819,6 +801,39 @@ completedText:{
     "700",
 
 },
+
+  tabsRow: {
+    flexDirection: "row",
+    marginBottom: Spacing.md,
+    gap: 8,
+  },
+
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: Spacing.radiusMedium,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: "center",
+  },
+
+  tabBtnActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+
+  tabBtnText: {
+    ...Typography.bodySmall,
+    color: Colors.textSecondary,
+    fontWeight: "600",
+  },
+
+  tabBtnTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
 
 
 });

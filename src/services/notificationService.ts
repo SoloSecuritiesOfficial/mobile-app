@@ -320,31 +320,32 @@ throw error;
 
 
 
+import { Alert, Platform } from "react-native";
+
 export const triggerAppNotification = (
-title:string,
-body:string
-)=>{
-
-
-console.log(
-"Local Notification:",
-title,
-body
-);
-
-
+  title: string,
+  body: string
+) => {
+  console.log("🔔 Local Device Notification Triggered:", title, body);
+  Alert.alert(`🔔 ${title}`, body, [{ text: "View Details" }]);
 };
 
+export const requestNotificationPermissions = async () => {
+  return true;
+};
 
-
-
-
-
-
-export const requestNotificationPermissions = async()=>{
-
-
-return true;
-
-
+export const checkAndTriggerDeviceNotifications = async () => {
+  try {
+    const unread = await getUnreadNotifications();
+    const items = unread?.data ?? unread ?? [];
+    if (Array.isArray(items) && items.length > 0) {
+      const latest = items[0];
+      triggerAppNotification(
+        latest.title || "New Security Notification 🛡️",
+        latest.message || latest.body || "You have unread security alerts and new quizzes available!"
+      );
+    }
+  } catch (error) {
+    console.log("Device notification check error:", error);
+  }
 };

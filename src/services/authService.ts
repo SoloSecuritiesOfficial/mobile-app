@@ -398,6 +398,16 @@ await removeToken();
 
 
 
+export const dailyCheckIn = async () => {
+  try {
+    const response = await api.post("/user/daily-checkin", {});
+    return response.data;
+  } catch (error: any) {
+    console.log("Daily Check-in Error:", error.response?.data || error.message);
+    throw error;
+  }
+};
+
 export const isLoggedIn = async()=>{
 
 

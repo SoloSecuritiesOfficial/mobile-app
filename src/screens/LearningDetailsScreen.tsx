@@ -11,7 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { RootStackParamList } from "../navigation/AppNavigator";
-import { getLearningModuleById } from "../services/securityService";
+import { getLearningModuleById, completeLearningModule } from "../services/securityService";
 
 import Colors from "../theme/colors";
 import Spacing from "../theme/spacing";
@@ -31,6 +31,7 @@ interface LearningModule {
   readTime: string;
   summary?: string;
   content: string;
+  completed?: boolean;
 }
 
 export default function LearningDetailsScreen({
@@ -40,6 +41,8 @@ export default function LearningDetailsScreen({
   const { id } = route.params;
 
   const [loading, setLoading] = useState(true);
+  const [completing, setCompleting] = useState(false);
+  const [completed, setCompleted] = useState(false);
   const [module, setModule] =
     useState<LearningModule | null>(null);
 
@@ -148,6 +151,34 @@ export default function LearningDetailsScreen({
             {module.content}
           </Text>
         </View>
+
+        <TouchableOpacity
+          style={[
+            styles.completeBtn,
+            completed && styles.completeBtnDone,
+          ]}
+          disabled={completing || completed}
+          onPress={async () => {
+            try {
+              setCompleting(true);
+              const targetId = module._id || module.id || id;
+              await completeLearningModule(targetId);
+              setCompleted(true);
+            } catch (err) {
+              console.log("Complete error:", err);
+            } finally {
+              setCompleting(false);
+            }
+          }}
+        >
+          {completing ? (
+            <ActivityIndicator color="#FFF" />
+          ) : (
+            <Text style={styles.completeBtnText}>
+              {completed ? "✓ Lesson Completed (+10 XP)" : "Mark as Completed ✓"}
+            </Text>
+          )}
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -270,5 +301,23 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontWeight: "700",
     fontSize: 15,
+  },
+
+  completeBtn: {
+    backgroundColor: Colors.primary,
+    paddingVertical: 16,
+    borderRadius: Spacing.radiusLarge,
+    alignItems: "center",
+    marginTop: 24,
+  },
+
+  completeBtnDone: {
+    backgroundColor: Colors.scoreExcellent,
+  },
+
+  completeBtnText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 16,
   },
 });

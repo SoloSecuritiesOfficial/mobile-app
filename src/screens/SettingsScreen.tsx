@@ -11,43 +11,44 @@ import {
 import Colors from "../theme/colors";
 import Spacing from "../theme/spacing";
 import Typography from "../theme/typography";
+import { useTheme } from "../context/ThemeContext";
 
 export default function SettingsScreen() {
+  const { isDarkMode, toggleTheme, colors } = useTheme();
   const [notifications, setNotifications] = useState(true);
   const [biometrics, setBiometrics] = useState(false);
-  const [darkMode, setDarkMode] = useState(true);
   const [autoScan, setAutoScan] = useState(true);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.headerTitle}>App Settings ⚙️</Text>
-      <Text style={styles.headerSubtitle}>Customize security & notifications</Text>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.content}>
+      <Text style={[styles.headerTitle, { color: colors.text }]}>App Settings ⚙️</Text>
+      <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Customize security & notifications</Text>
 
-      <View style={styles.section}>
+      <View style={[styles.section, { backgroundColor: colors.surface }]}>
         <Text style={styles.sectionHeader}>Security Preferences</Text>
 
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>Push Notifications (CVEs & Alert)</Text>
+        <View style={[styles.row, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.rowLabel, { color: colors.text }]}>Push Notifications (CVEs & Alert)</Text>
           <Switch value={notifications} onValueChange={setNotifications} />
         </View>
 
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>Biometric App Lock (Fingerprint/FaceID)</Text>
+        <View style={[styles.row, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.rowLabel, { color: colors.text }]}>Biometric App Lock (Fingerprint/FaceID)</Text>
           <Switch value={biometrics} onValueChange={setBiometrics} />
         </View>
 
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>Automatic Background Domain Audit</Text>
+        <View style={[styles.row, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.rowLabel, { color: colors.text }]}>Automatic Background Domain Audit</Text>
           <Switch value={autoScan} onValueChange={setAutoScan} />
         </View>
       </View>
 
-      <View style={styles.section}>
+      <View style={[styles.section, { backgroundColor: colors.surface }]}>
         <Text style={styles.sectionHeader}>Appearance</Text>
 
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>Dark Theme Mode</Text>
-          <Switch value={darkMode} onValueChange={setDarkMode} />
+        <View style={[styles.row, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.rowLabel, { color: colors.text }]}>Dark Theme Mode</Text>
+          <Switch value={isDarkMode} onValueChange={(val) => toggleTheme(val)} />
         </View>
       </View>
 

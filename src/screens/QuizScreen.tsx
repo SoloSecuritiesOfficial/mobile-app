@@ -20,6 +20,7 @@ import {
 
 import {
   useNavigation,
+  useFocusEffect,
 } from "@react-navigation/native";
 
 import {
@@ -32,7 +33,9 @@ import Spacing from "../theme/spacing";
 
 import {
   getQuizzes,
+  getUserQuizHistory,
 } from "../services/quizService";
+import { getCurrentUser } from "../services/authService";
 
 import {
   RootStackParamList,
@@ -65,7 +68,6 @@ interface Quiz {
 }
 
 export default function QuizScreen() {
-
   const navigation =
     useNavigation<Navigation>();
 
@@ -81,53 +83,49 @@ export default function QuizScreen() {
   const [quizzes, setQuizzes] =
     useState<Quiz[]>([]);
 
-  useEffect(() => {
-    loadQuizzes();
+  const [quizHistory, setQuizHistory] =
+    useState<Record<string, { score: number; totalMarks: number; percentage: number; passed: boolean }>>({});
+
+  const loadQuizzes = useCallback(async () => {
+    try {
+      setLoading(true);
+      const user = await getCurrentUser();
+
+      const [response, historyRes] = await Promise.all([
+        getQuizzes(),
+        user?._id ? getUserQuizHistory(user._id) : Promise.resolve([]),
+      ]);
+
+      const quizList = Array.isArray(response) ? response : response?.data ?? [];
+      setQuizzes(quizList);
+
+      const historyData = Array.isArray(historyRes) ? historyRes : historyRes?.data ?? [];
+      const historyMap: Record<string, any> = {};
+      historyData.forEach((attempt: any) => {
+        const qId = attempt.quiz?._id || attempt.quiz;
+        if (qId) {
+          historyMap[qId.toString()] = {
+            score: attempt.score ?? 0,
+            totalMarks: attempt.totalMarks ?? 100,
+            percentage: attempt.percentage ?? 0,
+            passed: attempt.passed ?? true,
+          };
+        }
+      });
+      setQuizHistory(historyMap);
+    } catch (error) {
+      console.log("Quiz Error", error);
+      setQuizzes([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const loadQuizzes = async () => {
-
-    try {
-
-      setLoading(true);
-
-      const response =
-        await getQuizzes();
-
-      if (
-        Array.isArray(response)
-      ) {
-
-        setQuizzes(response);
-
-      } else if (
-        response?.data
-      ) {
-
-        setQuizzes(response.data);
-
-      } else {
-
-        setQuizzes([]);
-
-      }
-
-    } catch (error) {
-
-      console.log(
-        "Quiz Error",
-        error
-      );
-
-      setQuizzes([]);
-
-    } finally {
-
-      setLoading(false);
-
-    }
-
-  };
+  useFocusEffect(
+    useCallback(() => {
+      loadQuizzes();
+    }, [loadQuizzes])
+  );
 
   const onRefresh =
     useCallback(async () => {
@@ -407,157 +405,90 @@ export default function QuizScreen() {
 
         )}
 
-        renderItem={({ item }) => (
-                    <TouchableOpacity
-            activeOpacity={0.9}
-            style={styles.card}
-            onPress={() =>
-              navigation.navigate(
-                "QuizQuestion",
-                {
-                  quizId: item._id,
-                }
-              )
-            }
-          >
-
-            {/* Top Row */}
-
-            <View style={styles.topRow}>
-
-              <Text
-                numberOfLines={2}
-                style={styles.title}
-              >
-                {item.title}
-              </Text>
-
-              <View
-                style={[
-                  styles.badge,
-                  {
-                    backgroundColor:
-                      difficultyColor(
-                        item.difficulty
-                      ),
-                  },
-                ]}
-              >
-                <Text
-                  style={styles.badgeText}
-                >
-                  {item.difficulty}
-                </Text>
-              </View>
-
-            </View>
-
-            {/* Description */}
-
-            <Text
-              numberOfLines={2}
-              style={styles.description}
-            >
-              {item.description}
-            </Text>
-
-            {/* Module */}
-
-            <View style={styles.module}>
-              <Text
-                style={styles.moduleText}
-              >
-                {item.module}
-              </Text>
-            </View>
-
-            {/* Information */}
-
-            <View
-              style={styles.infoRow}
-            >
-
-              <View
-                style={styles.infoBox}
-              >
-
-                <Text
-                  style={styles.infoValue}
-                >
-                  {item.totalQuestions}
-                </Text>
-
-                <Text
-                  style={styles.infoLabel}
-                >
-                  Questions
-                </Text>
-
-              </View>
-
-              <View
-                style={styles.infoBox}
-              >
-
-                <Text
-                  style={styles.infoValue}
-                >
-                  {item.duration}
-                </Text>
-
-                <Text
-                  style={styles.infoLabel}
-                >
-                  Minutes
-                </Text>
-
-              </View>
-
-              <View
-                style={styles.infoBox}
-              >
-
-                <Text
-                  style={styles.infoValue}
-                >
-                  {item.totalMarks}
-                </Text>
-
-                <Text
-                  style={styles.infoLabel}
-                >
-                  Marks
-                </Text>
-
-              </View>
-
-            </View>
-
-            {/* Button */}
-
+        renderItem={({ item }) => {
+          const attempt = quizHistory[item._id];
+          return (
             <TouchableOpacity
-              activeOpacity={0.85}
-              style={styles.button}
+              activeOpacity={0.9}
+              style={styles.card}
               onPress={() =>
-                navigation.navigate(
-                  "QuizQuestion",
-                  {
-                    quizId: item._id,
-                  }
-                )
+                navigation.navigate("QuizQuestion", {
+                  quizId: item._id,
+                })
               }
             >
+              {/* Top Row */}
+              <View style={styles.topRow}>
+                <Text numberOfLines={2} style={styles.title}>
+                  {item.title}
+                </Text>
 
-              <Text
-                style={styles.buttonText}
-              >
-                Start Quiz →
+                <View
+                  style={[
+                    styles.badge,
+                    {
+                      backgroundColor: difficultyColor(item.difficulty),
+                    },
+                  ]}
+                >
+                  <Text style={styles.badgeText}>{item.difficulty}</Text>
+                </View>
+              </View>
+
+              {/* Completion Banner */}
+              {attempt && (
+                <View style={{ backgroundColor: "#E8F5E9", padding: 8, borderRadius: 8, marginBottom: 10 }}>
+                  <Text style={{ color: "#2E7D32", fontWeight: "700", fontSize: 13 }}>
+                    ✓ Completed • Score: {attempt.score}/{attempt.totalMarks} ({attempt.percentage}%)
+                  </Text>
+                </View>
+              )}
+
+              {/* Description */}
+              <Text numberOfLines={2} style={styles.description}>
+                {item.description}
               </Text>
 
-            </TouchableOpacity>
+              {/* Module */}
+              <View style={styles.module}>
+                <Text style={styles.moduleText}>{item.module}</Text>
+              </View>
 
-          </TouchableOpacity>
-        )}
+              {/* Information */}
+              <View style={styles.infoRow}>
+                <View style={styles.infoBox}>
+                  <Text style={styles.infoValue}>{item.totalQuestions}</Text>
+                  <Text style={styles.infoLabel}>Questions</Text>
+                </View>
+
+                <View style={styles.infoBox}>
+                  <Text style={styles.infoValue}>{item.duration}</Text>
+                  <Text style={styles.infoLabel}>Minutes</Text>
+                </View>
+
+                <View style={styles.infoBox}>
+                  <Text style={styles.infoValue}>{item.totalMarks}</Text>
+                  <Text style={styles.infoLabel}>Marks</Text>
+                </View>
+              </View>
+
+              {/* Button */}
+              <TouchableOpacity
+                activeOpacity={0.85}
+                style={[styles.button, attempt && { backgroundColor: "#2E7D32" }]}
+                onPress={() =>
+                  navigation.navigate("QuizQuestion", {
+                    quizId: item._id,
+                  })
+                }
+              >
+                <Text style={styles.buttonText}>
+                  {attempt ? "✓ Completed (Retake Quiz)" : "Start Quiz →"}
+                </Text>
+              </TouchableOpacity>
+            </TouchableOpacity>
+          );
+        }}
 
       />
 

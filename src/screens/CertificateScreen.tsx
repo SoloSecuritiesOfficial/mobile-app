@@ -1,6 +1,7 @@
 import React, {
   useEffect,
   useState,
+  useCallback,
 } from "react";
 
 import {
@@ -10,6 +11,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 
 import {
@@ -23,6 +25,8 @@ import {
 import {
   RootStackParamList,
 } from "../navigation/AppNavigator";
+
+import Colors from "../theme/colors";
 
 import {
   getCertificates,
@@ -50,6 +54,9 @@ export default function CertificateScreen({
   const [loading, setLoading] =
     useState(true);
 
+  const [refreshing, setRefreshing] =
+    useState(false);
+
   const [certificates, setCertificates] =
     useState<Certificate[]>([]);
 
@@ -65,7 +72,7 @@ export default function CertificateScreen({
           await getCertificates();
 
         setCertificates(
-          response.data || []
+          response.data || response || []
         );
 
       } catch (error) {
@@ -75,8 +82,14 @@ export default function CertificateScreen({
         );
       } finally {
         setLoading(false);
+        setRefreshing(false);
       }
     };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadCertificates();
+  }, []);
 
   if (loading) {
     return (
@@ -93,13 +106,29 @@ export default function CertificateScreen({
     <SafeAreaView style={styles.container}>
 
       <Text style={styles.title}>
-        🏆 Certificates
+        🏆 Verified Certificates
       </Text>
 
       <FlatList
         data={certificates}
-        keyExtractor={(item) => item._id}
+        keyExtractor={(item) => item._id || item.certificateId}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#2563EB"
+          />
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyIcon}>🎓</Text>
+            <Text style={styles.emptyTitle}>No Certificates Earned Yet</Text>
+            <Text style={styles.emptyText}>
+              Complete cybersecurity labs or pass quizzes to automatically earn verified digital certificates!
+            </Text>
+          </View>
+        }
         renderItem={({ item }) => (
 
           <TouchableOpacity
@@ -129,7 +158,7 @@ export default function CertificateScreen({
             <Text style={styles.issuer}>
               Issued By:
               {" "}
-              {item.issuedBy}
+              {item.issuedBy || "SoloSecurities"}
             </Text>
 
           </TouchableOpacity>
@@ -139,6 +168,7 @@ export default function CertificateScreen({
     </SafeAreaView>
   );
 }
+
 
 const styles =
 StyleSheet.create({
@@ -191,4 +221,31 @@ StyleSheet.create({
     color: "#666",
   },
 
+  emptyCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 30,
+    alignItems: "center",
+    marginTop: 40,
+    elevation: 2,
+  },
+
+  emptyIcon: {
+    fontSize: 50,
+    marginBottom: 12,
+  },
+
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111",
+    marginBottom: 8,
+  },
+
+  emptyText: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    lineHeight: 20,
+  },
 });

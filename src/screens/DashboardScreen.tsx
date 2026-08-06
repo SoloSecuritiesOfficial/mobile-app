@@ -8,12 +8,17 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
+  RefreshControl,
+  Text,
+  View,
+  TouchableOpacity,
 } from "react-native";
 
 import {
   SafeAreaView,
 } from "react-native-safe-area-context";
 
+import { useFocusEffect } from "@react-navigation/native";
 import {
   NativeStackScreenProps,
 } from "@react-navigation/native-stack";
@@ -40,6 +45,7 @@ import NotificationCard from "../components/NotificationCard";
 import {
   fetchCurrentUser,
   getCurrentUser,
+  dailyCheckIn,
 } from "../services/authService";
 
 import {
@@ -52,6 +58,7 @@ import {
 
 import {
   getUnreadNotificationCount,
+  checkAndTriggerDeviceNotifications,
 } from "../services/notificationService";
 
 
@@ -83,6 +90,10 @@ interface DashboardData {
 
   labCompleted?: number;
   labTotal?: number;
+
+  stats?: any;
+  progress?: any;
+  recentActivity?: any[];
 }
 
 
@@ -93,6 +104,9 @@ export default function DashboardScreen({
 
   const [loading, setLoading] =
     useState(true);
+
+  const [refreshing, setRefreshing] =
+    useState(false);
 
 
   const [user, setUser] =
@@ -170,6 +184,8 @@ export default function DashboardScreen({
           0
         );
 
+        await checkAndTriggerDeviceNotifications();
+
 
 
       } catch (error) {
@@ -183,6 +199,7 @@ export default function DashboardScreen({
       } finally {
 
         setLoading(false);
+        setRefreshing(false);
 
       }
 
@@ -190,12 +207,16 @@ export default function DashboardScreen({
     }, []);
 
 
-
-  useEffect(() => {
-
+  const onRefresh = () => {
+    setRefreshing(true);
     loadDashboard();
+  };
 
-  }, [loadDashboard]);
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboard();
+    }, [loadDashboard])
+  );
 
 
 
@@ -232,16 +253,42 @@ export default function DashboardScreen({
 
       showsVerticalScrollIndicator={false}
 
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={Colors.primary}
+          colors={[Colors.primary]}
+        />
+      }
+
     >
 
 
+
       <DashboardHeader
-
         user={user}
-
         navigation={navigation}
-
       />
+
+      <TouchableOpacity
+        style={styles.streakBanner}
+        onPress={async () => {
+          try {
+            const res = await dailyCheckIn();
+            loadDashboard();
+          } catch (err) {
+            console.log("Check-in error:", err);
+          }
+        }}
+      >
+        <Text style={styles.streakBannerIcon}>🔥</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.streakBannerTitle}>Daily Security Check-in</Text>
+          <Text style={styles.streakBannerSub}>Streak: {dashboard.streak || 0} Days • Claim +20 XP Daily</Text>
+        </View>
+        <Text style={styles.streakBannerBtn}>Check In ✓</Text>
+      </TouchableOpacity>
 
 
 
@@ -293,7 +340,12 @@ export default function DashboardScreen({
           dashboard.labTotal ?? 0
         }
 
+        activities={
+          dashboard.recentActivity ?? []
+        }
+
       />
+
 
 
 
@@ -421,5 +473,39 @@ const styles = StyleSheet.create({
 
   },
 
+  streakBanner: {
+    backgroundColor: Colors.dashboardHeader,
+    borderRadius: Spacing.radiusLarge,
+    padding: Spacing.md,
+    marginVertical: Spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
 
+  streakBannerIcon: {
+    fontSize: 24,
+  },
+
+  streakBannerTitle: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  streakBannerSub: {
+    color: "#AAAAAA",
+    fontSize: 12,
+    marginTop: 2,
+  },
+
+  streakBannerBtn: {
+    backgroundColor: Colors.primary,
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
 });

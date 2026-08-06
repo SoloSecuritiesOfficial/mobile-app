@@ -43,9 +43,8 @@ const LabDetailsScreen =
 
 
 
-const {
-  labId,
-} = route.params;
+const targetLabId = route.params?.id || route.params?.labId;
+
 
 
 
@@ -77,13 +76,13 @@ try{
 
 const response =
 await getLabById(
-  labId
+  targetLabId
 );
 
 
 
 setLab(
-  response.data
+  response.data || response
 );
 
 
@@ -129,8 +128,9 @@ setCompleting(true);
 
 const response =
 await completeLab(
-  labId
+  targetLabId
 );
+
 
 
 

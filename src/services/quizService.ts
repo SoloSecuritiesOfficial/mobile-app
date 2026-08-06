@@ -33,9 +33,20 @@ export const submitQuiz = async (payload: any) => {
   return response.data;
 };
 
+export const getUserQuizHistory = async (userId: string) => {
+  try {
+    const response = await api.get(`/quiz/history/${userId}`);
+    return response.data;
+  } catch (err) {
+    console.log("Quiz history error:", err);
+    return [];
+  }
+};
+
 export default {
   getQuizzes,
   getQuizById,
   startQuiz,
   submitQuiz,
+  getUserQuizHistory,
 };

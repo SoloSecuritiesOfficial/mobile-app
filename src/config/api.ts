@@ -16,9 +16,10 @@ const LOCAL_HOST =
     ? "localhost" // Web / iOS Simulator
     : LOCAL_IP; // Physical Android/iOS device
 
-// Use the live Render backend by default
+// Smart base URL resolution: use EXPO_PUBLIC_API_URL if set, or local host in dev mode, fallback to production
 export const BASE_URL =
-  RENDER_BACKEND_URL || `http://${LOCAL_HOST}:5000`;
+  process.env.EXPO_PUBLIC_API_URL ||
+  (__DEV__ ? `http://${LOCAL_HOST}:5000` : RENDER_BACKEND_URL);
 
 // API base URL
 export const API_URL = `${BASE_URL}/api`;
