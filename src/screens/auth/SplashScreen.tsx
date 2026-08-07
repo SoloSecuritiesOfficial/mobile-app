@@ -9,9 +9,9 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
-import LoadingBar from "../components/LoadingBar";
-import { RootStackParamList } from "../navigation/AppNavigator";
-import { isLoggedIn } from "../services/authService";
+import LoadingBar from "../../components/LoadingBar";
+import { RootStackParamList } from "../../navigation/AppNavigator";
+import { isLoggedIn } from "../../services/authService";
 
 type Props = NativeStackScreenProps<
   RootStackParamList,
@@ -104,7 +104,7 @@ export default function SplashScreen({
         ]}
       >
         <Image
-          source={require("../../assets/images/logo.png")}
+          source={require("../../../assets/images/logo.png")}
           style={styles.logo}
           resizeMode="contain"
         />

@@ -12,9 +12,9 @@ import {
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
-import InputField from "../components/InputField";
-import PrimaryButton from "../components/PrimaryButton";
-import { RootStackParamList } from "../navigation/AppNavigator";
+import InputField from "../../components/InputField";
+import PrimaryButton from "../../components/PrimaryButton";
+import { RootStackParamList } from "../../navigation/AppNavigator";
 
 type Props = NativeStackScreenProps<
   RootStackParamList,

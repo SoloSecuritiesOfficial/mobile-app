@@ -18,10 +18,11 @@ export default function LearningProgressCard({
   completed = 0,
   total = 0,
 }: Props) {
-  const percentage =
-    total > 0
-      ? (completed / total) * 100
-      : 0;
+  const percentage = total > 0
+    ? Math.min(Math.round((completed / total) * 100), 100)
+    : 0;
+
+  const remaining = Math.max(total - completed, 0);
 
   return (
     <>
@@ -64,11 +65,10 @@ export default function LearningProgressCard({
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            {Math.round(percentage)}% Completed
+            {percentage}% Completed
           </Text>
-
           <Text style={styles.footerText}>
-            {total - completed} Remaining
+            {remaining} Remaining
           </Text>
         </View>
       </View>

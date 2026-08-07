@@ -19,16 +19,16 @@ import {
   NativeStackScreenProps,
 } from "@react-navigation/native-stack";
 
-import InputField from "../components/InputField";
-import PrimaryButton from "../components/PrimaryButton";
+import InputField from "../../components/InputField";
+import PrimaryButton from "../../components/PrimaryButton";
 
 import {
   RootStackParamList,
-} from "../navigation/AppNavigator";
+} from "../../navigation/AppNavigator";
 
 import {
   loginUser,
-} from "../services/authService";
+} from "../../services/authService";
 
 type Props =
   NativeStackScreenProps<
@@ -179,7 +179,7 @@ export default function LoginScreen({
       >
 
         <Image
-          source={require("../../assets/logo.png")}
+          source={require("../../../assets/logo.png")}
           style={styles.logo}
           resizeMode="contain"
         />

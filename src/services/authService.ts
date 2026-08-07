@@ -272,7 +272,7 @@ try{
 
 const response =
 await api.put(
-"/user/password",
+"/user/change-password",
 data
 );
 

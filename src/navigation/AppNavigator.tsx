@@ -2,90 +2,94 @@ import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
-import SplashScreen from "../screens/SplashScreen";
+// ── Auth ───────────────────────────────────────────────────────────────────
+import SplashScreen          from "../screens/auth/SplashScreen";
+import LoginScreen            from "../screens/auth/LoginScreen";
+import RegisterScreen         from "../screens/auth/RegisterScreen";
+import ForgotPasswordScreen   from "../screens/auth/ForgotPasswordScreen";
 
-import LoginScreen from "../screens/LoginScreen";
-import RegisterScreen from "../screens/RegisterScreen";
-import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
+// ── Dashboard ──────────────────────────────────────────────────────────────
+import DashboardScreen        from "../screens/dashboard/DashboardScreen";
 
-import DashboardScreen from "../screens/DashboardScreen";
-import QuizScreen from "../screens/QuizScreen";
-import QuizQuestionScreen from "../screens/QuizQuestionScreen";
+// ── Learning & Labs ────────────────────────────────────────────────────────
+import LearningScreen         from "../screens/learning/LearningScreen";
+import LearningDetailsScreen  from "../screens/learning/LearningDetailsScreen";
+import LabsScreen             from "../screens/learning/LabsScreen";
+import LabDetailsScreen       from "../screens/learning/LabDetailsScreen";
 
-import CVEUpdatesScreen from "../screens/CVEUpdatesScreen";
+// ── Quiz ───────────────────────────────────────────────────────────────────
+import QuizScreen             from "../screens/quiz/QuizScreen";
+import QuizQuestionScreen     from "../screens/quiz/QuizQuestionScreen";
 
-import SecurityScanScreen from "../screens/SecurityScanScreen";
-import ScanHistoryScreen from "../screens/security/ScanHistoryScreen";
+// ── Security ───────────────────────────────────────────────────────────────
+import SecurityScanScreen     from "../screens/security/SecurityScanScreen";
+import ScanHistoryScreen      from "../screens/security/ScanHistoryScreen";
+import CVEUpdatesScreen       from "../screens/security/CVEUpdatesScreen";
+import BugReportsScreen       from "../screens/security/BugReportsScreen";
 
-import BugReportsScreen from "../screens/BugReportsScreen";
+// ── Certificates ───────────────────────────────────────────────────────────
+import CertificateScreen      from "../screens/certificates/CertificateScreen";
+import CertificateDetailsScreen from "../screens/certificates/CertificateDetailsScreen";
 
-import LearningScreen from "../screens/LearningScreen";
-import LearningDetailsScreen from "../screens/LearningDetailsScreen";
+// ── Profile ────────────────────────────────────────────────────────────────
+import ProfileScreen          from "../screens/profile/ProfileScreen";
+import SettingsScreen         from "../screens/profile/SettingsScreen";
+import NotificationScreen     from "../screens/profile/NotificationScreen";
 
-import LabsScreen from "../screens/LabsScreen";
-import LabDetailsScreen from "../screens/LabDetailsScreen";
+// ── Social ─────────────────────────────────────────────────────────────────
+import FriendsScreen          from "../screens/social/FriendsScreen";
+import LeaderboardScreen      from "../screens/social/LeaderboardScreen";
+import AchievementsScreen     from "../screens/social/AchievementsScreen";
 
-import CertificateScreen from "../screens/CertificateScreen";
-import CertificateDetailsScreen from "../screens/CertificateDetailsScreen";
+// ── Premium & CTF ──────────────────────────────────────────────────────────
+import PremiumScreen          from "../screens/premium/PremiumScreen";
+import CTFScreen              from "../screens/premium/CTFScreen";
 
-import NotificationScreen from "../screens/NotificationScreen";
-
-import ProfileScreen from "../screens/ProfileScreen";
-
-import SettingsScreen from "../screens/SettingsScreen";
-
-import PasswordCheckerScreen from "../screens/PasswordCheckerScreen";
-import HashGeneratorScreen from "../screens/HashGeneratorScreen";
+// ── Tools ──────────────────────────────────────────────────────────────────
+import PasswordCheckerScreen  from "../screens/tools/PasswordCheckerScreen";
+import HashGeneratorScreen    from "../screens/tools/HashGeneratorScreen";
 
 export type RootStackParamList = {
+  // Auth
   Splash: undefined;
-
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
-
+  // Core
   Dashboard: undefined;
-
+  // Learning
+  Learning: undefined;
+  LearningDetails: { id: string };
+  Labs: undefined;
+  LabDetails: { id: string };
+  // Quiz
   Quiz: undefined;
-
-  QuizQuestion: {
-    quizId: string;
-  };
-
-  CVEUpdates: undefined;
-
+  QuizQuestion: { quizId: string };
+  // Security
   SecurityScan: undefined;
   ScanHistory: undefined;
-
+  CVEUpdates: undefined;
   BugReports: undefined;
-
-  Learning: undefined;
-  LearningDetails: {
-    id: string;
-  };
-
-  Labs: undefined;
-  LabDetails: {
-    id: string;
-  };
-
+  // Certificates
   Certificates: undefined;
-  CertificateDetails: {
-    id: string;
-  };
-
-  Notifications: undefined;
-
+  CertificateDetails: { id: string };
+  // Profile
   Profile: undefined;
-
   Settings: undefined;
-
+  Notifications: undefined;
+  // Social
+  Friends: undefined;
+  Leaderboard: undefined;
+  Achievements: undefined;
+  // Premium & CTF
+  Premium: undefined;
+  CTF: undefined;
+  // Tools
   PasswordChecker: undefined;
   HashGenerator: undefined;
 };
 
-const Stack =
-  createNativeStackNavigator<RootStackParamList>();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
   return (
@@ -95,120 +99,55 @@ export default function AppNavigator() {
         screenOptions={{
           headerShown: false,
           animation: "slide_from_right",
-          contentStyle: {
-            backgroundColor: "#FFFFFF",
-          },
+          contentStyle: { backgroundColor: "#FFFFFF" },
         }}
       >
-        <Stack.Screen
-          name="Splash"
-          component={SplashScreen}
-        />
+        {/* ── Auth ── */}
+        <Stack.Screen name="Splash"             component={SplashScreen} />
+        <Stack.Screen name="Login"              component={LoginScreen} />
+        <Stack.Screen name="Register"           component={RegisterScreen} />
+        <Stack.Screen name="ForgotPassword"     component={ForgotPasswordScreen} />
 
-        <Stack.Screen
-          name="Login"
-          component={LoginScreen}
-        />
+        {/* ── Dashboard ── */}
+        <Stack.Screen name="Dashboard"          component={DashboardScreen} />
 
-        <Stack.Screen
-          name="Register"
-          component={RegisterScreen}
-        />
+        {/* ── Learning & Labs ── */}
+        <Stack.Screen name="Learning"           component={LearningScreen} />
+        <Stack.Screen name="LearningDetails"    component={LearningDetailsScreen} />
+        <Stack.Screen name="Labs"               component={LabsScreen} />
+        <Stack.Screen name="LabDetails"         component={LabDetailsScreen} />
 
-        <Stack.Screen
-          name="ForgotPassword"
-          component={ForgotPasswordScreen}
-        />
+        {/* ── Quiz ── */}
+        <Stack.Screen name="Quiz"               component={QuizScreen} />
+        <Stack.Screen name="QuizQuestion"       component={QuizQuestionScreen} />
 
-        <Stack.Screen
-          name="Dashboard"
-          component={DashboardScreen}
-        />
+        {/* ── Security ── */}
+        <Stack.Screen name="SecurityScan"       component={SecurityScanScreen} />
+        <Stack.Screen name="ScanHistory"        component={ScanHistoryScreen} />
+        <Stack.Screen name="CVEUpdates"         component={CVEUpdatesScreen} />
+        <Stack.Screen name="BugReports"         component={BugReportsScreen} />
 
-        <Stack.Screen
-          name="Quiz"
-          component={QuizScreen}
-        />
+        {/* ── Certificates ── */}
+        <Stack.Screen name="Certificates"       component={CertificateScreen} />
+        <Stack.Screen name="CertificateDetails" component={CertificateDetailsScreen} />
 
-        <Stack.Screen
-          name="QuizQuestion"
-          component={QuizQuestionScreen}
-        />
+        {/* ── Profile ── */}
+        <Stack.Screen name="Profile"            component={ProfileScreen} />
+        <Stack.Screen name="Settings"           component={SettingsScreen} />
+        <Stack.Screen name="Notifications"      component={NotificationScreen} />
 
-        <Stack.Screen
-          name="CVEUpdates"
-          component={CVEUpdatesScreen}
-        />
+        {/* ── Social ── */}
+        <Stack.Screen name="Friends"            component={FriendsScreen} />
+        <Stack.Screen name="Leaderboard"        component={LeaderboardScreen} />
+        <Stack.Screen name="Achievements"       component={AchievementsScreen} />
 
-        <Stack.Screen
-          name="SecurityScan"
-          component={SecurityScanScreen}
-        />
+        {/* ── Premium & CTF ── */}
+        <Stack.Screen name="Premium"            component={PremiumScreen} />
+        <Stack.Screen name="CTF"                component={CTFScreen} />
 
-        <Stack.Screen
-          name="ScanHistory"
-          component={ScanHistoryScreen}
-        />
-
-        <Stack.Screen
-          name="BugReports"
-          component={BugReportsScreen}
-        />
-
-        <Stack.Screen
-          name="Learning"
-          component={LearningScreen}
-        />
-
-        <Stack.Screen
-          name="LearningDetails"
-          component={LearningDetailsScreen}
-        />
-
-        <Stack.Screen
-          name="Labs"
-          component={LabsScreen}
-        />
-
-        <Stack.Screen
-          name="LabDetails"
-          component={LabDetailsScreen}
-        />
-
-        <Stack.Screen
-          name="Certificates"
-          component={CertificateScreen}
-        />
-
-        <Stack.Screen
-          name="CertificateDetails"
-          component={CertificateDetailsScreen}
-        />
-
-        <Stack.Screen
-          name="Notifications"
-          component={NotificationScreen}
-        />
-
-        <Stack.Screen
-          name="Profile"
-          component={ProfileScreen}
-        />
-
-        <Stack.Screen
-          name="Settings"
-          component={SettingsScreen}
-        />
-
-        <Stack.Screen
-          name="PasswordChecker"
-          component={PasswordCheckerScreen}
-        />
-
-        <Stack.Screen
-          name="HashGenerator"
-          component={HashGeneratorScreen}
-        />
+        {/* ── Tools ── */}
+        <Stack.Screen name="PasswordChecker"    component={PasswordCheckerScreen} />
+        <Stack.Screen name="HashGenerator"      component={HashGeneratorScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

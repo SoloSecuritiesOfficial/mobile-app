@@ -15,16 +15,16 @@ import {
 } from "react-native";
 
 
-import Colors from "../theme/colors";
-import Spacing from "../theme/spacing";
-import Typography from "../theme/typography";
+import Colors from "../../theme/colors";
+import Spacing from "../../theme/spacing";
+import Typography from "../../theme/typography";
 
 
 import {
   getLabs,
   completeLab,
   getLabProgress,
-} from "../services/lab.service";
+} from "../../services/lab.service";
 
 
 
@@ -104,39 +104,43 @@ export default function LabsScreen(){
 
 const handleCompleteLab = async()=>{
 
-
 if(!selectedLab)
 return;
 
-
 try{
-
 
 setCompleting(true);
 
+const response = await completeLab(selectedLab._id);
 
-
-await completeLab(
-selectedLab._id
-);
-
-
+// Check if the backend returned a premium gate error
+if (response && response.premiumRequired) {
+  Alert.alert(
+    "👑 Premium Required",
+    "This is an advanced lab. Upgrade to Premium to complete it.",
+    [{ text: "OK" }]
+  );
+  return;
+}
 
 await loadLabs();
 
-
-
 setSelectedLab(null);
 
-
-
 }
-catch(error){
+catch(error: any){
 
-console.log(
-"Complete Lab Error:",
-error
-);
+const msg = error?.response?.data?.message || "";
+if (error?.response?.status === 403 || msg.includes("Premium")) {
+  Alert.alert(
+    "👑 Premium Required",
+    error?.response?.data?.message || "This lab requires a Premium subscription.",
+    [{ text: "OK" }]
+  );
+} else {
+  console.log("Complete Lab Error:", error);
+  Alert.alert("Error", "Failed to complete lab. Please try again.");
+}
 
 }
 finally{
@@ -361,6 +365,11 @@ disabled={completing || selectedLab.completed}
             {lab.category}
           </Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            {(lab as any).isPremiumOnly && (
+              <View style={styles.premiumLockBadge}>
+                <Text style={styles.premiumLockText}>👑 Premium</Text>
+              </View>
+            )}
             {lab.completed && (
               <View style={styles.completedBadge}>
                 <Text style={styles.completedBadgeText}>✓ Completed</Text>
@@ -622,6 +631,19 @@ fontWeight:"700",
 
   tabBtnTextActive: {
     color: "#FFFFFF",
+    fontWeight: "700",
+  },
+
+  premiumLockBadge: {
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+
+  premiumLockText: {
+    color: "#D97706",
+    fontSize: 11,
     fontWeight: "700",
   },
 

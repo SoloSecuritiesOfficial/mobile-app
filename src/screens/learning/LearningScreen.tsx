@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from "react-native";
 
 import { useFocusEffect } from "@react-navigation/native";
@@ -21,18 +22,18 @@ import {
 
 import {
   RootStackParamList,
-} from "../navigation/AppNavigator";
+} from "../../navigation/AppNavigator";
 
 import {
   getLearningModules,
   getLearningProgress,
-} from "../services/securityService";
+} from "../../services/securityService";
 
-import LearningProgressCard from "../components/LearningProgressCard";
+import LearningProgressCard from "../../components/LearningProgressCard";
 
-import Colors from "../theme/colors";
-import Spacing from "../theme/spacing";
-import Typography from "../theme/typography";
+import Colors from "../../theme/colors";
+import Spacing from "../../theme/spacing";
+import Typography from "../../theme/typography";
 
 
 type Props =
@@ -135,8 +136,8 @@ await Promise.all([
           progressResponse.data ??
           progressResponse;
 
-
-
+        // Backend returns flat fields: completedLessons, totalLessons, progress, completedLessonIds
+        // It also returns a nested .learning wrapper for dashboard compatibility — handle both
         const completedIds = Array.isArray(progressData.completedLessonIds)
           ? progressData.completedLessonIds
           : Array.isArray(progressData.completedLessons)
@@ -151,30 +152,25 @@ await Promise.all([
             })
           );
 
-
-
-        setModules(
-          updatedModules
-        );
-
-
+        setModules(updatedModules);
 
         setProgress({
-
           progress:
-            progressData.learning
-              ?.percentage || 0,
-
+            progressData.learning?.percentage ??
+            progressData.progress ??
+            0,
 
           completed:
-            progressData.learning
-              ?.completed || 0,
-
+            progressData.learning?.completed ??
+            progressData.completedLessons ??
+            progressData.completed ??
+            0,
 
           total:
-            progressData.learning
-              ?.total || moduleData.length,
-
+            progressData.learning?.total ??
+            progressData.totalLessons ??
+            progressData.total ??
+            moduleData.length,
         });
 
 
@@ -391,18 +387,17 @@ await Promise.all([
                 }
 
 
-                onPress={()=>
-
-
-                  navigation.navigate(
-                    "LearningDetails",
-                    {
-                      id:item._id
-                    }
-                  )
-
-
-                }
+                onPress={()=> {
+                  if ((item as any).isPremiumOnly) {
+                    Alert.alert(
+                      "👑 Premium Required",
+                      `"${item.title}" is a Premium module. Upgrade to unlock it.`,
+                      [{ text: "OK" }]
+                    );
+                    return;
+                  }
+                  navigation.navigate("LearningDetails", { id: item._id });
+                }}
 
 
               >
@@ -463,7 +458,11 @@ await Promise.all([
                     ⏱ {item.readTime}
                   </Text>
 
-
+                  {(item as any).isPremiumOnly && (
+                    <View style={{ backgroundColor: "#FEF3C7", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
+                      <Text style={{ color: "#D97706", fontWeight: "700", fontSize: 11 }}>👑 Premium</Text>
+                    </View>
+                  )}
 
                   {
                     item.completed &&

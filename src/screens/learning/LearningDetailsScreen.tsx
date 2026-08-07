@@ -10,12 +10,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
-import { RootStackParamList } from "../navigation/AppNavigator";
-import { getLearningModuleById, completeLearningModule } from "../services/securityService";
+import { RootStackParamList } from "../../navigation/AppNavigator";
+import { getLearningModuleById, completeLearningModule } from "../../services/securityService";
 
-import Colors from "../theme/colors";
-import Spacing from "../theme/spacing";
-import Typography from "../theme/typography";
+import Colors from "../../theme/colors";
+import Spacing from "../../theme/spacing";
+import Typography from "../../theme/typography";
 
 type Props = NativeStackScreenProps<
   RootStackParamList,

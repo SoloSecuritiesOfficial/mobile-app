@@ -18,7 +18,7 @@ import {
 import {
   getLabById,
   completeLab,
-} from "../services/lab.service";
+} from "../../services/lab.service";
 
 
 

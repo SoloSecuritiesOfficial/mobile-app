@@ -22,11 +22,11 @@ import {
 
 import {
   RootStackParamList,
-} from "../navigation/AppNavigator";
+} from "../../navigation/AppNavigator";
 
 import {
   getCertificateById,
-} from "../services/certificateService";
+} from "../../services/certificateService";
 
 type Props =
   NativeStackScreenProps<

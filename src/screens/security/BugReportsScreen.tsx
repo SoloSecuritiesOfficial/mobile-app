@@ -9,10 +9,10 @@ import {
   TouchableOpacity,
   Share,
 } from "react-native";
-import { getBugReports } from "../services/securityService";
-import Colors from "../theme/colors";
-import Spacing from "../theme/spacing";
-import Typography from "../theme/typography";
+import { getBugReports } from "../../services/securityService";
+import Colors from "../../theme/colors";
+import Spacing from "../../theme/spacing";
+import Typography from "../../theme/typography";
 
 export default function BugReportsScreen() {
   const [reports, setReports] = useState<any[]>([]);

@@ -249,7 +249,7 @@ try{
 
 const response =
 await api.delete(
-"/notifications"
+"/notifications/all"
 );
 
 

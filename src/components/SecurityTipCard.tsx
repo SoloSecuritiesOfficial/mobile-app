@@ -17,47 +17,54 @@ import { getTodaySecurityTip } from "../services/securityTipService";
 export default function SecurityTipCard() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
+  const [tip, setTip] = useState({ title: "Loading...", message: "", category: "" });
 
-  const [tip, setTip] = useState({
-    title: "Loading...",
-    message: "",
-  });
-
-  const animation = useRef(new Animated.Value(0)).current;
+  const expandAnim = useRef(new Animated.Value(0)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim  = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     loadTip();
+
+    // Subtle pulse on the shield icon to draw attention
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.1, duration: 1200, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+        Animated.timing(pulseAnim, { toValue: 1.0, duration: 1200, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+      ])
+    ).start();
   }, []);
 
   const loadTip = async () => {
     try {
       const response = await getTodaySecurityTip();
-
-      if (response?.success) {
+      if (response?.success && response.data) {
         setTip({
-          title: response.data.title,
-          message: response.data.message,
+          title:    response.data.title    ?? "Stay Secure",
+          message:  response.data.message  ?? "",
+          category: response.data.category ?? "Security",
         });
       }
     } catch (err) {
-      console.log(err);
+      console.log("Tip load error:", err);
     } finally {
       setLoading(false);
     }
   };
 
   const toggleExpand = () => {
+    const toValue = expanded ? 0 : 1;
+
     Animated.parallel([
-      Animated.timing(animation, {
-        toValue: expanded ? 0 : 1,
-        duration: 350,
-        easing: Easing.out(Easing.ease),
+      Animated.timing(expandAnim, {
+        toValue,
+        duration: 380,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: false,
       }),
       Animated.timing(rotateAnim, {
-        toValue: expanded ? 0 : 1,
-        duration: 350,
+        toValue,
+        duration: 280,
         useNativeDriver: true,
       }),
     ]).start();
@@ -65,175 +72,229 @@ export default function SecurityTipCard() {
     setExpanded(!expanded);
   };
 
-  const bodyHeight = animation.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 180],
+  const bodyHeight = expandAnim.interpolate({
+    inputRange:  [0, 1],
+    outputRange: [0, 200],
   });
 
   const arrowRotation = rotateAnim.interpolate({
-    inputRange: [0, 1],
+    inputRange:  [0, 1],
     outputRange: ["0deg", "180deg"],
   });
 
   if (loading) {
     return (
-      <View style={styles.loader}>
-        <ActivityIndicator size="large" color="#E53935" />
+      <View style={styles.loaderBox}>
+        <ActivityIndicator size="small" color={Colors.primary} />
+        <Text style={styles.loaderText}>Loading today's tip…</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.card}>
-      <TouchableOpacity
-        activeOpacity={0.85}
-        style={styles.header}
-        onPress={toggleExpand}
-      >
-        <View style={styles.iconContainer}>
-          <Text style={styles.icon}>🛡️</Text>
-        </View>
+    <View style={styles.wrapper}>
+      <View style={styles.card}>
 
-        <View style={styles.textContainer}>
-          <Text style={styles.badge}>TODAY'S SECURITY TIP</Text>
+        {/* ── Top accent line ── */}
+        <View style={styles.accentLine} />
 
-          <Text style={styles.title}>{tip.title}</Text>
-
-          <Text style={styles.subtitle}>
-            Tap to learn something important
-          </Text>
-        </View>
-
-        <Animated.Text
-          style={[
-            styles.arrow,
-            {
-              transform: [{ rotate: arrowRotation }],
-            },
-          ]}
+        {/* ── Header row ── */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          style={styles.header}
+          onPress={toggleExpand}
         >
-          ▼
-        </Animated.Text>
-      </TouchableOpacity>
+          {/* Animated shield icon */}
+          <Animated.View
+            style={[styles.iconBox, { transform: [{ scale: pulseAnim }] }]}
+          >
+            <Text style={styles.iconEmoji}>🛡️</Text>
+          </Animated.View>
 
-      <Animated.View
-        style={[
-          styles.expandContainer,
-          {
-            height: bodyHeight,
-          },
-        ]}
-      >
-        <View style={styles.divider} />
+          {/* Text block */}
+          <View style={styles.textBlock}>
+            <View style={styles.badgeRow}>
+              <View style={styles.badgePill}>
+                <Text style={styles.badgePillText}>TODAY'S TIP</Text>
+              </View>
+              {tip.category ? (
+                <View style={styles.categoryPill}>
+                  <Text style={styles.categoryPillText}>{tip.category}</Text>
+                </View>
+              ) : null}
+            </View>
 
-        <Text style={styles.message}>{tip.message}</Text>
-      </Animated.View>
+            <Text style={styles.tipTitle} numberOfLines={2}>
+              {tip.title}
+            </Text>
+
+            <Text style={styles.tapHint}>
+              {expanded ? "Tap to collapse" : "Tap to read more →"}
+            </Text>
+          </View>
+
+          {/* Chevron */}
+          <Animated.View
+            style={[styles.chevronBox, { transform: [{ rotate: arrowRotation }] }]}
+          >
+            <Text style={styles.chevron}>⌄</Text>
+          </Animated.View>
+        </TouchableOpacity>
+
+        {/* ── Expandable body ── */}
+        <Animated.View style={[styles.bodyWrap, { height: bodyHeight }]}>
+          <View style={styles.bodyDivider} />
+          <View style={styles.bodyContent}>
+            <Text style={styles.bodyText}>{tip.message}</Text>
+          </View>
+        </Animated.View>
+
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  loader: {
-    paddingVertical: 35,
+
+  wrapper: {
+    marginBottom: Spacing.lg,
+  },
+
+  // ── Loading placeholder ────────────────────────────────
+  loaderBox: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: 10,
+    paddingVertical: 18,
+    paddingHorizontal: Spacing.screen,
+  },
+  loaderText: {
+    color: Colors.textSecondary,
+    fontSize: 13,
   },
 
+  // ── Card shell ────────────────────────────────────────
   card: {
-    backgroundColor: "#171717",
-    borderRadius: 22,
-
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
-
+    borderRadius: 20,
     overflow: "hidden",
-
-    marginBottom: Spacing.xxl,
-
-    shadowColor: "#E53935",
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-
-    elevation: 10,
+    backgroundColor: "#0F172A",      // Deep navy — distinct from rest of dashboard
+    borderWidth: 1,
+    borderColor: "#1E293B",
+    shadowColor: "#6366F1",
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
   },
 
+  // Coloured top stripe
+  accentLine: {
+    height: 4,
+    backgroundColor: Colors.primary,
+    width: "100%",
+  },
+
+  // ── Header ────────────────────────────────────────────
   header: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 18,
+    padding: 16,
+    gap: 14,
   },
 
-  iconContainer: {
-    width: 58,
-    height: 58,
-    borderRadius: 16,
-
-    backgroundColor: "#E53935",
-
+  iconBox: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: Colors.primary + "22",
     justifyContent: "center",
     alignItems: "center",
-
-    marginRight: 16,
+    borderWidth: 1,
+    borderColor: Colors.primary + "44",
   },
+  iconEmoji: { fontSize: 26 },
 
-  icon: {
-    fontSize: 28,
-  },
+  textBlock: { flex: 1 },
 
-  textContainer: {
-    flex: 1,
-  },
-
-  badge: {
-    color: "#E53935",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1,
+  badgeRow: {
+    flexDirection: "row",
+    gap: 6,
     marginBottom: 6,
+    alignItems: "center",
   },
-
-  title: {
-    fontSize: 19,
-    fontWeight: "700",
+  badgePill: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 20,
+  },
+  badgePillText: {
     color: "#FFFFFF",
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+  },
+  categoryPill: {
+    backgroundColor: "#1E293B",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+  categoryPillText: {
+    color: "#94A3B8",
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
 
-  subtitle: {
-    marginTop: 6,
-    fontSize: 13,
-    color: "#9E9E9E",
-  },
-
-  arrow: {
-    fontSize: 18,
-    color: "#E53935",
-    marginLeft: 10,
-  },
-
-  expandContainer: {
-    overflow: "hidden",
-    backgroundColor: "#111111",
-  },
-
-  divider: {
-    height: 1,
-    backgroundColor: "#2A2A2A",
-    marginHorizontal: 18,
-  },
-
-  message: {
-    ...Typography.bodySmall,
-
-    color: "#F4F4F4",
-
+  tipTitle: {
     fontSize: 15,
+    fontWeight: "700",
+    color: "#F1F5F9",
+    lineHeight: 21,
+    marginBottom: 4,
+  },
+  tapHint: {
+    fontSize: 11,
+    color: Colors.primary,
+    fontWeight: "600",
+  },
 
-    lineHeight: 25,
+  chevronBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#1E293B",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  chevron: {
+    color: Colors.primary,
+    fontSize: 18,
+    fontWeight: "700",
+    lineHeight: 20,
+  },
 
-    paddingHorizontal: 20,
-    paddingVertical: 18,
+  // ── Expanded body ─────────────────────────────────────
+  bodyWrap: {
+    overflow: "hidden",
+    backgroundColor: "#080F1E",
+  },
+  bodyDivider: {
+    height: 1,
+    backgroundColor: "#1E293B",
+    marginHorizontal: 16,
+  },
+  bodyContent: {
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+  },
+  bodyText: {
+    ...Typography.bodySmall,
+    color: "#CBD5E1",
+    fontSize: 14,
+    lineHeight: 24,
   },
 });

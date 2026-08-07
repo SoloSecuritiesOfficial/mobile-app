@@ -27,19 +27,19 @@ import {
   NativeStackNavigationProp,
 } from "@react-navigation/native-stack";
 
-import Colors from "../theme/colors";
-import Typography from "../theme/typography";
-import Spacing from "../theme/spacing";
+import Colors from "../../theme/colors";
+import Typography from "../../theme/typography";
+import Spacing from "../../theme/spacing";
 
 import {
   getQuizzes,
   getUserQuizHistory,
-} from "../services/quizService";
-import { getCurrentUser } from "../services/authService";
+} from "../../services/quizService";
+import { getCurrentUser } from "../../services/authService";
 
 import {
   RootStackParamList,
-} from "../navigation/AppNavigator";
+} from "../../navigation/AppNavigator";
 
 type Navigation =
   NativeStackNavigationProp<
@@ -48,23 +48,14 @@ type Navigation =
 
 interface Quiz {
   _id: string;
-
   title: string;
-
   description: string;
-
   module: string;
-
-  difficulty:
-    | "Beginner"
-    | "Intermediate"
-    | "Advanced";
-
+  difficulty: "Beginner" | "Intermediate" | "Advanced";
   totalQuestions: number;
-
   totalMarks: number;
-
   duration: number;
+  isPremiumOnly?: boolean;
 }
 
 export default function QuizScreen() {
@@ -422,24 +413,27 @@ export default function QuizScreen() {
                 <Text numberOfLines={2} style={styles.title}>
                   {item.title}
                 </Text>
-
-                <View
-                  style={[
-                    styles.badge,
-                    {
-                      backgroundColor: difficultyColor(item.difficulty),
-                    },
-                  ]}
-                >
-                  <Text style={styles.badgeText}>{item.difficulty}</Text>
+                <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
+                  {item.isPremiumOnly && (
+                    <View style={styles.premiumBadge}>
+                      <Text style={styles.premiumBadgeText}>👑 Premium</Text>
+                    </View>
+                  )}
+                  <View style={[styles.badge, { backgroundColor: difficultyColor(item.difficulty) }]}>
+                    <Text style={styles.badgeText}>{item.difficulty}</Text>
+                  </View>
                 </View>
               </View>
 
               {/* Completion Banner */}
               {attempt && (
-                <View style={{ backgroundColor: "#E8F5E9", padding: 8, borderRadius: 8, marginBottom: 10 }}>
-                  <Text style={{ color: "#2E7D32", fontWeight: "700", fontSize: 13 }}>
-                    ✓ Completed • Score: {attempt.score}/{attempt.totalMarks} ({attempt.percentage}%)
+                <View style={styles.completedBanner}>
+                  <Text style={styles.completedBannerText}>
+                    ✓ Completed • Score: {attempt.score}/{
+                      attempt.totalMarks > 0
+                        ? attempt.totalMarks
+                        : (item.totalMarks > 0 ? item.totalMarks : (item.totalQuestions || 0) * 10)
+                    } ({attempt.percentage}%)
                   </Text>
                 </View>
               )}
@@ -454,36 +448,37 @@ export default function QuizScreen() {
                 <Text style={styles.moduleText}>{item.module}</Text>
               </View>
 
-              {/* Information */}
+              {/* Information — Questions / Minutes / Marks */}
               <View style={styles.infoRow}>
                 <View style={styles.infoBox}>
-                  <Text style={styles.infoValue}>{item.totalQuestions}</Text>
+                  <Text style={styles.infoValue}>{item.totalQuestions || 0}</Text>
                   <Text style={styles.infoLabel}>Questions</Text>
                 </View>
 
                 <View style={styles.infoBox}>
-                  <Text style={styles.infoValue}>{item.duration}</Text>
+                  <Text style={styles.infoValue}>{item.duration || 0}</Text>
                   <Text style={styles.infoLabel}>Minutes</Text>
                 </View>
 
                 <View style={styles.infoBox}>
-                  <Text style={styles.infoValue}>{item.totalMarks}</Text>
-                  <Text style={styles.infoLabel}>Marks</Text>
+                  <Text style={styles.infoValue}>
+                    {item.totalMarks && item.totalMarks > 0
+                      ? item.totalMarks
+                      : (item.totalQuestions || 0) * 10}
+                  </Text>
+                  <Text style={styles.infoLabel}>Total Marks</Text>
                 </View>
               </View>
 
-              {/* Button */}
+              {/* Start Button */}
               <TouchableOpacity
                 activeOpacity={0.85}
-                style={[styles.button, attempt && { backgroundColor: "#2E7D32" }]}
-                onPress={() =>
-                  navigation.navigate("QuizQuestion", {
-                    quizId: item._id,
-                  })
-                }
+                style={[styles.button, attempt && { backgroundColor: "#2E7D32" }, item.isPremiumOnly && !attempt && styles.premiumButton]}
+                onPress={() => navigation.navigate("QuizQuestion", { quizId: item._id })}
               >
                 <Text style={styles.buttonText}>
-                  {attempt ? "✓ Completed (Retake Quiz)" : "Start Quiz →"}
+                  {item.isPremiumOnly && !attempt ? "👑 Premium — Start Quiz →" :
+                   attempt ? "✓ Completed (Retake Quiz)" : "Start Quiz →"}
                 </Text>
               </TouchableOpacity>
             </TouchableOpacity>
@@ -719,6 +714,34 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     letterSpacing: 0.5,
+  },
+
+  premiumBadge: {
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  premiumBadgeText: {
+    color: "#D97706",
+    fontWeight: "700",
+    fontSize: 11,
+  },
+  premiumButton: {
+    backgroundColor: "#D97706",
+  },
+  completedBanner: {
+    backgroundColor: "#E8F5E9",
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: "#22C55E",
+  },
+  completedBannerText: {
+    color: "#2E7D32",
+    fontWeight: "700",
+    fontSize: 13,
   },
 
   empty: {

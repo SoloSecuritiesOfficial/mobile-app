@@ -480,8 +480,10 @@ export const verifyCertificate = async (
 
 export const issueCertificate = async (
   data:{
-    userId:string;
-    certificateId:string;
+    title: string;
+    category: string;
+    description?: string;
+    skills?: string[];
   }
 ) => {
 
@@ -574,7 +576,7 @@ export const deleteNotification = async (
 export const getProfile = async () => {
 
   return await apiGet(
-    "/security/profile"
+    "/user/profile"
   );
 
 };
@@ -583,18 +585,18 @@ export const getProfile = async () => {
 
 export const updateProfile = async (
   data:{
-    firstName?:string;
-    lastName?:string;
-    username?:string;
-    email?:string;
-    phone?:string;
-    bio?:string;
-    avatar?:string;
+    firstName?: string;
+    lastName?: string;
+    bio?: string;
+    country?: string;
+    github?: string;
+    linkedin?: string;
+    website?: string;
   }
 ) => {
 
   return await apiPut(
-    "/security/profile",
+    "/user/profile",
     data
   );
 

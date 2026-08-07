@@ -8,10 +8,10 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import Colors from "../theme/colors";
-import Spacing from "../theme/spacing";
-import Typography from "../theme/typography";
-import { useTheme } from "../context/ThemeContext";
+import Colors from "../../theme/colors";
+import Spacing from "../../theme/spacing";
+import Typography from "../../theme/typography";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function SettingsScreen() {
   const { isDarkMode, toggleTheme, colors } = useTheme();
@@ -57,17 +57,76 @@ export default function SettingsScreen() {
 
         <TouchableOpacity
           style={styles.actionRow}
-          onPress={() => Alert.alert("SoloSecurities", "Version 1.0.0 Realtime Build")}
+          onPress={() => Alert.alert("SoloSecurities", "Version 1.0.0 — Production Build\n\nA cybersecurity learning platform for ethical hackers and security professionals.")}
         >
-          <Text style={styles.actionText}>App Version</Text>
+          <Text style={styles.actionText}>📱 App Version</Text>
           <Text style={styles.valueText}>v1.0.0</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.actionRow}
-          onPress={() => Alert.alert("Privacy Policy", "All network scans and reports are encrypted and strictly stored in your user account context.")}
+          onPress={() => Alert.alert(
+            "🔐 Privacy Policy",
+            "SoloSecurities collects minimal data required to operate:\n\n" +
+            "• Email & username for account creation\n" +
+            "• Learning progress & quiz scores\n" +
+            "• Device FCM token for push notifications\n\n" +
+            "We DO NOT:\n" +
+            "• Sell your data to third parties\n" +
+            "• Store passwords in plain text\n" +
+            "• Access device contacts, camera, or location\n\n" +
+            "All data is encrypted in transit via HTTPS/TLS.\n" +
+            "JWT tokens are stored securely on device.\n\n" +
+            "You can delete your account at any time from Profile > Account Actions."
+          )}
         >
-          <Text style={styles.actionText}>Privacy & Security Terms</Text>
+          <Text style={styles.actionText}>🔐 Privacy Policy</Text>
+          <Text style={styles.valueText}>↗</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionRow}
+          onPress={() => Alert.alert(
+            "📋 Terms of Service",
+            "By using SoloSecurities you agree to:\n\n" +
+            "• Use the platform for ethical security learning only\n" +
+            "• Not attempt to compromise other users' accounts\n" +
+            "• Not use CTF knowledge for illegal activities\n" +
+            "• Respect community guidelines\n\n" +
+            "Violations will result in account suspension."
+          )}
+        >
+          <Text style={styles.actionText}>📋 Terms of Service</Text>
+          <Text style={styles.valueText}>↗</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionRow}
+          onPress={() => Alert.alert(
+            "🛡️ Data Safety",
+            "Data collected:\n" +
+            "• Account info (email, username) — required\n" +
+            "• App activity (progress, scores) — required\n" +
+            "• Device token (push notifications) — optional\n\n" +
+            "Data NOT collected:\n" +
+            "• Location, contacts, camera, microphone\n" +
+            "• Financial information\n" +
+            "• Browsing history\n\n" +
+            "Data is encrypted and never shared with advertisers."
+          )}
+        >
+          <Text style={styles.actionText}>🛡️ Data Safety (Play Store)</Text>
+          <Text style={styles.valueText}>↗</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.actionRow, { borderBottomWidth: 0 }]}
+          onPress={() => Alert.alert(
+            "📧 Contact Support",
+            "For support or data deletion requests:\n\nsupport@solosecurities.com\n\nAccount deletion can be done from Profile → Account Actions."
+          )}
+        >
+          <Text style={styles.actionText}>📧 Contact & Support</Text>
           <Text style={styles.valueText}>↗</Text>
         </TouchableOpacity>
       </View>

@@ -21,51 +21,20 @@ type Props = {
 };
 
 const actions = [
-  {
-    title: "Bug Reports",
-    icon: "🐞",
-    screen: "BugReports",
-  },
-  {
-    title: "Security Scan",
-    icon: "🛡️",
-    screen: "SecurityScan",
-  },
-  {
-    title: "Learning",
-    icon: "📚",
-    screen: "Learning",
-  },
-  {
-    title: "Quiz",
-    icon: "📝",
-    screen: "Quiz",
-  },
-  {
-    title: "Labs",
-    icon: "🎯",
-    screen: "Labs",
-  },
-  {
-    title: "CVE Updates",
-    icon: "📢",
-    screen: "CVEUpdates",
-  },
-  {
-    title: "Certificates",
-    icon: "🏆",
-    screen: "Certificates",
-  },
-  {
-    title: "Notifications",
-    icon: "🔔",
-    screen: "Notifications",
-  },
-  {
-    title: "Settings",
-    icon: "⚙️",
-    screen: "Settings",
-  },
+  { title: "Bug Reports",   icon: "🐞",  screen: "BugReports"   },
+  { title: "Security Scan", icon: "🛡️",  screen: "SecurityScan" },
+  { title: "Learning",      icon: "📚",  screen: "Learning"     },
+  { title: "Quiz",          icon: "📝",  screen: "Quiz"         },
+  { title: "Labs",          icon: "🎯",  screen: "Labs"         },
+  { title: "CVE Updates",   icon: "📢",  screen: "CVEUpdates"   },
+  { title: "Certificates",  icon: "🏆",  screen: "Certificates" },
+  { title: "Notifications", icon: "🔔",  screen: "Notifications"},
+  { title: "Friends",       icon: "👥",  screen: "Friends"      },
+  { title: "CTF Arena",     icon: "🚩",  screen: "CTF"          },
+  { title: "Leaderboard",   icon: "🥇",  screen: "Leaderboard"  },
+  { title: "Achievements",  icon: "🏅",  screen: "Achievements" },
+  { title: "Premium",       icon: "👑",  screen: "Premium"      },
+  { title: "Settings",      icon: "⚙️",  screen: "Settings"     },
 ] as const;
 
 export default function QuickActions({

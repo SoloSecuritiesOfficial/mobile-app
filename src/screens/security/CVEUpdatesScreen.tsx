@@ -11,10 +11,10 @@ import {
   Linking,
   Share,
 } from "react-native";
-import { getCVEUpdates } from "../services/securityService";
-import Colors from "../theme/colors";
-import Spacing from "../theme/spacing";
-import Typography from "../theme/typography";
+import { getCVEUpdates } from "../../services/securityService";
+import Colors from "../../theme/colors";
+import Spacing from "../../theme/spacing";
+import Typography from "../../theme/typography";
 
 export default function CVEUpdatesScreen() {
   const [cves, setCves] = useState<any[]>([]);
@@ -80,8 +80,15 @@ export default function CVEUpdatesScreen() {
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <Text style={styles.cveId}>{cveCode}</Text>
-          <View style={[styles.badge, { backgroundColor: sevColor }]}>
-            <Text style={styles.badgeText}>{item.severity} ({item.score || 7.5})</Text>
+          <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
+            {item.isPremiumOnly && (
+              <View style={{ backgroundColor: "#FEF3C7", paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 }}>
+                <Text style={{ color: "#D97706", fontWeight: "700", fontSize: 11 }}>👑</Text>
+              </View>
+            )}
+            <View style={[styles.badge, { backgroundColor: sevColor }]}>
+              <Text style={styles.badgeText}>{item.severity} ({item.score || 7.5})</Text>
+            </View>
           </View>
         </View>
 

@@ -10,10 +10,10 @@ import {
   ActivityIndicator,
   FlatList,
 } from "react-native";
-import { startSecurityScan, getScanHistory } from "../services/securityService";
-import Colors from "../theme/colors";
-import Spacing from "../theme/spacing";
-import Typography from "../theme/typography";
+import { startSecurityScan, getScanHistory } from "../../services/securityService";
+import Colors from "../../theme/colors";
+import Spacing from "../../theme/spacing";
+import Typography from "../../theme/typography";
 
 export default function SecurityScanScreen() {
   const [target, setTarget] = useState("");

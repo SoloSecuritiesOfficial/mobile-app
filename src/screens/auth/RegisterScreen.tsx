@@ -14,12 +14,12 @@ import {
 
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
-import InputField from "../components/InputField";
-import PrimaryButton from "../components/PrimaryButton";
+import InputField from "../../components/InputField";
+import PrimaryButton from "../../components/PrimaryButton";
 
-import { RootStackParamList } from "../navigation/AppNavigator";
+import { RootStackParamList } from "../../navigation/AppNavigator";
 
-import { registerUser } from "../services/authService";
+import { registerUser } from "../../services/authService";
 
 type Props = NativeStackScreenProps<
   RootStackParamList,
@@ -192,7 +192,7 @@ export default function RegisterScreen({
         showsVerticalScrollIndicator={false}
       >
         <Image
-          source={require("../../assets/logo.png")}
+          source={require("../../../assets/logo.png")}
           style={styles.logo}
           resizeMode="contain"
         />

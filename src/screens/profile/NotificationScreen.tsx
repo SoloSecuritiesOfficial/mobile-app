@@ -22,7 +22,7 @@ import {
   markNotificationAsRead,
   markAllNotificationsAsRead,
   deleteNotification,
-} from "../services/notificationService";
+} from "../../services/notificationService";
 
 type NotificationItem = {
   _id: string;

@@ -22,6 +22,18 @@ export default function ProgressCard({
   labCompleted = 0,
   labTotal = 0,
 }: Props) {
+
+  const learningPct = learningTotal > 0
+    ? Math.min(Math.round((learningCompleted / learningTotal) * 100), 100)
+    : 0;
+
+  const labPct = labTotal > 0
+    ? Math.min(Math.round((labCompleted / labTotal) * 100), 100)
+    : 0;
+
+  const labRemaining  = Math.max(labTotal - labCompleted, 0);
+  const learnRemaining = Math.max(learningTotal - learningCompleted, 0);
+
   return (
     <>
       <Text style={styles.sectionTitle}>
@@ -30,70 +42,29 @@ export default function ProgressCard({
 
       <View style={styles.container}>
         {/* Learning */}
-
         <View style={styles.card}>
-          <Text style={styles.icon}>
-            📚
-          </Text>
-
+          <Text style={styles.icon}>📚</Text>
           <Text style={styles.value}>
-            {learningCompleted}/
-            {learningTotal}
+            {learningCompleted}/{learningTotal}
           </Text>
-
-          <Text style={styles.label}>
-            Learning
-          </Text>
-
+          <Text style={styles.label}>Learning</Text>
           <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progress,
-                {
-                  width: `${
-                    learningTotal > 0
-                      ? (learningCompleted /
-                          learningTotal) *
-                        100
-                      : 0
-                  }%`,
-                },
-              ]}
-            />
+            <View style={[styles.progress, { width: `${learningPct}%` }]} />
           </View>
+          <Text style={styles.pctText}>{learningPct}% • {learnRemaining} left</Text>
         </View>
 
         {/* Labs */}
-
         <View style={styles.card}>
-          <Text style={styles.icon}>
-            🎯
-          </Text>
-
+          <Text style={styles.icon}>🎯</Text>
           <Text style={styles.value}>
             {labCompleted}/{labTotal}
           </Text>
-
-          <Text style={styles.label}>
-            Labs
-          </Text>
-
+          <Text style={styles.label}>Labs</Text>
           <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progress,
-                {
-                  width: `${
-                    labTotal > 0
-                      ? (labCompleted /
-                          labTotal) *
-                        100
-                      : 0
-                  }%`,
-                },
-              ]}
-            />
+            <View style={[styles.progress, { width: `${labPct}%` }]} />
           </View>
+          <Text style={styles.pctText}>{labPct}% • {labRemaining} left</Text>
         </View>
       </View>
     </>
@@ -168,5 +139,12 @@ const styles = StyleSheet.create({
     height: "100%",
     backgroundColor: Colors.primary,
     borderRadius: 20,
+  },
+
+  pctText: {
+    ...Typography.bodySmall,
+    color: Colors.textSecondary,
+    marginTop: 6,
+    fontSize: 11,
   },
 });
