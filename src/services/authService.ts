@@ -128,6 +128,11 @@ response.data.user
 
 
 
+// Register push token after successful login (fire-and-forget)
+import("../utils/pushNotifications")
+  .then(({ registerForPushNotifications }) => registerForPushNotifications())
+  .catch(() => {/* non-fatal */});
+
 return response.data;
 
 

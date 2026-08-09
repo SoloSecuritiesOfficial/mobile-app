@@ -320,32 +320,42 @@ throw error;
 
 
 
-import { Alert, Platform } from "react-native";
+import { Platform } from "react-native";
+import {
+  registerForPushNotifications,
+  clearBadge,
+} from "../utils/pushNotifications";
 
+// ─────────────────────────────────────────────────────────────────
+// Request notification permissions and register the device token
+// with the backend. Call this once after a successful login.
+// ─────────────────────────────────────────────────────────────────
+export const requestNotificationPermissions = async (): Promise<boolean> => {
+  const token = await registerForPushNotifications();
+  return !!token;
+};
+
+// ─────────────────────────────────────────────────────────────────
+// Trigger a local in-app notification (still useful for quick alerts
+// when the app is open, e.g. a streak reminder).
+// For background/killed notifications the backend sends FCM directly.
+// ─────────────────────────────────────────────────────────────────
 export const triggerAppNotification = (
-  title: string,
-  body: string
-) => {
-  console.log("🔔 Local Device Notification Triggered:", title, body);
-  Alert.alert(`🔔 ${title}`, body, [{ text: "View Details" }]);
+  _title: string,
+  _body: string
+): void => {
+  // No-op: foreground notifications are now shown via expo-notifications
+  // setNotificationHandler in pushNotifications.ts (shouldShowAlert: true).
 };
 
-export const requestNotificationPermissions = async () => {
-  return true;
-};
-
-export const checkAndTriggerDeviceNotifications = async () => {
+// ─────────────────────────────────────────────────────────────────
+// Called on DashboardScreen focus to clear the badge when the user
+// opens the app from a notification tap.
+// ─────────────────────────────────────────────────────────────────
+export const checkAndTriggerDeviceNotifications = async (): Promise<void> => {
   try {
-    const unread = await getUnreadNotifications();
-    const items = unread?.data ?? unread ?? [];
-    if (Array.isArray(items) && items.length > 0) {
-      const latest = items[0];
-      triggerAppNotification(
-        latest.title || "New Security Notification 🛡️",
-        latest.message || latest.body || "You have unread security alerts and new quizzes available!"
-      );
-    }
-  } catch (error) {
-    console.log("Device notification check error:", error);
+    await clearBadge();
+  } catch {
+    // Non-critical
   }
 };

@@ -11,7 +11,8 @@
       "icon": "./assets/icon.png",
       "bundleIdentifier": "com.solosecurities.app",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": ["fetch", "remote-notification"]
       }
     },
     "android": {
@@ -21,7 +22,13 @@
         "monochromeImage": "./assets/monochrome-icon.png"
       },
       "package": "com.solosecurities.app",
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -36,7 +43,16 @@
       "expo-secure-store",
       "expo-font",
       "expo-status-bar",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#C62828",
+          "androidMode": "default",
+          "androidCollapsedTitle": "SoloSecurities"
+        }
+      ]
     ]
   }
 }
