@@ -33,6 +33,8 @@ import CertificateDetailsScreen from "../screens/certificates/CertificateDetails
 
 // ── Profile ────────────────────────────────────────────────────────────────
 import ProfileScreen          from "../screens/profile/ProfileScreen";
+import ProfileSettingsScreen  from "../screens/profile/ProfileSettingsScreen";
+import AccountSettingsScreen  from "../screens/profile/AccountSettingsScreen";
 import SettingsScreen         from "../screens/profile/SettingsScreen";
 import NotificationScreen     from "../screens/profile/NotificationScreen";
 
@@ -75,6 +77,8 @@ export type RootStackParamList = {
   CertificateDetails: { id: string };
   // Profile
   Profile: undefined;
+  ProfileSettings: undefined;
+  AccountSettings: undefined;
   Settings: undefined;
   Notifications: undefined;
   // Social
@@ -133,6 +137,8 @@ export default function AppNavigator() {
 
         {/* ── Profile ── */}
         <Stack.Screen name="Profile"            component={ProfileScreen} />
+        <Stack.Screen name="ProfileSettings"    component={ProfileSettingsScreen} />
+        <Stack.Screen name="AccountSettings"    component={AccountSettingsScreen} />
         <Stack.Screen name="Settings"           component={SettingsScreen} />
         <Stack.Screen name="Notifications"      component={NotificationScreen} />
 

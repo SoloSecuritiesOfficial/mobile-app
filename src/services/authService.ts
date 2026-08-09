@@ -420,3 +420,39 @@ return !!token;
 
 
 };
+
+
+// ─────────────────────────────────────────────────────────────────
+// DELETE ACCOUNT — soft-delete via DELETE /user/account
+// ─────────────────────────────────────────────────────────────────
+export const deleteAccount = async (): Promise<{ success: boolean; message?: string }> => {
+  try {
+    const response = await api.delete("/user/account");
+    if (response.data.success) {
+      // Wipe local credentials immediately
+      await removeToken();
+    }
+    return response.data;
+  } catch (error: any) {
+    console.log("Delete Account Error:", error.response?.data || error.message);
+    throw error;
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────
+// GET SUBSCRIPTION STATUS — returns tier + expiry for badge display
+// ─────────────────────────────────────────────────────────────────
+export const getSubscriptionStatus = async (): Promise<{
+  tier: "free" | "trial" | "paid";
+  isPremium: boolean;
+  premiumExpiresAt?: string;
+  provider?: string;
+} | null> => {
+  try {
+    const response = await api.get("/subscription/status");
+    return response.data?.data ?? null;
+  } catch {
+    // Non-critical — return null on failure
+    return null;
+  }
+};
