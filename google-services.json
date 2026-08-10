@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "960176390407",
+    "project_id": "solosecurities-8280b",
+    "storage_bucket": "solosecurities-8280b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:960176390407:android:6d57a34761b065c99605a2",
+        "android_client_info": {
+          "package_name": "com.solosecurities.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDjKt6z65wDWsizExx6UNYYL_SkQl3BwiQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

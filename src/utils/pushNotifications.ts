@@ -32,18 +32,32 @@ function isExpoGo(): boolean {
 
 // ─────────────────────────────────────────────────────────────────
 // Configure foreground notification display.
-// Safe in both Expo Go and development/production builds.
+//
+// This controls what happens when a notification arrives while
+// the SoloSecurities app is currently open.
+//
+// Compatible with the newer expo-notifications NotificationBehavior
+// which requires shouldShowBanner and shouldShowList.
 // ─────────────────────────────────────────────────────────────────
 export function configureForegroundNotifications(): void {
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge:  true,
-    }),
+    handleNotification: async () => {
+      return {
+        // Show notification as a banner/popup at the top of the screen
+        shouldShowBanner: true,
+
+        // Keep notification visible in the notification list
+        shouldShowList: true,
+
+        // Play the default notification sound
+        shouldPlaySound: true,
+
+        // Update the app notification badge
+        shouldSetBadge: true,
+      };
+    },
   });
 }
-
 // ─────────────────────────────────────────────────────────────────
 // Create the Android notification channel (required on Android 8+).
 // ─────────────────────────────────────────────────────────────────
