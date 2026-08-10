@@ -22,7 +22,7 @@
     "monochromeImage": "./assets/monochrome-icon.png"
   },
   "package": "com.solosecurities.app",
-  "googleServicesFile": "./android/app/google-services.json",
+  "googleServicesFile": "./google-services.json",
   "predictiveBackGestureEnabled": false,
   "permissions": [
     "android.permission.RECEIVE_BOOT_COMPLETED",
