@@ -28,7 +28,7 @@ const actions = [
   { title: "Labs",          icon: "🎯",  screen: "Labs"         },
   { title: "CVE Updates",   icon: "📢",  screen: "CVEUpdates"   },
   { title: "Certificates",  icon: "🏆",  screen: "Certificates" },
-  { title: "Notifications", icon: "🔔",  screen: "Notifications"},
+  { title: "Jobs",          icon: "💼",  screen: "Jobs"         },
   { title: "Friends",       icon: "👥",  screen: "Friends"      },
   { title: "CTF Arena",     icon: "🚩",  screen: "CTF"          },
   { title: "Leaderboard",   icon: "🥇",  screen: "Leaderboard"  },
