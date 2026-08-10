@@ -42,6 +42,10 @@ import NotificationScreen     from "../screens/profile/NotificationScreen";
 import JobsScreen           from "../screens/jobs/JobsScreen";
 import JobDetailsScreen     from "../screens/jobs/JobDetailsScreen";
 
+// ── Chat ───────────────────────────────────────────────────────────────────
+import ChatListScreen       from "../screens/chat/ChatListScreen";
+import ChatScreen           from "../screens/chat/ChatScreen";
+
 // ── Social ─────────────────────────────────────────────────────────────────
 import FriendsScreen          from "../screens/social/FriendsScreen";
 import LeaderboardScreen      from "../screens/social/LeaderboardScreen";
@@ -88,6 +92,9 @@ export type RootStackParamList = {
   // Jobs
   Jobs: undefined;
   JobDetails: { id: string };
+  // Chat
+  ChatList: undefined;
+  Chat: { userId: string; username: string; profileImage?: string };
   // Social
   Friends: undefined;
   Leaderboard: undefined;
@@ -153,7 +160,11 @@ export default function AppNavigator() {
         <Stack.Screen name="Jobs"               component={JobsScreen} />
         <Stack.Screen name="JobDetails"         component={JobDetailsScreen} />
 
-        {/* ── Social ── */}
+        {/* ── Chat ── */}
+        <Stack.Screen name="ChatList"           component={ChatListScreen} />
+        <Stack.Screen name="Chat"               component={ChatScreen} />
+
+        {/* ── Social ── */
         <Stack.Screen name="Friends"            component={FriendsScreen} />
         <Stack.Screen name="Leaderboard"        component={LeaderboardScreen} />
         <Stack.Screen name="Achievements"       component={AchievementsScreen} />
