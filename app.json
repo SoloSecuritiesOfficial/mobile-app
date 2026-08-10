@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "SoloSecurities",
-    "slug": "mobile-app",
+    "slug": "soloji",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -12,33 +12,36 @@
       "bundleIdentifier": "com.solosecurities.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "UIBackgroundModes": ["fetch", "remote-notification"]
+        "UIBackgroundModes": [
+          "fetch",
+          "remote-notification"
+        ]
       }
     },
     "android": {
-  "adaptiveIcon": {
-    "foregroundImage": "./assets/adaptive-icon.png",
-    "backgroundColor": "#FFFFFF",
-    "monochromeImage": "./assets/monochrome-icon.png"
-  },
-  "package": "com.solosecurities.app",
-  "googleServicesFile": "./google-services.json",
-  "predictiveBackGestureEnabled": false,
-  "permissions": [
-    "android.permission.RECEIVE_BOOT_COMPLETED",
-    "android.permission.VIBRATE",
-    "android.permission.POST_NOTIFICATIONS"
-  ]
-},
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF",
+        "monochromeImage": "./assets/monochrome-icon.png"
+      },
+      "package": "com.solosecurities.app",
+      "googleServicesFile": "./google-services.json",
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS"
+      ]
+    },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {
-        "projectId": "77f1b468-080f-40ef-a4fd-167151d08d04"
+        "projectId": "3037dcb2-e406-40cc-868d-78c924cf30ea"
       }
     },
-    "owner": "reshavji",
+    "owner": "solojis-team",
     "plugins": [
       "expo-secure-store",
       "expo-font",

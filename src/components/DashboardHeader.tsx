@@ -95,8 +95,7 @@ export default function DashboardHeader({ user, navigation }: Props) {
   // Debug log to verify profile image URL
   React.useEffect(() => {
     if (user?.profileImage) {
-      console.log("DashboardHeader - Profile Image:", user.profileImage);
-      console.log("DashboardHeader - Resolved Avatar URI:", avatarUri);
+      console.log();
     }
   }, [user?.profileImage, avatarUri]);
 
