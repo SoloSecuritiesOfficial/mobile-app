@@ -1,9 +1,14 @@
-import {
-  apiGet,
-  apiPost,
-  apiPut,
-  apiDelete,
-} from "./api";
+import api from "./api";
+
+
+/* -------------------------------------------------------------------------- */
+/* Helper wrappers so the rest of the file doesn't change                     */
+/* -------------------------------------------------------------------------- */
+
+const apiGet    = (url: string)              => api.get(url).then(r => r.data);
+const apiPost   = (url: string, data: any)   => api.post(url, data).then(r => r.data);
+const apiPut    = (url: string, data: any)   => api.put(url, data).then(r => r.data);
+const apiDelete = (url: string)              => api.delete(url).then(r => r.data);
 
 
 /* -------------------------------------------------------------------------- */

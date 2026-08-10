@@ -80,6 +80,12 @@ function SubscriptionBadge({ user }: { user: User | null }) {
 export default function DashboardHeader({ user, navigation }: Props) {
   const avatarUri = resolveAvatar(user?.profileImage);
   const initials  = (user?.firstName || user?.username || "U").charAt(0).toUpperCase();
+  const [imageError, setImageError] = React.useState(false);
+
+  // Reset error state when avatar URI changes
+  React.useEffect(() => {
+    setImageError(false);
+  }, [avatarUri]);
 
   return (
     <View style={styles.container}>
@@ -96,12 +102,11 @@ export default function DashboardHeader({ user, navigation }: Props) {
         style={styles.avatarContainer}
         onPress={() => navigation.navigate("Profile")}
       >
-        {avatarUri ? (
+        {avatarUri && !imageError ? (
           <Image
             source={{ uri: avatarUri }}
             style={styles.avatar}
-            // Fallback to initials if image fails to load
-            onError={() => {/* handled by conditional below */}}
+            onError={() => setImageError(true)}
           />
         ) : (
           <Text style={styles.avatarText}>{initials}</Text>

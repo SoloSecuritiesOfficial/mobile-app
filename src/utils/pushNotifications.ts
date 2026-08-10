@@ -1,48 +1,80 @@
 /**
  * pushNotifications.ts — SoloSecurities Mobile App
- * ──────────────────────────────────────────────────
- * Uses NATIVE FCM device tokens (getDevicePushTokenAsync) so the
- * backend can send via Firebase Admin SDK admin.messaging().send().
  *
- * Why NOT getExpoPushTokenAsync?
- *   Expo push tokens (ExponentPushToken[...]) only work with Expo's
- *   own push gateway, which is a relay in front of FCM.
- *   Our backend talks to FCM directly, so we need the raw device token.
+ * CRITICAL: Do NOT use a top-level `import * as Notifications from
+ * "expo-notifications"`. In Expo Go SDK 53, the module itself
+ * registers an internal push-token listener the moment it is
+ * imported, which crashes immediately with:
  *
- * SDK 53 note:
- *   getDevicePushTokenAsync still works in Expo Go on Android.
- *   iOS physical device requires a development build.
+ *   "Android Push notifications (remote notifications) functionality
+ *    provided by expo-notifications was removed from Expo Go…"
+ *
+ * Solution: lazy-load via require() only when running in a real
+ * build (detected with Constants.appOwnership !== "expo").
+ * Everything is a no-op in Expo Go — the app works normally,
+ * just without push notifications.
+ *
+ * For full push support use a development build:
+ *   npx expo run:android
  */
 
-import * as Notifications from "expo-notifications";
-import * as Device from "expo-device";
 import { Platform } from "react-native";
 import Constants from "expo-constants";
+import * as Device from "expo-device";
 import api from "../services/api";
 
 // ─────────────────────────────────────────────────────────────────
-// Configure how notifications look when the app is in the foreground
+// Runtime guard — true when running inside Expo Go
+// ─────────────────────────────────────────────────────────────────
+function isExpoGo(): boolean {
+  return Constants.appOwnership === "expo";
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Lazy loader — returns the expo-notifications module only in
+// real builds. Returns null in Expo Go (avoids the import crash).
+// ─────────────────────────────────────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getNotifications(): any | null {
+  if (isExpoGo()) return null;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    return require("expo-notifications");
+  } catch {
+    return null;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Configure foreground notification display
+// Safe to call anywhere — silently skipped in Expo Go
 // ─────────────────────────────────────────────────────────────────
 export function configureForegroundNotifications(): void {
-  Notifications.setNotificationHandler({
+  const N = getNotifications();
+  if (!N) return;
+
+  N.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowAlert:  true,
       shouldPlaySound:  true,
       shouldSetBadge:   true,
       shouldShowBanner: true,
       shouldShowList:   true,
-    } as Notifications.NotificationBehavior),
+    }),
   });
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Create Android notification channel (required on Android 8+)
+// Create Android notification channel (Android 8+ requirement)
 // ─────────────────────────────────────────────────────────────────
 async function ensureAndroidChannel(): Promise<void> {
   if (Platform.OS !== "android") return;
-  await Notifications.setNotificationChannelAsync("default", {
+  const N = getNotifications();
+  if (!N) return;
+
+  await N.setNotificationChannelAsync("default", {
     name:             "SoloSecurities",
-    importance:       Notifications.AndroidImportance.MAX,
+    importance:       N.AndroidImportance.MAX,
     vibrationPattern: [0, 250, 250, 250],
     lightColor:       "#C62828",
     sound:            "default",
@@ -54,10 +86,15 @@ async function ensureAndroidChannel(): Promise<void> {
 
 // ─────────────────────────────────────────────────────────────────
 // Register for push notifications
-// Returns the FCM device token, or null on failure.
+// Returns FCM device token string, or null if unavailable
 // ─────────────────────────────────────────────────────────────────
 export async function registerForPushNotifications(): Promise<string | null> {
-  // Must be a real device — simulators/emulators have no push token
+  const N = getNotifications();
+  if (!N) {
+    console.log("[Push] Expo Go — push registration skipped.");
+    return null;
+  }
+
   if (!Device.isDevice) {
     console.log("[Push] Skipping: not a physical device.");
     return null;
@@ -66,17 +103,13 @@ export async function registerForPushNotifications(): Promise<string | null> {
   try {
     await ensureAndroidChannel();
 
-    // 1. Request OS permission
-    const { status: existing } = await Notifications.getPermissionsAsync();
+    // Request OS permission
+    const { status: existing } = await N.getPermissionsAsync();
     let finalStatus = existing;
 
     if (existing !== "granted") {
-      const { status } = await Notifications.requestPermissionsAsync({
-        ios: {
-          allowAlert: true,
-          allowBadge: true,
-          allowSound: true,
-        },
+      const { status } = await N.requestPermissionsAsync({
+        ios: { allowAlert: true, allowBadge: true, allowSound: true },
       });
       finalStatus = status;
     }
@@ -86,17 +119,16 @@ export async function registerForPushNotifications(): Promise<string | null> {
       return null;
     }
 
-    // 2. Get NATIVE FCM device token (not Expo push token)
-    //    This is what admin.messaging().send({ token }) expects.
-    const tokenData = await Notifications.getDevicePushTokenAsync();
+    // Get native FCM device token
+    const tokenData = await N.getDevicePushTokenAsync();
     const fcmToken  = tokenData.data as string;
 
-    console.log("[Push] FCM device token obtained:", fcmToken.substring(0, 20) + "...");
+    console.log("[Push] FCM token:", fcmToken.substring(0, 20) + "...");
 
-    // 3. Register token with our backend
+    // Register with backend
     await api.post("/push/register", {
       token:    fcmToken,
-      platform: Platform.OS as "android" | "ios" | "web",
+      platform: Platform.OS,
       deviceInfo: {
         model:      Device.modelName    ?? "unknown",
         osVersion:  Device.osVersion    ?? "unknown",
@@ -104,7 +136,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
       },
     });
 
-    console.log("[Push] Token registered with backend ✅");
+    console.log("[Push] Token registered ✅");
     return fcmToken;
 
   } catch (err: any) {
@@ -117,9 +149,10 @@ export async function registerForPushNotifications(): Promise<string | null> {
 // Unregister on logout
 // ─────────────────────────────────────────────────────────────────
 export async function unregisterPushToken(): Promise<void> {
-  if (!Device.isDevice) return;
+  const N = getNotifications();
+  if (!N || !Device.isDevice) return;
   try {
-    const tokenData = await Notifications.getDevicePushTokenAsync();
+    const tokenData = await N.getDevicePushTokenAsync();
     await api.post("/push/unregister", { token: tokenData.data });
     console.log("[Push] Token unregistered.");
   } catch (err: any) {
@@ -128,29 +161,40 @@ export async function unregisterPushToken(): Promise<void> {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Notification listeners — attach at app root
-// Returns a cleanup function for useEffect
+// Notification listeners
+// Returns a no-op cleanup function in Expo Go
 // ─────────────────────────────────────────────────────────────────
 export function addNotificationListeners(opts: {
-  onForeground?: (notification: Notifications.Notification) => void;
-  onTap?: (response: Notifications.NotificationResponse) => void;
+  onForeground?: (notification: unknown) => void;
+  onTap?: (response: unknown) => void;
 }): () => void {
+  const N = getNotifications();
+  if (!N) return () => {};
+
   const s1 = opts.onForeground
-    ? Notifications.addNotificationReceivedListener(opts.onForeground)
+    ? N.addNotificationReceivedListener(opts.onForeground)
     : null;
   const s2 = opts.onTap
-    ? Notifications.addNotificationResponseReceivedListener(opts.onTap)
+    ? N.addNotificationResponseReceivedListener(opts.onTap)
     : null;
-  return () => { s1?.remove(); s2?.remove(); };
+
+  return () => {
+    s1?.remove();
+    s2?.remove();
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Badge helpers
+// Badge helpers — silent no-ops in Expo Go
 // ─────────────────────────────────────────────────────────────────
 export async function setBadgeCount(count: number): Promise<void> {
-  await Notifications.setBadgeCountAsync(count);
+  const N = getNotifications();
+  if (!N) return;
+  try { await N.setBadgeCountAsync(count); } catch { /* ignore */ }
 }
 
 export async function clearBadge(): Promise<void> {
-  await Notifications.setBadgeCountAsync(0);
+  const N = getNotifications();
+  if (!N) return;
+  try { await N.setBadgeCountAsync(0); } catch { /* ignore */ }
 }

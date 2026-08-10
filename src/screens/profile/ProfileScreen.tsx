@@ -30,8 +30,14 @@ const TIER: Record<Tier, { label: string; icon: string; bg: string; fg: string }
   admin: { label: "Administrator",    icon: "🛡️", bg: "#E8EAF6", fg: "#1A237E" },
 };
 
+// Safely resolve tier — any unexpected value falls back to "free"
+function safeTier(raw: string | undefined | null): Tier {
+  if (raw === "trial" || raw === "paid" || raw === "admin") return raw;
+  return "free";
+}
+
 function TierBadge({ tier }: { tier: Tier }) {
-  const cfg = TIER[tier];
+  const cfg = TIER[tier] ?? TIER.free;   // always defined — never crashes
   const scale = useRef(new Animated.Value(0.7)).current;
   useEffect(() => {
     Animated.spring(scale, { toValue: 1, damping: 12, stiffness: 160, useNativeDriver: true }).start();
@@ -69,6 +75,7 @@ export default function ProfileScreen({ navigation }: any) {
   const [loading,   setLoading]   = useState(true);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [tier, setTier] = useState<Tier>("free");
+  const [imageError, setImageError] = useState(false);
 
   const headerAnim = useRef(new Animated.Value(0)).current;
 
@@ -76,6 +83,7 @@ export default function ProfileScreen({ navigation }: any) {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      setImageError(false); // Reset on reload
 
       // Each call is wrapped individually so one failure never
       // crashes the whole profile screen.
@@ -95,11 +103,11 @@ export default function ProfileScreen({ navigation }: any) {
         setDashboard((dashRes as any).data || dashRes);
       }
 
-      // Resolve subscription tier
+      // Resolve subscription tier — always a valid Tier key
       if ((user as any)?.role === "admin") {
         setTier("admin");
       } else if (subStatus?.tier) {
-        setTier(subStatus.tier as Tier);
+        setTier(safeTier(subStatus.tier));
       } else {
         setTier((user as any)?.isPremium ? "paid" : "free");
       }
@@ -131,7 +139,14 @@ export default function ProfileScreen({ navigation }: any) {
       const res = await uploadProfileImage(asset);
       if (res.success || res.profileImage) {
         const newImg = res.profileImage || res.user?.profileImage;
+        // Update local state immediately so the image shows right away
         setProfile((p: any) => ({ ...p, profileImage: newImg }));
+        setImageError(false); // Reset error state since new image uploaded
+        // Persist to SecureStore so it survives app restarts
+        if (res.user) {
+          const { saveUser } = await import("../../utils/storage");
+          await saveUser(res.user).catch(() => {});
+        }
       }
     } catch (err: any) {
       console.log("Upload error:", err.message);
@@ -180,8 +195,12 @@ export default function ProfileScreen({ navigation }: any) {
             <View style={styles.avatarCircle}>
               {uploadingImage ? (
                 <ActivityIndicator color="#FFF" size="large" />
-              ) : avatarUrl ? (
-                <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+              ) : avatarUrl && !imageError ? (
+                <Image 
+                  source={{ uri: avatarUrl }} 
+                  style={styles.avatarImage}
+                  onError={() => setImageError(true)}
+                />
               ) : (
                 <Text style={styles.avatarText}>{initials}</Text>
               )}
