@@ -16,19 +16,20 @@
       }
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FFFFFF",
-        "monochromeImage": "./assets/monochrome-icon.png"
-      },
-      "package": "com.solosecurities.app",
-      "predictiveBackGestureEnabled": false,
-      "permissions": [
-        "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.VIBRATE",
-        "android.permission.POST_NOTIFICATIONS"
-      ]
-    },
+  "adaptiveIcon": {
+    "foregroundImage": "./assets/adaptive-icon.png",
+    "backgroundColor": "#FFFFFF",
+    "monochromeImage": "./assets/monochrome-icon.png"
+  },
+  "package": "com.solosecurities.app",
+  "googleServicesFile": "./google-services.json",
+  "predictiveBackGestureEnabled": false,
+  "permissions": [
+    "android.permission.RECEIVE_BOOT_COMPLETED",
+    "android.permission.VIBRATE",
+    "android.permission.POST_NOTIFICATIONS"
+  ]
+},
     "web": {
       "favicon": "./assets/favicon.png"
     },

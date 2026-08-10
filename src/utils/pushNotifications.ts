@@ -1,210 +1,400 @@
 /**
  * pushNotifications.ts
- * ─────────────────────
- * Push notification setup for the SoloSecurities mobile app.
  *
- * IMPORTANT — SDK 53 behaviour:
- *   Expo Go no longer supports remote push notifications (FCM).
- *   Token registration is silently skipped when running in Expo Go.
- *   Everything works normally in:
- *     • A development build  (npx expo run:android / npx expo run:ios)
- *     • A production build   (EAS Build)
+ * SoloSecurities push notification setup.
  *
- *   Foreground notification display and notification listeners still
- *   work in Expo Go (for local notifications). Remote push from the
- *   backend only works in a real build.
+ * IMPORTANT:
+ * - Expo Go:
+ *   Remote push registration is skipped on Android.
+ *   Local notifications still work.
+ *
+ * - Development build / production build:
+ *   Native FCM/APNs push token is registered with our backend.
+ *
+ * Backend:
+ *   Firebase Admin SDK sends notifications directly through FCM.
  */
 
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
-import { Platform } from "react-native";
 import Constants from "expo-constants";
+import { Platform } from "react-native";
+
 import api from "../services/api";
 
-// ─────────────────────────────────────────────────────────────────
-// Detect whether we are running inside Expo Go.
-// expo-notifications throws at runtime in Expo Go SDK 53+ when
-// you try to get a push token.
-// ─────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Detect Expo Go
+// ─────────────────────────────────────────────────────────────
+
 function isExpoGo(): boolean {
   return Constants.appOwnership === "expo";
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Configure foreground notification display.
-//
-// This controls what happens when a notification arrives while
-// the SoloSecurities app is currently open.
-//
-// Compatible with the newer expo-notifications NotificationBehavior
-// which requires shouldShowBanner and shouldShowList.
-// ─────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Configure foreground notifications
+// ─────────────────────────────────────────────────────────────
+
 export function configureForegroundNotifications(): void {
   Notifications.setNotificationHandler({
-    handleNotification: async () => {
-      return {
-        // Show notification as a banner/popup at the top of the screen
-        shouldShowBanner: true,
-
-        // Keep notification visible in the notification list
-        shouldShowList: true,
-
-        // Play the default notification sound
-        shouldPlaySound: true,
-
-        // Update the app notification badge
-        shouldSetBadge: true,
-      };
-    },
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
   });
 }
-// ─────────────────────────────────────────────────────────────────
-// Create the Android notification channel (required on Android 8+).
-// ─────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────
+// Android notification channel
+// ─────────────────────────────────────────────────────────────
+
 async function ensureAndroidChannel(): Promise<void> {
-  if (Platform.OS !== "android") return;
+  if (Platform.OS !== "android") {
+    return;
+  }
+
   await Notifications.setNotificationChannelAsync("default", {
     name: "SoloSecurities",
     importance: Notifications.AndroidImportance.MAX,
+
     vibrationPattern: [0, 250, 250, 250],
+
     lightColor: "#C62828",
+
     sound: "default",
+
     enableLights: true,
+
     enableVibrate: true,
+
     showBadge: true,
   });
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Register device for remote push notifications.
+// ─────────────────────────────────────────────────────────────
+// Register device for remote push notifications
+// ─────────────────────────────────────────────────────────────
 //
-// Returns the Expo push token string on success, null otherwise.
+// IMPORTANT:
+// We use getDevicePushTokenAsync() because your backend sends
+// directly through Firebase Admin / FCM.
 //
-// Silently returns null when:
-//   • Running in Expo Go (SDK 53+ restriction)
-//   • Running on a simulator / emulator
-//   • Permission denied by user
-// ─────────────────────────────────────────────────────────────────
-export async function registerForPushNotifications(): Promise<string | null> {
+// This returns a native FCM token on Android.
+//
+// DO NOT use getExpoPushTokenAsync() with your current backend.
+// ─────────────────────────────────────────────────────────────
 
-  // Skip in Expo Go — FCM tokens are not supported there in SDK 53+
+export async function registerForPushNotifications(): Promise<
+  string | null
+> {
+  // ───────────────────────────────────────────────────────────
+  // Expo Go protection
+  // ───────────────────────────────────────────────────────────
+
   if (isExpoGo()) {
     console.log(
-      "[Push] Skipping token registration: Expo Go does not support " +
-      "remote push notifications in SDK 53+. " +
-      "Use a development build (npx expo run:android) for full push support."
+      "[Push] Expo Go detected. Remote push registration skipped."
     );
+
+    console.log(
+      "[Push] Install a development build to test FCM push notifications."
+    );
+
     return null;
   }
 
-  // Push tokens also don't work on simulators/emulators
+  // ───────────────────────────────────────────────────────────
+  // Physical device check
+  // ───────────────────────────────────────────────────────────
+
   if (!Device.isDevice) {
-    console.log("[Push] Skipping: not a physical device.");
+    console.log(
+      "[Push] Remote push requires a physical device."
+    );
+
     return null;
   }
 
   try {
+    // ─────────────────────────────────────────────────────────
+    // Android notification channel
+    // ─────────────────────────────────────────────────────────
+
     await ensureAndroidChannel();
 
-    // 1. Check / request OS permission
-    const { status: existing } = await Notifications.getPermissionsAsync();
-    let finalStatus = existing;
+    // ─────────────────────────────────────────────────────────
+    // Check notification permission
+    // ─────────────────────────────────────────────────────────
 
-    if (existing !== "granted") {
-      const { status } = await Notifications.requestPermissionsAsync({
-        ios: {
-          allowAlert: true,
-          allowBadge: true,
-          allowSound: true,
-        },
-      });
+    const { status: existingStatus } =
+      await Notifications.getPermissionsAsync();
+
+    let finalStatus = existingStatus;
+
+    if (existingStatus !== "granted") {
+      const { status } =
+        await Notifications.requestPermissionsAsync({
+          ios: {
+            allowAlert: true,
+            allowBadge: true,
+            allowSound: true,
+          },
+        });
+
       finalStatus = status;
     }
 
     if (finalStatus !== "granted") {
-      console.log("[Push] Permission denied by user.");
+      console.log(
+        "[Push] Notification permission was denied."
+      );
+
       return null;
     }
 
-    // 2. Get Expo Push Token
-    const projectId =
-      Constants.expoConfig?.extra?.eas?.projectId ??
-      (Constants as any).easConfig?.projectId;
-
-    const tokenData = await Notifications.getExpoPushTokenAsync(
-      projectId ? { projectId } : undefined
+    console.log(
+      "[Push] Notification permission granted."
     );
-    const token = tokenData.data;
-    console.log("[Push] Expo push token:", token);
 
-    // 3. Register token with our backend
+    // ─────────────────────────────────────────────────────────
+    // Get native FCM/APNs token
+    // ─────────────────────────────────────────────────────────
+    //
+    // IMPORTANT:
+    // Your backend uses Firebase Admin:
+    //
+    // admin.messaging().send({
+    //   token: token
+    // })
+    //
+    // Therefore we need the native device token.
+    // ─────────────────────────────────────────────────────────
+
+    const tokenData =
+      await Notifications.getDevicePushTokenAsync();
+
+    const token = String(tokenData.data);
+
+    if (!token) {
+      console.warn(
+        "[Push] Device push token was empty."
+      );
+
+      return null;
+    }
+
+    console.log(
+      "[Push] Native device push token received."
+    );
+
+    console.log(
+      "[Push] Token type:",
+      tokenData.type
+    );
+
+    // ─────────────────────────────────────────────────────────
+    // Register token with backend
+    // ─────────────────────────────────────────────────────────
+
     await api.post("/push/register", {
       token,
-      platform: Platform.OS as "android" | "ios" | "web",
+
+      platform:
+        Platform.OS === "ios"
+          ? "ios"
+          : "android",
+
       deviceInfo: {
-        model:      Device.modelName    ?? "unknown",
-        osVersion:  Device.osVersion    ?? "unknown",
-        appVersion: Constants.expoConfig?.version ?? "1.0.0",
+        model:
+          Device.modelName ?? "unknown",
+
+        osVersion:
+          Device.osVersion ?? "unknown",
+
+        appVersion:
+          Constants.expoConfig?.version ??
+          "1.0.0",
       },
     });
 
-    console.log("[Push] Token registered with backend.");
-    return token;
+    console.log(
+      "[Push] Native push token registered with backend."
+    );
 
-  } catch (err: any) {
-    console.warn("[Push] Registration failed:", err?.message ?? err);
+    return token;
+  } catch (error: any) {
+    console.warn(
+      "[Push] Registration failed:",
+      error?.response?.data ||
+        error?.message ||
+        error
+    );
+
     return null;
   }
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Unregister token on logout
-// ─────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Unregister push token
+// ─────────────────────────────────────────────────────────────
+
 export async function unregisterPushToken(): Promise<void> {
-  if (isExpoGo() || !Device.isDevice) return;
+  // Nothing to unregister from Expo Go
+  if (isExpoGo()) {
+    return;
+  }
+
+  if (!Device.isDevice) {
+    return;
+  }
+
   try {
-    const projectId =
-      Constants.expoConfig?.extra?.eas?.projectId ??
-      (Constants as any).easConfig?.projectId;
-    const tokenData = await Notifications.getExpoPushTokenAsync(
-      projectId ? { projectId } : undefined
+    const tokenData =
+      await Notifications.getDevicePushTokenAsync();
+
+    const token = String(tokenData.data);
+
+    if (!token) {
+      return;
+    }
+
+    await api.post("/push/unregister", {
+      token,
+    });
+
+    console.log(
+      "[Push] Push token unregistered."
     );
-    await api.post("/push/unregister", { token: tokenData.data });
-    console.log("[Push] Token unregistered.");
-  } catch (err: any) {
-    console.warn("[Push] Unregister failed:", err?.message ?? err);
+  } catch (error: any) {
+    console.warn(
+      "[Push] Unregister failed:",
+      error?.response?.data ||
+        error?.message ||
+        error
+    );
   }
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Notification listeners — safe in both Expo Go and real builds.
-// Returns a cleanup function for useEffect.
-// ─────────────────────────────────────────────────────────────────
-export function addNotificationListeners(opts: {
-  onForeground?: (notification: Notifications.Notification) => void;
-  onTap?: (response: Notifications.NotificationResponse) => void;
-}): () => void {
-  const sub1 = opts.onForeground
-    ? Notifications.addNotificationReceivedListener(opts.onForeground)
-    : null;
+// ─────────────────────────────────────────────────────────────
+// Notification listeners
+// ─────────────────────────────────────────────────────────────
 
-  const sub2 = opts.onTap
-    ? Notifications.addNotificationResponseReceivedListener(opts.onTap)
-    : null;
+export function addNotificationListeners(options: {
+  onForeground?: (
+    notification: Notifications.Notification
+  ) => void;
+
+  onTap?: (
+    response: Notifications.NotificationResponse
+  ) => void;
+}): () => void {
+  const foregroundSubscription =
+    options.onForeground
+      ? Notifications.addNotificationReceivedListener(
+          options.onForeground
+        )
+      : null;
+
+  const responseSubscription =
+    options.onTap
+      ? Notifications.addNotificationResponseReceivedListener(
+          options.onTap
+        )
+      : null;
 
   return () => {
-    sub1?.remove();
-    sub2?.remove();
+    foregroundSubscription?.remove();
+
+    responseSubscription?.remove();
   };
 }
 
-// ─────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
 // Badge helpers
-// ─────────────────────────────────────────────────────────────────
-export async function setBadgeCount(count: number): Promise<void> {
-  await Notifications.setBadgeCountAsync(count);
+// ─────────────────────────────────────────────────────────────
+
+export async function setBadgeCount(
+  count: number
+): Promise<void> {
+  try {
+    await Notifications.setBadgeCountAsync(
+      count
+    );
+  } catch (error) {
+    console.warn(
+      "[Push] Failed to set badge:",
+      error
+    );
+  }
 }
 
 export async function clearBadge(): Promise<void> {
-  await Notifications.setBadgeCountAsync(0);
+  try {
+    await Notifications.setBadgeCountAsync(0);
+  } catch (error) {
+    console.warn(
+      "[Push] Failed to clear badge:",
+      error
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Local notification helper
+// ─────────────────────────────────────────────────────────────
+//
+// This DOES work in Expo Go.
+// Useful for testing notification UI before making
+// a development build.
+// ─────────────────────────────────────────────────────────────
+
+export async function showLocalTestNotification(): Promise<void> {
+  try {
+    if (Platform.OS === "android") {
+      await ensureAndroidChannel();
+    }
+
+    const { status } =
+      await Notifications.getPermissionsAsync();
+
+    let finalStatus = status;
+
+    if (status !== "granted") {
+      const permission =
+        await Notifications.requestPermissionsAsync();
+
+      finalStatus = permission.status;
+    }
+
+    if (finalStatus !== "granted") {
+      console.warn(
+        "[Push] Notification permission denied."
+      );
+
+      return;
+    }
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "🔔 SoloSecurities",
+        body: "Local notification test successful!",
+        sound: "default",
+        data: {
+          type: "local_test",
+        },
+      },
+
+      trigger: null,
+    });
+
+    console.log(
+      "[Push] Local test notification scheduled."
+    );
+  } catch (error: any) {
+    console.warn(
+      "[Push] Local notification failed:",
+      error?.message || error
+    );
+  }
 }
