@@ -66,8 +66,15 @@ export default function DashboardScreen({ navigation }: Props) {
 
   const loadDashboard = useCallback(async () => {
     try {
+      // Always fetch from server to get latest profile data including image
       const latestUser = await fetchCurrentUser();
-      setUser(latestUser ?? (await getCurrentUser()));
+      const fallbackUser = await getCurrentUser();
+      const finalUser = latestUser ?? fallbackUser;
+      
+      console.log("Dashboard - User loaded:", finalUser?.username);
+      console.log("Dashboard - Profile Image:", finalUser?.profileImage);
+      
+      setUser(finalUser);
 
       const dashRes = await getSecurityDashboard();
       setDashboard(dashRes.data ?? dashRes ?? {});

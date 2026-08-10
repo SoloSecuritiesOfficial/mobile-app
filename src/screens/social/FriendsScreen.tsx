@@ -5,11 +5,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../navigation/AppNavigator";
 import api from "../../services/api";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
 
+type Props = NativeStackScreenProps<RootStackParamList, "Friends">;
 type Tab = "friends" | "requests" | "search" | "activity";
 
 interface FriendUser {
@@ -28,7 +31,7 @@ interface FriendRequest {
   createdAt: string;
 }
 
-export default function FriendsScreen() {
+export default function FriendsScreen({ navigation }: Props) {
   const [tab, setTab] = useState<Tab>("friends");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -173,16 +176,46 @@ export default function FriendsScreen() {
           friends.length === 0
             ? <View style={styles.emptyBox}><Text style={styles.emptyIcon}>👥</Text><Text style={styles.emptyTitle}>No Friends Yet</Text><Text style={styles.emptyText}>Search for users and send friend requests to connect.</Text></View>
             : friends.map((f) => (
-              <View key={f._id} style={styles.card}>
+              <TouchableOpacity 
+                key={f._id} 
+                style={styles.card}
+                onPress={() => navigation.navigate("Chat", {
+                  userId: f._id,
+                  username: f.username,
+                  profileImage: f.profileImage,
+                })}
+                activeOpacity={0.7}
+              >
                 <Avatar user={f} />
                 <View style={styles.cardInfo}>
                   <Text style={styles.cardName}>{f.username}</Text>
                   <Text style={styles.cardSub}>Level {f.level ?? 1} • {f.xp ?? 0} XP</Text>
                 </View>
-                <TouchableOpacity style={styles.removeBtn} onPress={() => handleRemoveFriend(f._id)}>
-                  <Text style={styles.removeBtnText}>Remove</Text>
-                </TouchableOpacity>
-              </View>
+                <View style={styles.actionBtns}>
+                  <TouchableOpacity 
+                    style={styles.chatBtn}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      navigation.navigate("Chat", {
+                        userId: f._id,
+                        username: f.username,
+                        profileImage: f.profileImage,
+                      });
+                    }}
+                  >
+                    <Text style={styles.chatBtnText}>💬 Chat</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.removeBtn} 
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleRemoveFriend(f._id);
+                    }}
+                  >
+                    <Text style={styles.removeBtnText}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
             ))
         )}
 
@@ -286,6 +319,9 @@ const styles = StyleSheet.create({
   cardInfo: { flex: 1 },
   cardName: { ...Typography.bodyMedium, color: Colors.text, fontWeight: "700" },
   cardSub: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  actionBtns: { flexDirection: "row", gap: 6 },
+  chatBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: Colors.primary },
+  chatBtnText: { color: "#FFF", fontWeight: "700", fontSize: 12 },
   removeBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: "#FEE2E2" },
   removeBtnText: { color: "#EF4444", fontWeight: "700", fontSize: 12 },
   reqBtns: { flexDirection: "row", gap: 8 },

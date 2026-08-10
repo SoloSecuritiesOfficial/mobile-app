@@ -87,6 +87,14 @@ export default function DashboardHeader({ user, navigation }: Props) {
     setImageError(false);
   }, [avatarUri]);
 
+  // Debug log to verify profile image URL
+  React.useEffect(() => {
+    if (user?.profileImage) {
+      console.log("DashboardHeader - Profile Image:", user.profileImage);
+      console.log("DashboardHeader - Resolved Avatar URI:", avatarUri);
+    }
+  }, [user?.profileImage, avatarUri]);
+
   return (
     <View style={styles.container}>
       <View style={styles.leftSection}>
@@ -106,7 +114,10 @@ export default function DashboardHeader({ user, navigation }: Props) {
           <Image
             source={{ uri: avatarUri }}
             style={styles.avatar}
-            onError={() => setImageError(true)}
+            onError={(e) => {
+              console.log("DashboardHeader - Image Load Error:", e.nativeEvent.error);
+              setImageError(true);
+            }}
           />
         ) : (
           <Text style={styles.avatarText}>{initials}</Text>
