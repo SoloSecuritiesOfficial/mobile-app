@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from "react";
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  TextInput, ActivityIndicator, RefreshControl, ScrollView,
+  TextInput, ActivityIndicator, RefreshControl, ScrollView, Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
@@ -151,6 +151,177 @@ function FilterRow<T extends string>({
 }
 
 // ─────────────────────────────────────────────────────────────────
+// Filter Modal Component
+// ─────────────────────────────────────────────────────────────────
+function FilterModal({
+  visible,
+  onClose,
+  filters,
+  onApply,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  filters: {
+    locationType: string;
+    experienceLevel: string;
+    jobType: string;
+  };
+  onApply: (filters: any) => void;
+}) {
+  const [tempFilters, setTempFilters] = useState(filters);
+
+  React.useEffect(() => {
+    setTempFilters(filters);
+  }, [filters, visible]);
+
+  const handleApply = () => {
+    onApply(tempFilters);
+    onClose();
+  };
+
+  const handleClear = () => {
+    const cleared = { locationType: "", experienceLevel: "", jobType: "" };
+    setTempFilters(cleared);
+    onApply(cleared);
+    onClose();
+  };
+
+  const activeCount = [tempFilters.locationType, tempFilters.experienceLevel, tempFilters.jobType].filter(Boolean).length;
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={onClose}
+    >
+      <TouchableOpacity 
+        style={styles.modalOverlay} 
+        activeOpacity={1} 
+        onPress={onClose}
+      >
+        <TouchableOpacity 
+          activeOpacity={1} 
+          style={styles.filterModalContent}
+          onPress={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <View style={styles.filterModalHeader}>
+            <Text style={styles.filterModalTitle}>🔍 Filters</Text>
+            {activeCount > 0 && (
+              <View style={styles.filterBadge}>
+                <Text style={styles.filterBadgeText}>{activeCount}</Text>
+              </View>
+            )}
+            <TouchableOpacity onPress={onClose} style={styles.filterCloseBtn}>
+              <Text style={styles.filterCloseText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.filterModalScroll} showsVerticalScrollIndicator={false}>
+            {/* Location Type */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>📍 Location Type</Text>
+              <View style={styles.filterOptions}>
+                {LOCATION_FILTERS.map((opt) => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[
+                      styles.filterOption,
+                      tempFilters.locationType === opt.value && styles.filterOptionActive,
+                    ]}
+                    onPress={() => setTempFilters({ ...tempFilters, locationType: opt.value })}
+                  >
+                    <Text
+                      style={[
+                        styles.filterOptionText,
+                        tempFilters.locationType === opt.value && styles.filterOptionTextActive,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Experience Level */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>💼 Experience Level</Text>
+              <View style={styles.filterOptions}>
+                {EXPERIENCE_FILTERS.map((opt) => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[
+                      styles.filterOption,
+                      tempFilters.experienceLevel === opt.value && styles.filterOptionActive,
+                    ]}
+                    onPress={() => setTempFilters({ ...tempFilters, experienceLevel: opt.value })}
+                  >
+                    <Text
+                      style={[
+                        styles.filterOptionText,
+                        tempFilters.experienceLevel === opt.value && styles.filterOptionTextActive,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Job Type */}
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionTitle}>⏰ Job Type</Text>
+              <View style={styles.filterOptions}>
+                {JOB_TYPE_FILTERS.map((opt) => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[
+                      styles.filterOption,
+                      tempFilters.jobType === opt.value && styles.filterOptionActive,
+                    ]}
+                    onPress={() => setTempFilters({ ...tempFilters, jobType: opt.value })}
+                  >
+                    <Text
+                      style={[
+                        styles.filterOptionText,
+                        tempFilters.jobType === opt.value && styles.filterOptionTextActive,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+
+          {/* Action Buttons */}
+          <View style={styles.filterModalActions}>
+            <TouchableOpacity 
+              style={styles.filterClearBtn} 
+              onPress={handleClear}
+              disabled={activeCount === 0}
+            >
+              <Text style={[styles.filterClearText, activeCount === 0 && { opacity: 0.4 }]}>
+                Clear All
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.filterApplyBtn} onPress={handleApply}>
+              <Text style={styles.filterApplyText}>
+                Apply {activeCount > 0 ? `(${activeCount})` : ""}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
 // Screen
 // ─────────────────────────────────────────────────────────────────
 export default function JobsScreen({ navigation }: Props) {
@@ -166,8 +337,11 @@ export default function JobsScreen({ navigation }: Props) {
   const [locationType,   setLocationType]   = useState<string>("");
   const [experienceLevel,setExperienceLevel]= useState<string>("");
   const [jobType,        setJobType]        = useState<string>("");
+  const [showFilters,    setShowFilters]    = useState(false);
 
   const LIMIT = 15;
+
+  const activeFilterCount = [locationType, experienceLevel, jobType].filter(Boolean).length;
 
   const load = useCallback(async (reset = true) => {
     if (reset) { setLoading(true); setPage(1); }
@@ -207,6 +381,12 @@ export default function JobsScreen({ navigation }: Props) {
     load(false);
   };
 
+  const handleApplyFilters = (filters: any) => {
+    setLocationType(filters.locationType);
+    setExperienceLevel(filters.experienceLevel);
+    setJobType(filters.jobType);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -220,29 +400,86 @@ export default function JobsScreen({ navigation }: Props) {
         </View>
       </View>
 
-      {/* Search */}
-      <View style={styles.searchBox}>
-        <Text style={styles.searchIcon}>🔍</Text>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search jobs, companies, skills…"
-          placeholderTextColor="#999"
-          value={search}
-          onChangeText={(t) => { setSearch(t); }}
-          returnKeyType="search"
-          onSubmitEditing={() => load(true)}
-        />
-        {search.length > 0 && (
-          <TouchableOpacity onPress={() => setSearch("")}>
-            <Text style={{ color: "#999", paddingHorizontal: 8, fontSize: 16 }}>✕</Text>
-          </TouchableOpacity>
-        )}
+      {/* Search & Filter Bar */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchBox}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search jobs, companies, skills…"
+            placeholderTextColor="#999"
+            value={search}
+            onChangeText={(t) => { setSearch(t); }}
+            returnKeyType="search"
+            onSubmitEditing={() => load(true)}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")}>
+              <Text style={{ color: "#999", paddingHorizontal: 8, fontSize: 16 }}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Filter Button */}
+        <TouchableOpacity 
+          style={[styles.filterBtn, activeFilterCount > 0 && styles.filterBtnActive]}
+          onPress={() => setShowFilters(true)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.filterBtnIcon, activeFilterCount > 0 && styles.filterBtnIconActive]}>
+            ⚙️
+          </Text>
+          {activeFilterCount > 0 && (
+            <View style={styles.filterCountBadge}>
+              <Text style={styles.filterCountText}>{activeFilterCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
-      {/* Filters */}
-      <FilterRow options={LOCATION_FILTERS}   value={locationType}    onChange={(v) => setLocationType(v)} />
-      <FilterRow options={EXPERIENCE_FILTERS} value={experienceLevel} onChange={(v) => setExperienceLevel(v)} />
-      <FilterRow options={JOB_TYPE_FILTERS}   value={jobType}         onChange={(v) => setJobType(v)} />
+      {/* Active Filters Chips (if any) */}
+      {activeFilterCount > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.activeFiltersRow}
+        >
+          {locationType && (
+            <View style={styles.activeFilterChip}>
+              <Text style={styles.activeFilterText}>📍 {LOCATION_FILTERS.find(f => f.value === locationType)?.label}</Text>
+              <TouchableOpacity onPress={() => setLocationType("")} style={styles.activeFilterRemove}>
+                <Text style={styles.activeFilterRemoveText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {experienceLevel && (
+            <View style={styles.activeFilterChip}>
+              <Text style={styles.activeFilterText}>💼 {experienceLevel}</Text>
+              <TouchableOpacity onPress={() => setExperienceLevel("")} style={styles.activeFilterRemove}>
+                <Text style={styles.activeFilterRemoveText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {jobType && (
+            <View style={styles.activeFilterChip}>
+              <Text style={styles.activeFilterText}>⏰ {JOB_TYPE_FILTERS.find(f => f.value === jobType)?.label}</Text>
+              <TouchableOpacity onPress={() => setJobType("")} style={styles.activeFilterRemove}>
+                <Text style={styles.activeFilterRemoveText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          <TouchableOpacity
+            style={styles.clearAllBtn}
+            onPress={() => {
+              setLocationType("");
+              setExperienceLevel("");
+              setJobType("");
+            }}
+          >
+            <Text style={styles.clearAllText}>Clear all</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      )}
 
       {/* List */}
       {loading ? (
@@ -290,6 +527,14 @@ export default function JobsScreen({ navigation }: Props) {
           }
         />
       )}
+
+      {/* Filter Modal */}
+      <FilterModal
+        visible={showFilters}
+        onClose={() => setShowFilters(false)}
+        filters={{ locationType, experienceLevel, jobType }}
+        onApply={handleApplyFilters}
+      />
     </SafeAreaView>
   );
 }
@@ -374,4 +619,100 @@ const styles = StyleSheet.create({
   emptyIcon:  { fontSize: 52, marginBottom: 14 },
   emptyTitle: { ...Typography.h3, color: Colors.text, marginBottom: 8 },
   emptyDesc:  { fontSize: 14, color: Colors.textSecondary, textAlign: "center", lineHeight: 20 },
+
+  // ── New compact filter system ──
+  searchContainer: { flexDirection: "row", paddingHorizontal: Spacing.screen, paddingTop: 12, paddingBottom: 8, gap: 8, alignItems: "center" },
+  filterBtn: {
+    width: 46, height: 46,
+    borderRadius: 12,
+    backgroundColor: Colors.surface,
+    borderWidth: 1, borderColor: Colors.border,
+    justifyContent: "center", alignItems: "center",
+    position: "relative",
+    elevation: 1,
+  },
+  filterBtnActive: { backgroundColor: Colors.primary + "22", borderColor: Colors.primary },
+  filterBtnIcon: { fontSize: 20 },
+  filterBtnIconActive: { color: Colors.primary },
+  filterCountBadge: {
+    position: "absolute", top: -4, right: -4,
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
+    minWidth: 24, height: 24,
+    justifyContent: "center", alignItems: "center",
+    borderWidth: 2, borderColor: "#FFF",
+  },
+  filterCountText: { color: "#FFF", fontWeight: "700", fontSize: 11 },
+
+  activeFiltersRow: { paddingHorizontal: Spacing.screen, paddingVertical: 8, gap: 6 },
+  activeFilterChip: {
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: Colors.primary + "22",
+    borderColor: Colors.primary,
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 10, paddingVertical: 5,
+    gap: 4,
+  },
+  activeFilterText: { fontSize: 11, fontWeight: "600", color: Colors.primary },
+  activeFilterRemove: { padding: 2 },
+  activeFilterRemoveText: { fontSize: 12, color: Colors.primary, fontWeight: "700" },
+  clearAllBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: "#F0F0F0" },
+  clearAllText: { fontSize: 11, color: "#666", fontWeight: "600" },
+
+  // ── Filter Modal ──
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  filterModalContent: {
+    backgroundColor: "#FFF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "85%",
+    elevation: 10,
+  },
+  filterModalHeader: {
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 20, paddingVertical: 16,
+    borderBottomWidth: 1, borderBottomColor: Colors.border,
+  },
+  filterModalTitle: { fontSize: 18, fontWeight: "800", color: Colors.text, flex: 1 },
+  filterBadge: {
+    backgroundColor: Colors.primary,
+    borderRadius: 12, minWidth: 28, height: 28,
+    justifyContent: "center", alignItems: "center",
+    marginRight: 12,
+  },
+  filterBadgeText: { color: "#FFF", fontWeight: "700", fontSize: 12 },
+  filterCloseBtn: { padding: 6 },
+  filterCloseText: { fontSize: 20, color: "#999" },
+
+  filterModalScroll: { padding: 20 },
+  filterSection: { marginBottom: 24 },
+  filterSectionTitle: { fontSize: 14, fontWeight: "700", color: Colors.text, marginBottom: 10 },
+  filterOptions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  filterOption: {
+    paddingHorizontal: 14, paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: "#F0F0F0",
+    borderWidth: 1.5, borderColor: "#E0E0E0",
+    minWidth: "30%",
+    alignItems: "center",
+  },
+  filterOptionActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  filterOptionText: { fontSize: 13, color: "#555", fontWeight: "600" },
+  filterOptionTextActive: { color: "#FFF" },
+
+  filterModalActions: {
+    flexDirection: "row", gap: 10,
+    paddingHorizontal: 20, paddingVertical: 16,
+    paddingBottom: 20,
+    borderTopWidth: 1, borderTopColor: Colors.border,
+  },
+  filterClearBtn: { flex: 0.35, paddingVertical: 12, alignItems: "center", borderRadius: 10, backgroundColor: "#F0F0F0" },
+  filterClearText: { fontSize: 13, fontWeight: "700", color: "#666" },
+  filterApplyBtn: { flex: 0.65, paddingVertical: 12, alignItems: "center", borderRadius: 10, backgroundColor: Colors.primary },
+  filterApplyText: { fontSize: 14, fontWeight: "700", color: "#FFF" },
 });
