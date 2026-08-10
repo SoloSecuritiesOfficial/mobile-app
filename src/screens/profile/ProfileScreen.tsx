@@ -76,19 +76,26 @@ export default function ProfileScreen({ navigation }: any) {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [user, dashRes, subStatus] = await Promise.all([
-        fetchCurrentUser().catch(() => null) || getCurrentUser(),
-        getSecurityDashboard().catch(() => null),
-        getSubscriptionStatus().catch(() => null),
-      ]);
+
+      // Each call is wrapped individually so one failure never
+      // crashes the whole profile screen.
+      const user = await fetchCurrentUser().catch(() => null)
+                ?? await getCurrentUser().catch(() => null);
+
+      const dashRes = await getSecurityDashboard().catch(() => null);
+
+      const subStatus = await getSubscriptionStatus().catch(() => null);
 
       if (user) {
         setProfile(user);
-        setBadges(user.badges || []);
+        setBadges((user as any).badges || []);
       }
-      if (dashRes) setDashboard(dashRes.data || dashRes);
 
-      // Resolve tier
+      if (dashRes) {
+        setDashboard((dashRes as any).data || dashRes);
+      }
+
+      // Resolve subscription tier
       if ((user as any)?.role === "admin") {
         setTier("admin");
       } else if (subStatus?.tier) {
@@ -98,8 +105,15 @@ export default function ProfileScreen({ navigation }: any) {
       }
 
       // Animate header in
-      Animated.spring(headerAnim, { toValue: 1, damping: 14, stiffness: 120, useNativeDriver: true }).start();
+      Animated.spring(headerAnim, {
+        toValue: 1,
+        damping: 14,
+        stiffness: 120,
+        useNativeDriver: true,
+      }).start();
+
     } catch (err) {
+      // Last-resort catch — should not normally be reached
       console.log("Profile load error:", err);
     } finally {
       setLoading(false);

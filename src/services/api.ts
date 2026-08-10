@@ -98,18 +98,7 @@ api.interceptors.response.use(
 
 (response)=>{
 
-
-  console.log(
-
-    "API SUCCESS:",
-    response.status,
-    response.config.url
-
-  );
-
-
   return response;
-
 
 },
 

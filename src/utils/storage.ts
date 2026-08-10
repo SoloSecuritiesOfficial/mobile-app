@@ -12,8 +12,6 @@ export const getToken = async () => {
 };
 
 export const saveUser = async (user: any) => {
-  console.log("Saving user:", user);
-
   await SecureStore.setItemAsync(
     USER_KEY,
     JSON.stringify(user)
@@ -22,11 +20,7 @@ export const saveUser = async (user: any) => {
 
 export const getUser = async () => {
   const data = await SecureStore.getItemAsync(USER_KEY);
-
-  console.log("Stored user:", data);
-
   if (!data) return null;
-
   return JSON.parse(data);
 };
 
