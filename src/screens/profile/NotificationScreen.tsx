@@ -46,6 +46,13 @@ export default function NotificationScreen() {
 
   useEffect(() => {
     loadNotifications();
+    
+    // ✅ AUTO-REFRESH: Poll for new notifications every 5 seconds
+    const pollInterval = setInterval(() => {
+      loadNotifications();
+    }, 5000);
+    
+    return () => clearInterval(pollInterval);
   }, []);
 
   const loadNotifications =

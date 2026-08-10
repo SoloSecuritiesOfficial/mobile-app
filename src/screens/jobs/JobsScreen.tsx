@@ -373,7 +373,16 @@ export default function JobsScreen({ navigation }: Props) {
     }
   }, [search, locationType, experienceLevel, jobType, page]);
 
-  useFocusEffect(useCallback(() => { load(true); }, [search, locationType, experienceLevel, jobType]));
+  useFocusEffect(useCallback(() => { 
+    load(true); 
+    
+    // ✅ AUTO-REFRESH: Poll for new jobs every 10 seconds
+    const pollInterval = setInterval(() => {
+      load(true);
+    }, 10000);
+    
+    return () => clearInterval(pollInterval);
+  }, [search, locationType, experienceLevel, jobType]));
 
   const handleLoadMore = () => {
     if (!hasMore || loadingMore) return;

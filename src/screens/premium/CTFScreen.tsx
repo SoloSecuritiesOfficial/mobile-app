@@ -65,7 +65,16 @@ export default function CTFScreen() {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
+  useFocusEffect(useCallback(() => { 
+    loadData(); 
+    
+    // ✅ AUTO-REFRESH: Poll for new CTF challenges/leaderboard every 10 seconds
+    const pollInterval = setInterval(() => {
+      loadData();
+    }, 10000);
+    
+    return () => clearInterval(pollInterval);
+  }, [loadData]));
 
   const handleSubmitFlag = async () => {
     if (!selectedChallenge || !flagInput.trim()) return;

@@ -205,6 +205,13 @@ await Promise.all([
   useFocusEffect(
     useCallback(() => {
       loadLearningData();
+      
+      // ✅ AUTO-REFRESH: Poll for new learning modules every 10 seconds
+      const pollInterval = setInterval(() => {
+        loadLearningData();
+      }, 10000);
+      
+      return () => clearInterval(pollInterval);
     }, [loadLearningData])
   );
 

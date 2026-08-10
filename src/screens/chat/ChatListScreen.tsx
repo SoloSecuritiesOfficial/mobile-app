@@ -31,6 +31,13 @@ export default function ChatListScreen({ navigation }: any) {
   useFocusEffect(
     useCallback(() => {
       loadConversations();
+      
+      // ✅ AUTO-REFRESH: Poll for new conversations every 5 seconds
+      const pollInterval = setInterval(() => {
+        loadConversations();
+      }, 5000);
+      
+      return () => clearInterval(pollInterval);
     }, [])
   );
 

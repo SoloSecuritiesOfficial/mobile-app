@@ -97,6 +97,13 @@ export default function LabsScreen(){
   useFocusEffect(
     useCallback(() => {
       loadLabs();
+      
+      // ✅ AUTO-REFRESH: Poll for new labs every 10 seconds
+      const pollInterval = setInterval(() => {
+        loadLabs();
+      }, 10000);
+      
+      return () => clearInterval(pollInterval);
     }, [loadLabs])
   );
 

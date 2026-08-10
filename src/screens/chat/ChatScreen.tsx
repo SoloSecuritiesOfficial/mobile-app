@@ -22,10 +22,17 @@ export default function ChatScreen({ route, navigation }: any) {
   useEffect(() => {
     loadChat();
     loadCurrentUser();
+    
+    // ✅ AUTO-REFRESH: Poll for new messages every 3 seconds
+    const pollInterval = setInterval(() => {
+      loadChat();
+    }, 3000);
+    
     return () => {
+      clearInterval(pollInterval);
       markAsRead(userId).catch(() => {});
     };
-  }, []);
+  }, [userId]);
 
   const loadCurrentUser = async () => {
     const user = await getCurrentUser();

@@ -94,7 +94,16 @@ export default function DashboardScreen({ navigation }: Props) {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { loadDashboard(); }, [loadDashboard]));
+  useFocusEffect(useCallback(() => { 
+    loadDashboard(); 
+    
+    // ✅ AUTO-REFRESH: Poll for dashboard updates every 10 seconds
+    const pollInterval = setInterval(() => {
+      loadDashboard();
+    }, 10000);
+    
+    return () => clearInterval(pollInterval);
+  }, [loadDashboard]));
 
   if (loading) {
     return (

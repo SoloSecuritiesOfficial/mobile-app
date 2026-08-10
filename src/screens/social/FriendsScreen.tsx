@@ -61,7 +61,16 @@ export default function FriendsScreen({ navigation }: Props) {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
+  useFocusEffect(useCallback(() => { 
+    loadData(); 
+    
+    // ✅ AUTO-REFRESH: Poll for new friend requests/activity every 5 seconds
+    const pollInterval = setInterval(() => {
+      loadData();
+    }, 5000);
+    
+    return () => clearInterval(pollInterval);
+  }, [loadData]));
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;

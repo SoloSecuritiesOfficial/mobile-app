@@ -115,6 +115,13 @@ export default function QuizScreen() {
   useFocusEffect(
     useCallback(() => {
       loadQuizzes();
+      
+      // ✅ AUTO-REFRESH: Poll for new quizzes every 10 seconds
+      const pollInterval = setInterval(() => {
+        loadQuizzes();
+      }, 10000);
+      
+      return () => clearInterval(pollInterval);
     }, [loadQuizzes])
   );
 
