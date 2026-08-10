@@ -31,15 +31,20 @@ interface Props {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Resolve profileImage: prepend BASE_URL for relative server paths,
-// leave full http(s) URLs unchanged.
+// Resolve profileImage: 
+// - If it's a data URL (data:image/...), use it directly
+// - If it starts with http(s), use it directly
+// - Otherwise prepend BASE_URL for relative server paths
 // ─────────────────────────────────────────────────────────────────
 function resolveAvatar(profileImage?: string): string | null {
   if (!profileImage) return null;
-  if (profileImage.startsWith("http://") || profileImage.startsWith("https://")) {
-    return profileImage;
+  if (profileImage.startsWith("data:image/")) {
+    return profileImage; // Base64 data URL
   }
-  return `${BASE_URL}${profileImage}`;
+  if (profileImage.startsWith("http://") || profileImage.startsWith("https://")) {
+    return profileImage; // Full URL
+  }
+  return `${BASE_URL}${profileImage}`; // Relative path
 }
 
 // ─────────────────────────────────────────────────────────────────
