@@ -355,7 +355,11 @@ export const triggerAppNotification = (
 export const checkAndTriggerDeviceNotifications = async (): Promise<void> => {
   try {
     await clearBadge();
-  } catch {
+    // ✅ Re-register push token every time dashboard loads (ensures token is fresh)
+    await registerForPushNotifications();
+    console.log("[checkAndTriggerDeviceNotifications] Push token re-registered ✅");
+  } catch (error) {
+    console.warn("[checkAndTriggerDeviceNotifications] Error:", error);
     // Non-critical
   }
 };
