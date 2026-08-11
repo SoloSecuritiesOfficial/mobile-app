@@ -6,10 +6,7 @@ type RequestOptions = {
   body?: any;
 };
 
-const request = async (
-  endpoint: string,
-  options: RequestOptions = {}
-) => {
+const request = async (endpoint: string, options: RequestOptions = {}) => {
   const token = await getToken();
 
   const headers: HeadersInit = {
@@ -30,17 +27,12 @@ const request = async (
   }
 
   try {
-    const response = await fetch(
-      `${API_BASE_URL}${endpoint}`,
-      config
-    );
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
 
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(
-        data.message || "Something went wrong"
-      );
+      throw new Error(data.message || "Something went wrong");
     }
 
     return data;

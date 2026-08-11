@@ -4,8 +4,9 @@ import * as SecureStore from "expo-secure-store";
 // Namespaced keys — avoids collisions with other libraries that
 // also store "token" or "user" in SecureStore.
 // ─────────────────────────────────────────────────────────────────
-const TOKEN_KEY = "solosec_auth_token";
-const USER_KEY  = "solosec_auth_user";
+const TOKEN_KEY     = "solosec_auth_token";
+const USER_KEY      = "solosec_auth_user";
+const PUSH_ASKED_KEY = "solosec_push_asked";
 
 export const saveToken = async (token: string): Promise<void> => {
   await SecureStore.setItemAsync(TOKEN_KEY, token);
@@ -38,4 +39,16 @@ export const removeUser = async (): Promise<void> => {
 export const removeToken = async (): Promise<void> => {
   await SecureStore.deleteItemAsync(TOKEN_KEY);
   await removeUser();
+};
+
+// ─────────────────────────────────────────────────────────────────
+// Push notification permission flag
+// ─────────────────────────────────────────────────────────────────
+export const hasPushBeenAsked = async (): Promise<boolean> => {
+  const val = await SecureStore.getItemAsync(PUSH_ASKED_KEY);
+  return val === "true";
+};
+
+export const markPushAsked = async (): Promise<void> => {
+  await SecureStore.setItemAsync(PUSH_ASKED_KEY, "true");
 };

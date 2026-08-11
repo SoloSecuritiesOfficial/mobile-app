@@ -11,49 +11,58 @@ import {
   clearBadge,
 } from "./src/utils/pushNotifications";
 import { isLoggedIn } from "./src/services/authService";
-
-// ─────────────────────────────────────────────────────────────────
-// NOTE: Do NOT call configureForegroundNotifications() at module
-// level — Expo Go SDK 53 crashes immediately when any
-// expo-notifications handler is set outside a component.
-// It is called inside useEffect below after the guard runs.
-// ─────────────────────────────────────────────────────────────────
+import { routeNotification } from "./src/navigation/notificationRouter";
 
 export default function App() {
   const appState = useRef(AppState.currentState);
 
   useEffect(() => {
-    // Only set up push infrastructure in real builds (not Expo Go)
     const inExpoGo = Constants.appOwnership === "expo";
 
     if (!inExpoGo) {
-      // Safe to call — this crashes in Expo Go SDK 53
       configureForegroundNotifications();
     }
 
-    // Register token if already logged in
     const initPush = async () => {
       const loggedIn = await isLoggedIn();
       if (loggedIn) {
-        registerForPushNotifications(); // no-op in Expo Go
+        registerForPushNotifications();
+      }
+
+      // Cold-start: app was killed, user tapped a notification
+      if (!inExpoGo) {
+        try {
+          const N = require("expo-notifications");
+          const initialResponse = await N.getLastNotificationResponseAsync();
+          if (initialResponse) {
+            const data = initialResponse.notification?.request?.content?.data as
+              | Record<string, string>
+              | undefined;
+            // Small delay so navigator is mounted
+            setTimeout(() => routeNotification(data), 500);
+          }
+        } catch {
+          // expo-notifications not available
+        }
       }
     };
     initPush();
 
-    // Notification listeners — no-op in Expo Go (guard is inside addNotificationListeners)
+    // Foreground tap + app-open tap
     const cleanup = addNotificationListeners({
       onForeground: (notification: any) => {
-        console.log("[Push] Foreground:", (notification as any)?.request?.content?.title);
+        console.log("[Push] Foreground:", notification?.request?.content?.title);
       },
       onTap: (response: any) => {
         clearBadge();
-        const data = (response as any)?.notification?.request?.content?.data as Record<string, string> | undefined;
-        const url  = data?.actionUrl ?? "";
-        console.log("[Push] Tapped:", url);
+        const data = response?.notification?.request?.content?.data as
+          | Record<string, string>
+          | undefined;
+        console.log("[Push] Tapped:", data?.actionUrl ?? data?.type ?? "(no url)");
+        routeNotification(data);
       },
     });
 
-    // Clear badge when app comes to foreground
     const appStateSub = AppState.addEventListener(
       "change",
       (nextState: AppStateStatus) => {

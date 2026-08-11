@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, StyleSheet, FlatList, TextInput,
-  TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Image,
+  TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import { sendMessage, getChatHistory, markAsRead } from "../../services/chatService";
 import { getCurrentUser } from "../../services/authService";
-import { BASE_URL } from "../../config/api";
+import UserAvatar from "../../components/UserAvatar";
 
 export default function ChatScreen({ route, navigation }: any) {
   const { userId, username, profileImage } = route.params;
@@ -93,26 +93,23 @@ export default function ChatScreen({ route, navigation }: any) {
     );
   }
 
-  const avatarUri = profileImage?.startsWith("http")
-    ? profileImage
-    : profileImage
-    ? `${BASE_URL}${profileImage}`
-    : null;
-
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backText}>‹</Text>
         </TouchableOpacity>
-        {avatarUri ? (
-          <Image source={{ uri: avatarUri }} style={styles.headerAvatar} />
-        ) : (
-          <View style={styles.headerAvatarPlaceholder}>
-            <Text style={styles.headerAvatarText}>{username?.charAt(0).toUpperCase()}</Text>
+        <TouchableOpacity
+          style={styles.headerProfile}
+          activeOpacity={0.75}
+          onPress={() => navigation.navigate("FriendProfile", { userId, username, profileImage })}
+        >
+          <UserAvatar username={username} profileImage={profileImage} size={40} />
+          <View style={styles.headerNameCol}>
+            <Text style={styles.headerTitle}>{username}</Text>
+            <Text style={styles.headerSub}>Tap to view profile</Text>
           </View>
-        )}
-        <Text style={styles.headerTitle}>{username}</Text>
+        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView
@@ -171,21 +168,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
+    gap: 12,
   },
-  backBtn: { marginRight: 12 },
-  backText: { fontSize: 32, color: Colors.primary, fontWeight: "300" },
-  headerAvatar: { width: 40, height: 40, borderRadius: 20, marginRight: 12 },
-  headerAvatarPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  headerAvatarText: { color: "#FFF", fontSize: 16, fontWeight: "700" },
-  headerTitle: { fontSize: 18, fontWeight: "600", color: Colors.text, flex: 1 },
+  backBtn:     { paddingRight: 4 },
+  backText:    { fontSize: 32, color: Colors.primary, fontWeight: "300", lineHeight: 36 },
+  headerProfile: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
+  headerNameCol: { flex: 1 },
+  headerTitle: { fontSize: 16, fontWeight: "700", color: Colors.text },
+  headerSub:   { fontSize: 11, color: Colors.textMuted },
   messagesList: { padding: Spacing.screen, paddingBottom: Spacing.lg },
   messageBubble: {
     maxWidth: "75%",

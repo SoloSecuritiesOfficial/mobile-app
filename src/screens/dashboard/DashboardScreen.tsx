@@ -22,10 +22,17 @@ import SecurityScoreCard from "../../components/SecurityScoreCard";
 import SecurityTipCard from "../../components/SecurityTipCard";
 import QuickActions from "../../components/QuickAction";
 
-import { fetchCurrentUser, getCurrentUser, dailyCheckIn } from "../../services/authService";
+import {
+  fetchCurrentUser,
+  getCurrentUser,
+  dailyCheckIn,
+} from "../../services/authService";
 import { getSecurityDashboard } from "../../services/securityService";
 import { getCertificates } from "../../services/certificateService";
-import { getUnreadNotificationCount, checkAndTriggerDeviceNotifications } from "../../services/notificationService";
+import {
+  getUnreadNotificationCount,
+  checkAndTriggerDeviceNotifications,
+} from "../../services/notificationService";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Dashboard">;
 
@@ -70,10 +77,10 @@ export default function DashboardScreen({ navigation }: Props) {
       const latestUser = await fetchCurrentUser();
       const fallbackUser = await getCurrentUser();
       const finalUser = latestUser ?? fallbackUser;
-      
+
       console.log("Dashboard - User loaded:", finalUser?.username);
       console.log("Dashboard - Profile Image:", finalUser?.profileImage);
-      
+
       setUser(finalUser);
 
       const dashRes = await getSecurityDashboard();
@@ -94,16 +101,18 @@ export default function DashboardScreen({ navigation }: Props) {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { 
-    loadDashboard(); 
-    
-    // ✅ AUTO-REFRESH: Poll for dashboard updates every 10 seconds
-    const pollInterval = setInterval(() => {
+  useFocusEffect(
+    useCallback(() => {
       loadDashboard();
-    }, 10000);
-    
-    return () => clearInterval(pollInterval);
-  }, [loadDashboard]));
+
+      // ✅ AUTO-REFRESH: Poll for dashboard updates every 10 seconds
+      const pollInterval = setInterval(() => {
+        loadDashboard();
+      }, 10000);
+
+      return () => clearInterval(pollInterval);
+    }, [loadDashboard]),
+  );
 
   if (loading) {
     return (
@@ -115,12 +124,12 @@ export default function DashboardScreen({ navigation }: Props) {
 
   // Progress helpers — capped
   const lTotal = dashboard.learningTotal ?? 0;
-  const lDone  = Math.min(dashboard.learningCompleted ?? 0, lTotal);
-  const lPct   = lTotal > 0 ? Math.round((lDone / lTotal) * 100) : 0;
+  const lDone = Math.min(dashboard.learningCompleted ?? 0, lTotal);
+  const lPct = lTotal > 0 ? Math.round((lDone / lTotal) * 100) : 0;
 
   const bTotal = dashboard.labTotal ?? 0;
-  const bDone  = Math.min(dashboard.labCompleted ?? 0, bTotal);
-  const bPct   = bTotal > 0 ? Math.round((bDone / bTotal) * 100) : 0;
+  const bDone = Math.min(dashboard.labCompleted ?? 0, bTotal);
+  const bPct = bTotal > 0 ? Math.round((bDone / bTotal) * 100) : 0;
 
   return (
     <ScrollView
@@ -129,13 +138,15 @@ export default function DashboardScreen({ navigation }: Props) {
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
-          onRefresh={() => { setRefreshing(true); loadDashboard(); }}
+          onRefresh={() => {
+            setRefreshing(true);
+            loadDashboard();
+          }}
           tintColor={Colors.primary}
           colors={[Colors.primary]}
         />
       }
     >
-
       {/* ── 1. Header (avatar + greeting + notification bell) ── */}
       <DashboardHeader user={user} navigation={navigation} />
 
@@ -143,8 +154,12 @@ export default function DashboardScreen({ navigation }: Props) {
       <TouchableOpacity
         style={styles.streakBanner}
         onPress={async () => {
-          try { await dailyCheckIn(); loadDashboard(); }
-          catch (err) { console.log("Check-in error:", err); }
+          try {
+            await dailyCheckIn();
+            loadDashboard();
+          } catch (err) {
+            console.log("Check-in error:", err);
+          }
         }}
       >
         <Text style={styles.streakBannerIcon}>🔥</Text>
@@ -163,24 +178,33 @@ export default function DashboardScreen({ navigation }: Props) {
       {/* ── 4. Overview — icon + badge style ── */}
       <Text style={styles.sectionTitle}>Overview</Text>
       <View style={styles.overviewRow}>
-
         {/* Bug Reports */}
-        <TouchableOpacity style={styles.overviewItem} onPress={() => navigation.navigate("BugReports")}>
+        <TouchableOpacity
+          style={styles.overviewItem}
+          onPress={() => navigation.navigate("BugReports")}
+        >
           <View style={styles.overviewIconWrap}>
             <Text style={styles.overviewEmoji}>🐞</Text>
             {(dashboard.reports ?? 0) > 0 && (
-              <View style={styles.badge}><Text style={styles.badgeText}>{dashboard.reports}</Text></View>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{dashboard.reports}</Text>
+              </View>
             )}
           </View>
           <Text style={styles.overviewLabel}>Reports</Text>
         </TouchableOpacity>
 
         {/* Certificates */}
-        <TouchableOpacity style={styles.overviewItem} onPress={() => navigation.navigate("Certificates")}>
+        <TouchableOpacity
+          style={styles.overviewItem}
+          onPress={() => navigation.navigate("Certificates")}
+        >
           <View style={styles.overviewIconWrap}>
             <Text style={styles.overviewEmoji}>🏆</Text>
             {certificateCount > 0 && (
-              <View style={styles.badge}><Text style={styles.badgeText}>{certificateCount}</Text></View>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{certificateCount}</Text>
+              </View>
             )}
           </View>
           <Text style={styles.overviewLabel}>Certs</Text>
@@ -191,7 +215,11 @@ export default function DashboardScreen({ navigation }: Props) {
           <View style={styles.overviewIconWrap}>
             <Text style={styles.overviewEmoji}>🥇</Text>
           </View>
-          <Text style={styles.overviewLabel} numberOfLines={1} ellipsizeMode="tail">
+          <Text
+            style={styles.overviewLabel}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
             {(dashboard.rank ?? "—").replace("#", "").substring(0, 6)}
           </Text>
         </View>
@@ -210,36 +238,43 @@ export default function DashboardScreen({ navigation }: Props) {
         </View>
 
         {/* Notifications */}
-        <TouchableOpacity style={styles.overviewItem} onPress={() => navigation.navigate("Notifications")}>
+        <TouchableOpacity
+          style={styles.overviewItem}
+          onPress={() => navigation.navigate("Notifications")}
+        >
           <View style={styles.overviewIconWrap}>
             <Text style={styles.overviewEmoji}>🔔</Text>
             {notificationCount > 0 && (
               <View style={[styles.badge, styles.badgeRed]}>
-                <Text style={styles.badgeText}>{notificationCount > 99 ? "99+" : notificationCount}</Text>
+                <Text style={styles.badgeText}>
+                  {notificationCount > 99 ? "99+" : notificationCount}
+                </Text>
               </View>
             )}
           </View>
           <Text style={styles.overviewLabel}>Alerts</Text>
         </TouchableOpacity>
-
       </View>
 
       {/* ── 5. Combined progress card (Learning + Labs) ── */}
       <Text style={styles.sectionTitle}>Progress</Text>
       <View style={styles.progressCard}>
-
         {/* Learning */}
         <View style={styles.progressRow}>
           <Text style={styles.progressIcon}>📚</Text>
           <View style={styles.progressInfo}>
             <View style={styles.progressLabelRow}>
               <Text style={styles.progressLabel}>Learning Modules</Text>
-              <Text style={styles.progressCount}>{lDone}/{lTotal}</Text>
+              <Text style={styles.progressCount}>
+                {lDone}/{lTotal}
+              </Text>
             </View>
             <View style={styles.progressTrack}>
               <View style={[styles.progressFill, { width: `${lPct}%` }]} />
             </View>
-            <Text style={styles.progressMeta}>{lPct}% complete • {Math.max(lTotal - lDone, 0)} remaining</Text>
+            <Text style={styles.progressMeta}>
+              {lPct}% complete • {Math.max(lTotal - lDone, 0)} remaining
+            </Text>
           </View>
         </View>
 
@@ -251,15 +286,18 @@ export default function DashboardScreen({ navigation }: Props) {
           <View style={styles.progressInfo}>
             <View style={styles.progressLabelRow}>
               <Text style={styles.progressLabel}>Hands-on Labs</Text>
-              <Text style={styles.progressCount}>{bDone}/{bTotal}</Text>
+              <Text style={styles.progressCount}>
+                {bDone}/{bTotal}
+              </Text>
             </View>
             <View style={styles.progressTrack}>
               <View style={[styles.progressFill, { width: `${bPct}%` }]} />
             </View>
-            <Text style={styles.progressMeta}>{bPct}% complete • {Math.max(bTotal - bDone, 0)} remaining</Text>
+            <Text style={styles.progressMeta}>
+              {bPct}% complete • {Math.max(bTotal - bDone, 0)} remaining
+            </Text>
           </View>
         </View>
-
       </View>
 
       {/* ── 6. Recent Activity ── */}
@@ -268,12 +306,25 @@ export default function DashboardScreen({ navigation }: Props) {
           <Text style={styles.sectionTitle}>Recent Activity</Text>
           <View style={styles.activityCard}>
             {(dashboard.recentActivity ?? []).slice(0, 5).map((item, idx) => (
-              <View key={item._id ?? idx} style={[styles.activityItem, idx === (Math.min((dashboard.recentActivity?.length ?? 0), 5) - 1) && { borderBottomWidth: 0 }]}>
+              <View
+                key={item._id ?? idx}
+                style={[
+                  styles.activityItem,
+                  idx ===
+                    Math.min(dashboard.recentActivity?.length ?? 0, 5) - 1 && {
+                    borderBottomWidth: 0,
+                  },
+                ]}
+              >
                 <Text style={styles.activityIcon}>
                   {ACTIVITY_ICONS[item.type ?? ""] ?? "⚡"}
                 </Text>
-                <Text style={styles.activityTitle} numberOfLines={1}>{item.title}</Text>
-                {item.points ? <Text style={styles.activityXP}>+{item.points} XP</Text> : null}
+                <Text style={styles.activityTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                {item.points ? (
+                  <Text style={styles.activityXP}>+{item.points} XP</Text>
+                ) : null}
               </View>
             ))}
           </View>
@@ -294,7 +345,9 @@ export default function DashboardScreen({ navigation }: Props) {
         <Text style={styles.premiumBannerIcon}>👑</Text>
         <View style={{ flex: 1 }}>
           <Text style={styles.premiumBannerTitle}>Unlock Premium</Text>
-          <Text style={styles.premiumBannerSub}>All labs, CTF challenges, ad-free & more</Text>
+          <Text style={styles.premiumBannerSub}>
+            All labs, CTF challenges, ad-free & more
+          </Text>
         </View>
         <Text style={styles.premiumBannerArrow}>›</Text>
       </TouchableOpacity>
@@ -302,23 +355,31 @@ export default function DashboardScreen({ navigation }: Props) {
       {/* ── Play Store Compliance ── */}
       <View style={styles.complianceCard}>
         <Text style={styles.complianceTitle}>🔐 Privacy & Security</Text>
-        <Text style={styles.complianceItem}>✅ Data encrypted in transit (HTTPS/TLS)</Text>
-        <Text style={styles.complianceItem}>✅ JWT tokens stored in SecureStore</Text>
-        <Text style={styles.complianceItem}>✅ No sensitive data logged or shared</Text>
-        <Text style={styles.complianceItem}>✅ Minimal permissions required</Text>
+        <Text style={styles.complianceItem}>
+          ✅ Data encrypted in transit (HTTPS/TLS)
+        </Text>
+        <Text style={styles.complianceItem}>
+          ✅ JWT tokens stored in SecureStore
+        </Text>
+        <Text style={styles.complianceItem}>
+          ✅ No sensitive data logged or shared
+        </Text>
+        <Text style={styles.complianceItem}>
+          ✅ Minimal permissions required
+        </Text>
         <TouchableOpacity onPress={() => navigation.navigate("Settings")}>
-          <Text style={styles.complianceLink}>View Privacy Policy & Settings →</Text>
+          <Text style={styles.complianceLink}>
+            View Privacy Policy & Settings →
+          </Text>
         </TouchableOpacity>
       </View>
 
       {/* ── 10. Logout ── */}
-
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-
   loader: {
     flex: 1,
     justifyContent: "center",
@@ -350,7 +411,7 @@ const styles = StyleSheet.create({
   },
   streakBannerIcon: { fontSize: 24 },
   streakBannerTitle: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
-  streakBannerSub:   { color: "#AAAAAA", fontSize: 12, marginTop: 2 },
+  streakBannerSub: { color: "#AAAAAA", fontSize: 12, marginTop: 2 },
   streakBannerBtn: {
     backgroundColor: Colors.primary,
     color: "#FFFFFF",
@@ -486,9 +547,14 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
     gap: 10,
   },
-  activityIcon:  { fontSize: 18 },
-  activityTitle: { flex: 1, fontSize: 13, color: Colors.text, fontWeight: "600" },
-  activityXP:    { color: "#10B981", fontWeight: "700", fontSize: 12 },
+  activityIcon: { fontSize: 18 },
+  activityTitle: {
+    flex: 1,
+    fontSize: 13,
+    color: Colors.text,
+    fontWeight: "600",
+  },
+  activityXP: { color: "#10B981", fontWeight: "700", fontSize: 12 },
 
   // ── Premium banner ─────────────────────────────────
   premiumBanner: {
@@ -500,9 +566,9 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: Spacing.md,
   },
-  premiumBannerIcon:  { fontSize: 28 },
+  premiumBannerIcon: { fontSize: 28 },
   premiumBannerTitle: { color: "#FFF", fontWeight: "700", fontSize: 15 },
-  premiumBannerSub:   { color: "#FFD0D0", fontSize: 12, marginTop: 2 },
+  premiumBannerSub: { color: "#FFD0D0", fontSize: 12, marginTop: 2 },
   premiumBannerArrow: { color: "#FFF", fontSize: 28, fontWeight: "700" },
 
   // ── Play Store Compliance card ──────────────────────

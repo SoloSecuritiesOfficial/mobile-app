@@ -1,12 +1,14 @@
 import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { navigationRef } from "./navigationRef";
 
 // ── Auth ───────────────────────────────────────────────────────────────────
 import SplashScreen from "../screens/auth/SplashScreen";
 import LoginScreen from "../screens/auth/LoginScreen";
 import RegisterScreen from "../screens/auth/RegisterScreen";
 import ForgotPasswordScreen from "../screens/auth/ForgotPasswordScreen";
+import NotificationPermissionScreen from "../screens/auth/NotificationPermissionScreen";
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
 import DashboardScreen from "../screens/dashboard/DashboardScreen";
@@ -48,6 +50,7 @@ import ChatScreen from "../screens/chat/ChatScreen";
 
 // ── Social ─────────────────────────────────────────────────────────────────
 import FriendsScreen from "../screens/social/FriendsScreen";
+import FriendProfileScreen from "../screens/social/FriendProfileScreen";
 import LeaderboardScreen from "../screens/social/LeaderboardScreen";
 import AchievementsScreen from "../screens/social/AchievementsScreen";
 
@@ -65,6 +68,7 @@ export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
+  NotificationPermission: undefined;
   // Core
   Dashboard: undefined;
   // Learning
@@ -97,6 +101,7 @@ export type RootStackParamList = {
   Chat: { userId: string; username: string; profileImage?: string };
   // Social
   Friends: undefined;
+  FriendProfile: { userId: string; username: string; profileImage?: string };
   Leaderboard: undefined;
   Achievements: undefined;
   // Premium & CTF
@@ -111,7 +116,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator
         initialRouteName="Splash"
         screenOptions={{
@@ -124,6 +129,7 @@ export default function AppNavigator() {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+        <Stack.Screen name="NotificationPermission" component={NotificationPermissionScreen} />
         <Stack.Screen name="Dashboard" component={DashboardScreen} />
         <Stack.Screen name="Learning" component={LearningScreen} />
         <Stack.Screen name="LearningDetails" component={LearningDetailsScreen} />
@@ -147,6 +153,7 @@ export default function AppNavigator() {
         <Stack.Screen name="ChatList" component={ChatListScreen} />
         <Stack.Screen name="Chat" component={ChatScreen} />
         <Stack.Screen name="Friends" component={FriendsScreen} />
+        <Stack.Screen name="FriendProfile" component={FriendProfileScreen} />
         <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
         <Stack.Screen name="Achievements" component={AchievementsScreen} />
         <Stack.Screen name="Premium" component={PremiumScreen} />

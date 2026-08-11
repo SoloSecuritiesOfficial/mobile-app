@@ -17,11 +17,15 @@ import { getTodaySecurityTip } from "../services/securityTipService";
 export default function SecurityTipCard() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
-  const [tip, setTip] = useState({ title: "Loading...", message: "", category: "" });
+  const [tip, setTip] = useState({
+    title: "Loading...",
+    message: "",
+    category: "",
+  });
 
   const expandAnim = useRef(new Animated.Value(0)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
-  const pulseAnim  = useRef(new Animated.Value(1)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     loadTip();
@@ -29,9 +33,19 @@ export default function SecurityTipCard() {
     // Subtle pulse on the shield icon to draw attention
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.1, duration: 1200, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
-        Animated.timing(pulseAnim, { toValue: 1.0, duration: 1200, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
-      ])
+        Animated.timing(pulseAnim, {
+          toValue: 1.1,
+          duration: 1200,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1.0,
+          duration: 1200,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease),
+        }),
+      ]),
     ).start();
   }, []);
 
@@ -40,8 +54,8 @@ export default function SecurityTipCard() {
       const response = await getTodaySecurityTip();
       if (response?.success && response.data) {
         setTip({
-          title:    response.data.title    ?? "Stay Secure",
-          message:  response.data.message  ?? "",
+          title: response.data.title ?? "Stay Secure",
+          message: response.data.message ?? "",
           category: response.data.category ?? "Security",
         });
       }
@@ -73,12 +87,12 @@ export default function SecurityTipCard() {
   };
 
   const bodyHeight = expandAnim.interpolate({
-    inputRange:  [0, 1],
+    inputRange: [0, 1],
     outputRange: [0, 200],
   });
 
   const arrowRotation = rotateAnim.interpolate({
-    inputRange:  [0, 1],
+    inputRange: [0, 1],
     outputRange: ["0deg", "180deg"],
   });
 
@@ -94,7 +108,6 @@ export default function SecurityTipCard() {
   return (
     <View style={styles.wrapper}>
       <View style={styles.card}>
-
         {/* ── Top accent line ── */}
         <View style={styles.accentLine} />
 
@@ -135,7 +148,10 @@ export default function SecurityTipCard() {
 
           {/* Chevron */}
           <Animated.View
-            style={[styles.chevronBox, { transform: [{ rotate: arrowRotation }] }]}
+            style={[
+              styles.chevronBox,
+              { transform: [{ rotate: arrowRotation }] },
+            ]}
           >
             <Text style={styles.chevron}>⌄</Text>
           </Animated.View>
@@ -148,14 +164,12 @@ export default function SecurityTipCard() {
             <Text style={styles.bodyText}>{tip.message}</Text>
           </View>
         </Animated.View>
-
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-
   wrapper: {
     marginBottom: Spacing.lg,
   },
@@ -177,7 +191,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 20,
     overflow: "hidden",
-    backgroundColor: "#0F172A",      // Deep navy — distinct from rest of dashboard
+    backgroundColor: "#0F172A", // Deep navy — distinct from rest of dashboard
     borderWidth: 1,
     borderColor: "#1E293B",
     shadowColor: "#6366F1",

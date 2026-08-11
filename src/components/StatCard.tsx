@@ -1,9 +1,5 @@
 import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-} from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 
 interface StatCardProps {
   title: string;
@@ -20,28 +16,15 @@ export default function StatCard({
 }: StatCardProps) {
   return (
     <View style={styles.card}>
-      <View
-        style={[
-          styles.iconContainer,
-          { backgroundColor: color },
-        ]}
-      >
-        <Text style={styles.icon}>
-          {icon}
-        </Text>
+      <View style={[styles.iconContainer, { backgroundColor: color }]}>
+        <Text style={styles.icon}>{icon}</Text>
       </View>
 
-      <Text
-        numberOfLines={1}
-        style={styles.value}
-      >
+      <Text numberOfLines={1} style={styles.value}>
         {value}
       </Text>
 
-      <Text
-        numberOfLines={1}
-        style={styles.title}
-      >
+      <Text numberOfLines={1} style={styles.title}>
         {title}
       </Text>
     </View>

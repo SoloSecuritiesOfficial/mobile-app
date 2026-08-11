@@ -10,13 +10,14 @@ export const getJobs = async (params?: {
   limit?: number;
 }) => {
   const qs = new URLSearchParams();
-  if (params?.search)          qs.set("search",          params.search);
-  if (params?.locationType)    qs.set("locationType",    params.locationType);
-  if (params?.jobType)         qs.set("jobType",         params.jobType);
-  if (params?.experienceLevel) qs.set("experienceLevel", params.experienceLevel);
-  if (params?.skill)           qs.set("skill",           params.skill);
-  if (params?.page)            qs.set("page",            String(params.page));
-  if (params?.limit)           qs.set("limit",           String(params.limit));
+  if (params?.search) qs.set("search", params.search);
+  if (params?.locationType) qs.set("locationType", params.locationType);
+  if (params?.jobType) qs.set("jobType", params.jobType);
+  if (params?.experienceLevel)
+    qs.set("experienceLevel", params.experienceLevel);
+  if (params?.skill) qs.set("skill", params.skill);
+  if (params?.page) qs.set("page", String(params.page));
+  if (params?.limit) qs.set("limit", String(params.limit));
   const q = qs.toString();
   const response = await api.get(`/jobs${q ? "?" + q : ""}`);
   return response.data;

@@ -29,6 +29,7 @@ import {
 import {
   loginUser,
 } from "../../services/authService";
+import { hasPushBeenAsked } from "../../utils/storage";
 
 type Props =
   NativeStackScreenProps<
@@ -120,13 +121,13 @@ export default function LoginScreen({
         });
 
       if (response?.success) {
-
-        navigation.replace(
-          "Dashboard"
-        );
-
+        const alreadyAsked = await hasPushBeenAsked();
+        if (alreadyAsked) {
+          navigation.replace("Dashboard");
+        } else {
+          navigation.replace("NotificationPermission");
+        }
         return;
-
       }
 
       Alert.alert(

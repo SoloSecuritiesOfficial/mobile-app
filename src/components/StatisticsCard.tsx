@@ -1,9 +1,5 @@
 import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-} from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 
 import Colors from "../theme/colors";
 import Spacing from "../theme/spacing";
@@ -24,67 +20,41 @@ export default function StatisticsCard({
 }: Props) {
   return (
     <>
-      <Text style={styles.sectionTitle}>
-        Statistics
-      </Text>
+      <Text style={styles.sectionTitle}>Statistics</Text>
 
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
-          <Text style={styles.statIcon}>
-            🐞
-          </Text>
+          <Text style={styles.statIcon}>🐞</Text>
 
-          <Text style={styles.statValue}>
-            {reports}
-          </Text>
+          <Text style={styles.statValue}>{reports}</Text>
 
-          <Text style={styles.statLabel}>
-            Reports
-          </Text>
+          <Text style={styles.statLabel}>Reports</Text>
         </View>
 
         <View style={styles.statCard}>
-          <Text style={styles.statIcon}>
-            🏆
-          </Text>
+          <Text style={styles.statIcon}>🏆</Text>
 
-          <Text style={styles.statValue}>
-            {certificates}
-          </Text>
+          <Text style={styles.statValue}>{certificates}</Text>
 
-          <Text style={styles.statLabel}>
-            Certificates
-          </Text>
+          <Text style={styles.statLabel}>Certificates</Text>
         </View>
       </View>
 
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
-          <Text style={styles.statIcon}>
-            🥇
-          </Text>
+          <Text style={styles.statIcon}>🥇</Text>
 
-          <Text style={styles.statValue}>
-            {rank}
-          </Text>
+          <Text style={styles.statValue}>{rank}</Text>
 
-          <Text style={styles.statLabel}>
-            Rank
-          </Text>
+          <Text style={styles.statLabel}>Rank</Text>
         </View>
 
         <View style={styles.statCard}>
-          <Text style={styles.statIcon}>
-            🔥
-          </Text>
+          <Text style={styles.statIcon}>🔥</Text>
 
-          <Text style={styles.statValue}>
-            {streak}
-          </Text>
+          <Text style={styles.statValue}>{streak}</Text>
 
-          <Text style={styles.statLabel}>
-            Day Streak
-          </Text>
+          <Text style={styles.statLabel}>Day Streak</Text>
         </View>
       </View>
     </>

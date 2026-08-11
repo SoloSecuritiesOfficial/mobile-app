@@ -28,22 +28,25 @@ export default function Typewriter() {
   useEffect(() => {
     const currentMessage = messages[messageIndex];
 
-    const timer = setTimeout(() => {
-      if (!isDeleting) {
-        setDisplayText(currentMessage.substring(0, displayText.length + 1));
+    const timer = setTimeout(
+      () => {
+        if (!isDeleting) {
+          setDisplayText(currentMessage.substring(0, displayText.length + 1));
 
-        if (displayText === currentMessage) {
-          setTimeout(() => setIsDeleting(true), 1800);
-        }
-      } else {
-        setDisplayText(currentMessage.substring(0, displayText.length - 1));
+          if (displayText === currentMessage) {
+            setTimeout(() => setIsDeleting(true), 1800);
+          }
+        } else {
+          setDisplayText(currentMessage.substring(0, displayText.length - 1));
 
-        if (displayText === "") {
-          setIsDeleting(false);
-          setMessageIndex((prev) => (prev + 1) % messages.length);
+          if (displayText === "") {
+            setIsDeleting(false);
+            setMessageIndex((prev) => (prev + 1) % messages.length);
+          }
         }
-      }
-    }, isDeleting ? 40 : 80);
+      },
+      isDeleting ? 40 : 80,
+    );
 
     return () => clearTimeout(timer);
   }, [displayText, isDeleting, messageIndex]);
@@ -51,9 +54,7 @@ export default function Typewriter() {
   return (
     <Text style={styles.text}>
       {displayText}
-      <Text style={styles.cursor}>
-        {showCursor ? "|" : " "}
-      </Text>
+      <Text style={styles.cursor}>{showCursor ? "|" : " "}</Text>
     </Text>
   );
 }

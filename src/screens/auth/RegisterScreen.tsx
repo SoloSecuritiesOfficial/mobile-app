@@ -20,6 +20,7 @@ import PrimaryButton from "../../components/PrimaryButton";
 import { RootStackParamList } from "../../navigation/AppNavigator";
 
 import { registerUser } from "../../services/authService";
+import { hasPushBeenAsked } from "../../utils/storage";
 
 type Props = NativeStackScreenProps<
   RootStackParamList,
@@ -140,18 +141,13 @@ export default function RegisterScreen({
       });
 
       if (response?.success) {
+        const alreadyAsked = await hasPushBeenAsked();
+        const nextScreen = alreadyAsked ? "Dashboard" : "NotificationPermission";
         Alert.alert(
           "Account Created",
           "Welcome to SoloSecurities",
-          [
-            {
-              text: "Continue",
-              onPress: () =>
-                navigation.replace("Dashboard"),
-            },
-          ]
+          [{ text: "Continue", onPress: () => navigation.replace(nextScreen) }]
         );
-
         return;
       }
 
