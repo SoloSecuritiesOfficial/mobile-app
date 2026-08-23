@@ -11,6 +11,7 @@ import { getJobs } from "../../services/jobsService";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
+import AdBanner from "../../components/AdBanner";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Jobs">;
 
@@ -507,6 +508,7 @@ export default function JobsScreen({ navigation }: Props) {
             />
           )}
           contentContainerStyle={styles.list}
+          ListHeaderComponent={<AdBanner marginVertical={4} />}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

@@ -186,3 +186,8 @@ export const getSubscriptionStatus = async (): Promise<{
     return null;
   }
 };
+
+// Google sign-in is handled entirely inside GoogleSignInButton.tsx
+// using expo-auth-session (works in Expo Go + native builds).
+// No separate googleSignIn function needed here.
+export const googleSignIn = undefined;

@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  SafeAreaView,
   View,
   Text,
   StyleSheet,
@@ -11,176 +10,107 @@ import {
   Image,
   Alert,
 } from "react-native";
-
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-
 import InputField from "../../components/InputField";
 import PrimaryButton from "../../components/PrimaryButton";
-
+import GoogleSignInButton from "../../components/GoogleSignInButton";
 import { RootStackParamList } from "../../navigation/AppNavigator";
-
 import { registerUser } from "../../services/authService";
 import { hasPushBeenAsked } from "../../utils/storage";
 
-type Props = NativeStackScreenProps<
-  RootStackParamList,
-  "Register"
->;
+type Props = NativeStackScreenProps<RootStackParamList, "Register">;
 
-export default function RegisterScreen({
-  navigation,
-}: Props) {
-  const [name, setName] = useState("");
-
-  const [email, setEmail] = useState("");
-
-  const [password, setPassword] = useState("");
-
-  const [confirmPassword, setConfirmPassword] =
-    useState("");
-
-  const [loading, setLoading] =
-    useState(false);
-
-  const [errors, setErrors] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
+export default function RegisterScreen({ navigation }: Props) {
+  const [name,            setName]            = useState("");
+  const [email,           setEmail]           = useState("");
+  const [password,        setPassword]        = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading,         setLoading]         = useState(false);
+  const [errors,          setErrors]          = useState({
+    name: "", email: "", password: "", confirmPassword: "",
   });
+
+  // ── shared post-auth navigation ────────────────────────────────
+  const afterAuth = async () => {
+    const asked = await hasPushBeenAsked();
+    navigation.replace(asked ? "Dashboard" : "NotificationPermission");
+  };
 
   const validate = () => {
     let valid = true;
+    const e = { name: "", email: "", password: "", confirmPassword: "" };
 
-    const newErrors = {
-      name: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-    };
-
-    const username = name.trim();
-
-    // ================= USERNAME =================
-
-    if (!username) {
-      newErrors.name = "Username is required";
-      valid = false;
-    } else if (
-      !/^[a-zA-Z0-9_]{3,20}$/.test(username)
-    ) {
-      newErrors.name =
-        "Username must be 3-20 characters and contain only letters, numbers and _";
-      valid = false;
+    if (!name.trim()) {
+      e.name = "Username is required"; valid = false;
+    } else if (!/^[a-zA-Z0-9_]{3,20}$/.test(name.trim())) {
+      e.name = "3-20 chars: letters, numbers and _ only"; valid = false;
     }
-
-    // ================= EMAIL =================
 
     if (!email.trim()) {
-      newErrors.email = "Email is required";
-      valid = false;
-    } else if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-        email.trim()
-      )
-    ) {
-      newErrors.email =
-        "Enter a valid email address";
-      valid = false;
+      e.email = "Email is required"; valid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      e.email = "Enter a valid email address"; valid = false;
     }
-
-    // ================= PASSWORD =================
 
     if (!password) {
-      newErrors.password =
-        "Password is required";
-      valid = false;
+      e.password = "Password is required"; valid = false;
     } else if (
-      !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&^#()[\]{}\-_=+])[A-Za-z\d@$!%*?&^#()[\]{}\-_=+]{8,64}$/.test(
-        password
-      )
+      !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&^#()[\]{}\-_=+])[A-Za-z\d@$!%*?&^#()[\]{}\-_=+]{8,64}$/.test(password)
     ) {
-      newErrors.password =
-        "Password must be at least 8 characters with uppercase, lowercase, number and special character.";
-      valid = false;
+      e.password = "Min 8 chars with uppercase, lowercase, number & special character."; valid = false;
     }
-
-    // ================= CONFIRM PASSWORD =================
 
     if (!confirmPassword) {
-      newErrors.confirmPassword =
-        "Confirm password is required";
-      valid = false;
+      e.confirmPassword = "Confirm password is required"; valid = false;
     } else if (password !== confirmPassword) {
-      newErrors.confirmPassword =
-        "Passwords do not match";
-      valid = false;
+      e.confirmPassword = "Passwords do not match"; valid = false;
     }
 
-    setErrors(newErrors);
-
+    setErrors(e);
     return valid;
   };
 
   const handleRegister = async () => {
-    if (!validate()) return;
-
-    if (loading) return;
-
+    if (!validate() || loading) return;
+    setLoading(true);
     try {
-      setLoading(true);
-
-      console.log("Username:", name.trim());
-      console.log("Email:", email.trim());
-      console.log("Password:", password);
-
-      const response = await registerUser({
+      const res = await registerUser({
         username: name.trim(),
         email: email.trim().toLowerCase(),
         password,
       });
-
-      if (response?.success) {
-        const alreadyAsked = await hasPushBeenAsked();
-        const nextScreen = alreadyAsked ? "Dashboard" : "NotificationPermission";
-        Alert.alert(
-          "Account Created",
-          "Welcome to SoloSecurities",
-          [{ text: "Continue", onPress: () => navigation.replace(nextScreen) }]
-        );
+      if (res?.success) {
+        Alert.alert("Account Created", "Welcome to SoloSecurities!", [
+          { text: "Continue", onPress: afterAuth },
+        ]);
         return;
       }
-
+      Alert.alert("Registration Failed", res?.message ?? "Unable to create account");
+    } catch (err: any) {
       Alert.alert(
         "Registration Failed",
-        response?.message ??
-          "Unable to create account"
-      );
-    } catch (error: any) {
-      console.log(
-        "Register Error:",
-        error?.response?.data || error
-      );
-
-      Alert.alert(
-        "Registration Failed",
-        error?.response?.data?.message ||
-          error?.message ||
-          "Registration failed"
+        err?.response?.data?.message ?? err?.message ?? "Registration failed",
       );
     } finally {
       setLoading(false);
     }
   };
 
+  const handleGoogleSuccess = async (res: any) => {
+    if (res?.success) await afterAuth();
+  };
+
+  const handleGoogleError = (err: any) => {
+    Alert.alert(
+      "Google Sign-In Failed",
+      err?.message ?? "Could not sign in with Google.",
+    );
+  };
+
   return (
     <KeyboardAvoidingView
-      style={styles.keyboard}
-      behavior={
-        Platform.OS === "ios"
-          ? "padding"
-          : undefined
-      }
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -193,13 +123,22 @@ export default function RegisterScreen({
           resizeMode="contain"
         />
 
-        <Text style={styles.title}>
-          Create Account
-        </Text>
+        <Text style={styles.title}>Create Account</Text>
+        <Text style={styles.subtitle}>Join SoloSecurities today</Text>
 
-        <Text style={styles.subtitle}>
-          Join SoloSecurities today
-        </Text>
+        {/* ── Google Sign-In (top — fastest path for new users) ── */}
+        <GoogleSignInButton
+          label="Sign up with Google"
+          onSuccess={handleGoogleSuccess}
+          onError={handleGoogleError}
+        />
+
+        {/* ── Divider ── */}
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>or create with email</Text>
+          <View style={styles.dividerLine} />
+        </View>
 
         <View style={styles.form}>
           <InputField
@@ -210,7 +149,6 @@ export default function RegisterScreen({
             onChangeText={setName}
             error={errors.name}
           />
-
           <InputField
             label="Email Address"
             icon="email-outline"
@@ -221,7 +159,6 @@ export default function RegisterScreen({
             onChangeText={setEmail}
             error={errors.email}
           />
-
           <InputField
             label="Password"
             icon="lock-outline"
@@ -231,42 +168,25 @@ export default function RegisterScreen({
             onChangeText={setPassword}
             error={errors.password}
           />
-
           <InputField
             label="Confirm Password"
             icon="lock-outline"
             placeholder="Confirm password"
             password
             value={confirmPassword}
-            onChangeText={
-              setConfirmPassword
-            }
-            error={
-              errors.confirmPassword
-            }
+            onChangeText={setConfirmPassword}
+            error={errors.confirmPassword}
           />
 
-          <PrimaryButton
-            title="CREATE ACCOUNT"
-            loading={loading}
-            onPress={handleRegister}
-          />
+          <View style={styles.button}>
+            <PrimaryButton title="CREATE ACCOUNT" loading={loading} onPress={handleRegister} />
+          </View>
         </View>
 
         <View style={styles.bottomRow}>
-          <Text style={styles.bottomText}>
-            Already have an account?
-          </Text>
-
-          <TouchableOpacity
-            disabled={loading}
-            onPress={() =>
-              navigation.replace("Login")
-            }
-          >
-            <Text style={styles.loginText}>
-              Login
-            </Text>
+          <Text style={styles.bottomText}>Already have an account?</Text>
+          <TouchableOpacity disabled={loading} onPress={() => navigation.replace("Login")}>
+            <Text style={styles.loginText}>Login</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -275,60 +195,18 @@ export default function RegisterScreen({
 }
 
 const styles = StyleSheet.create({
-  keyboard: {
-    flex: 1,
-  },
+  scroll:      { flexGrow: 1, justifyContent: "center", paddingHorizontal: 24, paddingVertical: 40, backgroundColor: "#FFFFFF" },
+  logo:        { width: 120, height: 120, alignSelf: "center", marginBottom: 20 },
+  title:       { fontSize: 30, fontWeight: "700", color: "#111", textAlign: "center" },
+  subtitle:    { marginTop: 10, marginBottom: 22, fontSize: 16, color: "#666", textAlign: "center" },
+  form:        { width: "100%", marginTop: 4 },
+  button:      { marginTop: 20 },
 
-  scroll: {
-    flexGrow: 1,
-    justifyContent: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 40,
-    backgroundColor: "#FFFFFF",
-  },
+  divider:     { flexDirection: "row", alignItems: "center", marginVertical: 20, gap: 10 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: "#E8E8E8" },
+  dividerText: { fontSize: 12, color: "#AAA", fontWeight: "600" },
 
-  logo: {
-    width: 120,
-    height: 120,
-    alignSelf: "center",
-    marginBottom: 20,
-  },
-
-  title: {
-    fontSize: 30,
-    fontWeight: "700",
-    color: "#111",
-    textAlign: "center",
-  },
-
-  subtitle: {
-    marginTop: 10,
-    marginBottom: 35,
-    fontSize: 16,
-    color: "#666",
-    textAlign: "center",
-  },
-
-  form: {
-    width: "100%",
-  },
-
-  bottomRow: {
-    marginTop: 35,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  bottomText: {
-    fontSize: 15,
-    color: "#555",
-  },
-
-  loginText: {
-    marginLeft: 6,
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#C62828",
-  },
+  bottomRow:   { marginTop: 28, flexDirection: "row", justifyContent: "center", alignItems: "center" },
+  bottomText:  { fontSize: 15, color: "#555" },
+  loginText:   { marginLeft: 6, fontSize: 15, fontWeight: "700", color: "#C62828" },
 });

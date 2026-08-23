@@ -2,6 +2,7 @@
   "expo": {
     "name": "SoloSecurities",
     "slug": "soloji",
+    "scheme": "soloji",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -41,7 +42,7 @@
         "projectId": "3037dcb2-e406-40cc-868d-78c924cf30ea"
       }
     },
-    "owner": "solojis-team",
+    "owner": "reshavji",
     "plugins": [
       "expo-secure-store",
       "expo-font",
@@ -54,6 +55,21 @@
           "color": "#C62828",
           "androidMode": "default",
           "androidCollapsedTitle": "SoloSecurities"
+        }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-4705207925908028~8229931071",
+          "iosAppId": "ca-app-pub-4705207925908028~8229931071",
+          "delayAppMeasurementInit": true,
+          "userTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you."
+        }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.YOUR_REVERSED_CLIENT_ID"
         }
       ]
     ]

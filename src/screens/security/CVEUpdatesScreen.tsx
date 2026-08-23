@@ -15,6 +15,7 @@ import { getCVEUpdates } from "../../services/securityService";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
+import AdBanner from "../../components/AdBanner";
 
 export default function CVEUpdatesScreen() {
   const [cves, setCves] = useState<any[]>([]);
@@ -147,6 +148,7 @@ export default function CVEUpdatesScreen() {
           keyExtractor={(item, idx) => item.id || item.cveId || idx.toString()}
           renderItem={renderCVEItem}
           contentContainerStyle={styles.listContent}
+          ListHeaderComponent={<AdBanner marginVertical={4} />}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

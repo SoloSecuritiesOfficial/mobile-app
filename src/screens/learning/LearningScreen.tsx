@@ -30,6 +30,7 @@ import {
 } from "../../services/securityService";
 
 import LearningProgressCard from "../../components/LearningProgressCard";
+import AdBanner from "../../components/AdBanner";
 
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
@@ -314,6 +315,9 @@ await Promise.all([
           progress.total
         }
       />
+
+      {/* Ad — shown to free users between progress and module list */}
+      <AdBanner marginVertical={8} />
 
 
 

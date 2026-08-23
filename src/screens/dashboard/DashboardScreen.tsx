@@ -21,6 +21,7 @@ import DashboardHeader from "../../components/DashboardHeader";
 import SecurityScoreCard from "../../components/SecurityScoreCard";
 import SecurityTipCard from "../../components/SecurityTipCard";
 import QuickActions from "../../components/QuickAction";
+import AdBanner from "../../components/AdBanner";
 
 import {
   fetchCurrentUser,
@@ -172,8 +173,14 @@ export default function DashboardScreen({ navigation }: Props) {
         <Text style={styles.streakBannerBtn}>Check In ✓</Text>
       </TouchableOpacity>
 
-      {/* ── 3. Security Score (with progress bar) ── */}
-      <SecurityScoreCard securityScore={dashboard.securityScore ?? 0} />
+      {/* ── 3. Security Score ── */}
+      <SecurityScoreCard
+        securityScore={dashboard.securityScore ?? 0}
+        xp={user?.xp ?? 0}
+        points={user?.points ?? 0}
+        level={user?.level ?? 1}
+        streak={dashboard.streak ?? 0}
+      />
 
       {/* ── 4. Overview — icon + badge style ── */}
       <Text style={styles.sectionTitle}>Overview</Text>
@@ -333,6 +340,9 @@ export default function DashboardScreen({ navigation }: Props) {
 
       {/* ── 7. Daily Security Tip ── */}
       <SecurityTipCard />
+
+      {/* ── Ad banner — shown to free users only ── */}
+      <AdBanner isPremium={user?.isPremium} marginVertical={12} />
 
       {/* ── Quick Actions (all screens in one grid) ── */}
       <QuickActions navigation={navigation} />
