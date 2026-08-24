@@ -17,6 +17,7 @@ import GoogleSignInButton from "../../components/GoogleSignInButton";
 import { RootStackParamList } from "../../navigation/AppNavigator";
 import { registerUser } from "../../services/authService";
 import { hasPushBeenAsked } from "../../utils/storage";
+import { getEmailError } from "../../utils/emailValidator";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Register">;
 
@@ -46,10 +47,9 @@ export default function RegisterScreen({ navigation }: Props) {
       e.name = "3-20 chars: letters, numbers and _ only"; valid = false;
     }
 
-    if (!email.trim()) {
-      e.email = "Email is required"; valid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      e.email = "Enter a valid email address"; valid = false;
+    const emailErr = getEmailError(email);
+    if (emailErr) {
+      e.email = emailErr; valid = false;
     }
 
     if (!password) {

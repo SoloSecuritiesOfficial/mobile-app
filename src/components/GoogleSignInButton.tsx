@@ -177,15 +177,9 @@ export default function GoogleSignInButton({
     response,
     promptAsync,
   ] = Google.useAuthRequest({
-    androidClientId:
-      getPlatformClientId(),
-
-    iosClientId:
-      getPlatformClientId(),
-
-    webClientId:
-      getPlatformClientId(),
-
+    androidClientId: ANDROID_CLIENT_ID || PLACEHOLDER_CLIENT_ID,
+    iosClientId:     IOS_CLIENT_ID     || PLACEHOLDER_CLIENT_ID,
+    webClientId:     WEB_CLIENT_ID     || PLACEHOLDER_CLIENT_ID,
     scopes: [
       "openid",
       "profile",

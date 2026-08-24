@@ -5,49 +5,68 @@
     "scheme": "soloji",
     "version": "1.0.0",
     "orientation": "portrait",
+
     "icon": "./assets/icon.png",
+
     "userInterfaceStyle": "light",
+
     "ios": {
       "supportsTablet": true,
       "icon": "./assets/icon.png",
       "bundleIdentifier": "com.solosecurities.app",
+
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+
         "UIBackgroundModes": [
           "fetch",
           "remote-notification"
         ]
       }
     },
+
     "android": {
+      "package": "com.solosecurities.app",
+
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF",
         "monochromeImage": "./assets/monochrome-icon.png"
       },
-      "package": "com.solosecurities.app",
+
       "googleServicesFile": "./google-services.json",
+
       "predictiveBackGestureEnabled": false,
+
       "permissions": [
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
         "android.permission.POST_NOTIFICATIONS"
       ]
     },
+
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "extra": {
-      "eas": {
-        "projectId": "3037dcb2-e406-40cc-868d-78c924cf30ea"
-      }
-    },
-    "owner": "reshavji",
+
+    "owner": "janemun",
+
     "plugins": [
       "expo-secure-store",
       "expo-font",
       "expo-status-bar",
       "expo-web-browser",
+
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/images/logo.png",
+          "imageWidth": 200,
+          "resizeMode": "contain"
+        }
+      ],
+
       [
         "expo-notifications",
         {
@@ -57,6 +76,7 @@
           "androidCollapsedTitle": "SoloSecurities"
         }
       ],
+
       [
         "react-native-google-mobile-ads",
         {
@@ -66,12 +86,19 @@
           "userTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you."
         }
       ],
+
       [
         "@react-native-google-signin/google-signin",
         {
-          "iosUrlScheme": "com.googleusercontent.apps.YOUR_REVERSED_CLIENT_ID"
+          "iosUrlScheme": "com.googleusercontent.apps.960176390407-vgfmfvrj6jfjjqpsa5p9ifbftsupiuch"
         }
       ]
-    ]
+    ],
+
+    "extra": {
+      "eas": {
+        "projectId": "fc4b736f-a9bb-44cc-84cb-bd61af68422c"
+      }
+    }
   }
 }

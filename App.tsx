@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { AppState, AppStateStatus } from "react-native";
 import Constants from "expo-constants";
+import * as SplashScreen from "expo-splash-screen";
 
 import AppNavigator from "./src/navigation/AppNavigator";
 import { ThemeProvider } from "./src/context/ThemeContext";
@@ -13,10 +14,18 @@ import {
 import { isLoggedIn } from "./src/services/authService";
 import { routeNotification } from "./src/navigation/notificationRouter";
 
+// Keep the native splash screen visible until we explicitly hide it.
+// Must be called at module level (before any component renders).
+SplashScreen.preventAutoHideAsync();
+
 export default function App() {
   const appState = useRef(AppState.currentState);
 
   useEffect(() => {
+    // Hide the native splash screen as soon as the JS navigator is mounted.
+    // This reveals our animated SplashScreen component underneath.
+    SplashScreen.hide();
+
     const inExpoGo = Constants.appOwnership === "expo";
 
     if (!inExpoGo) {

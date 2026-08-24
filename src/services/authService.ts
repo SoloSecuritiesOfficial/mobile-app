@@ -26,9 +26,17 @@ export const registerUser = async (data: {
 
     return response.data;
   } catch (error: any) {
-    console.log("Register Error:", error.response?.data || error.message);
+    // Extract only the message field — never re-throw raw server response
+    // objects which may contain stack traces or internal field names.
+    const message: string =
+      error?.response?.data?.message ??
+      error?.response?.data?.error ??
+      error?.message ??
+      "Registration failed. Please try again.";
 
-    throw error;
+    const sanitized = new Error(message);
+    (sanitized as any).isAppError = true;
+    throw sanitized;
   }
 };
 
@@ -55,9 +63,15 @@ export const loginUser = async (data: { email: string; password: string }) => {
 
     return response.data;
   } catch (error: any) {
-    console.log("Login Error:", error.response?.data || error.message);
+    const message: string =
+      error?.response?.data?.message ??
+      error?.response?.data?.error ??
+      error?.message ??
+      "Login failed. Please try again.";
 
-    throw error;
+    const sanitized = new Error(message);
+    (sanitized as any).isAppError = true;
+    throw sanitized;
   }
 };
 
