@@ -10,6 +10,7 @@ import { getCurrentUser } from "../../services/authService";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
+import UserAvatar from "../../components/UserAvatar";
 
 type Tab = "xp" | "level" | "streak" | "quiz";
 
@@ -120,9 +121,7 @@ export default function LeaderboardScreen() {
             {/* 2nd place */}
             <View style={styles.podiumItem}>
               <Text style={styles.podiumMedal}>{MEDALS[1]}</Text>
-              <View style={[styles.podiumAvatar, { backgroundColor: "#9CA3AF" }]}>
-                <Text style={styles.podiumAvatarText}>{(data[1]?.username ?? "?").substring(0, 2).toUpperCase()}</Text>
-              </View>
+              <UserAvatar username={data[1]?.username} profileImage={data[1]?.profileImage} size={52} />
               <Text style={styles.podiumName} numberOfLines={1}>{data[1]?.username}</Text>
               <Text style={styles.podiumMetric}>{getMetric(data[1])}</Text>
             </View>
@@ -130,9 +129,7 @@ export default function LeaderboardScreen() {
             {/* 1st place */}
             <View style={[styles.podiumItem, styles.podiumFirst]}>
               <Text style={[styles.podiumMedal, { fontSize: 32 }]}>{MEDALS[0]}</Text>
-              <View style={[styles.podiumAvatar, { backgroundColor: Colors.primary, width: 64, height: 64, borderRadius: 32 }]}>
-                <Text style={[styles.podiumAvatarText, { fontSize: 22 }]}>{(data[0]?.username ?? "?").substring(0, 2).toUpperCase()}</Text>
-              </View>
+              <UserAvatar username={data[0]?.username} profileImage={data[0]?.profileImage} size={64} />
               <Text style={[styles.podiumName, { fontWeight: "800" }]} numberOfLines={1}>{data[0]?.username}</Text>
               <Text style={styles.podiumMetric}>{getMetric(data[0])}</Text>
             </View>
@@ -140,9 +137,7 @@ export default function LeaderboardScreen() {
             {/* 3rd place */}
             <View style={styles.podiumItem}>
               <Text style={styles.podiumMedal}>{MEDALS[2]}</Text>
-              <View style={[styles.podiumAvatar, { backgroundColor: "#CD7F32" }]}>
-                <Text style={styles.podiumAvatarText}>{(data[2]?.username ?? "?").substring(0, 2).toUpperCase()}</Text>
-              </View>
+              <UserAvatar username={data[2]?.username} profileImage={data[2]?.profileImage} size={52} />
               <Text style={styles.podiumName} numberOfLines={1}>{data[2]?.username}</Text>
               <Text style={styles.podiumMetric}>{getMetric(data[2])}</Text>
             </View>
@@ -156,11 +151,11 @@ export default function LeaderboardScreen() {
           return (
             <View key={entry._id} style={[styles.card, isMe && styles.cardMe]}>
               <Text style={styles.rankNum}>#{rank}</Text>
-              <View style={styles.entryAvatar}>
-                <Text style={styles.entryAvatarText}>{(entry.username ?? "?").substring(0, 2).toUpperCase()}</Text>
+              <View style={{ marginRight: 12 }}>
+                <UserAvatar username={entry.username} profileImage={entry.profileImage} size={40} />
               </View>
               <View style={styles.entryInfo}>
-                <Text style={styles.entryName}>{entry.username} {isMe ? "(You)" : ""}</Text>
+                <Text style={styles.entryName}>{entry.username}{isMe ? " (You)" : ""}</Text>
                 <Text style={styles.entryLevel}>Level {entry.level ?? 1}</Text>
               </View>
               <Text style={styles.entryMetric}>{getMetric(entry)}</Text>

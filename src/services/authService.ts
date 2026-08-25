@@ -91,14 +91,15 @@ export const updateProfile = async (data: any) => {
   try {
     const response = await api.put("/user/profile", data);
 
-    if (response.data.user) {
-      await saveUser(response.data.user);
+    // Accept both { user } and { data } shapes
+    const updated = response.data?.user ?? response.data?.data ?? null;
+    if (updated) {
+      await saveUser(updated);
     }
 
     return response.data;
   } catch (error: any) {
     console.log("Update Profile Error:", error.response?.data || error.message);
-
     throw error;
   }
 };
@@ -125,16 +126,20 @@ export const fetchCurrentUser = async () => {
   try {
     const response = await api.get("/user/profile");
 
-    if (response.data.success && response.data.user) {
-      await saveUser(response.data.user);
+    // Profile endpoint returns { success, data: <user> } — not { success, user }
+    const user =
+      response.data?.data ??       // profile controller shape
+      response.data?.user ??       // legacy shape (some controllers still use .user)
+      null;
 
-      return response.data.user;
+    if (response.data.success && user) {
+      await saveUser(user);
+      return user;
     }
 
     return null;
   } catch (error) {
     console.log("Fetch Current User Error:", error);
-
     return null;
   }
 };

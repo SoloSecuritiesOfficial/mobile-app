@@ -22,9 +22,13 @@ export default function UserAvatar({ username, profileImage, size = 44, onPress 
 
   let uri: string | null = null;
   if (profileImage && !imgError) {
-    uri = profileImage.startsWith("http")
-      ? profileImage
-      : `${BASE_URL}${profileImage}`;
+    // data: URL (base64 stored in DB) — use directly
+    // http(s): URL (Google OAuth, CDN) — use directly
+    // anything else (relative path) — prepend backend base URL
+    uri =
+      profileImage.startsWith("data:") || profileImage.startsWith("http")
+        ? profileImage
+        : `${BASE_URL}${profileImage}`;
   }
 
   const circle = {

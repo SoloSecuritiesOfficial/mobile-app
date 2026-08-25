@@ -349,6 +349,16 @@ export const submitBugReport = async (
 
 };
 
+export const acknowledgeBugReport = async (id: string) => {
+  try {
+    const apiPatch = (url: string) => api.patch(url).then(r => r.data);
+    return await apiPatch(`/security/bugs/${id}/acknowledge`);
+  } catch (error) {
+    console.error("Acknowledge Bug Error:", error);
+    throw error;
+  }
+};
+
 
 
 /* -------------------------------------------------------------------------- */

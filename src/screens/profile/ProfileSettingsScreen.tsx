@@ -48,7 +48,11 @@ const TIER_CONFIG: Record<Tier, TierConfig> = {
 
 function resolveAvatar(profileImage?: string): string | null {
   if (!profileImage) return null;
+  // data: URL (base64) — use directly
+  if (profileImage.startsWith("data:")) return profileImage;
+  // absolute http(s) URL — use directly
   if (profileImage.startsWith("http")) return profileImage;
+  // relative path — prepend backend base URL
   return `${BASE_URL}${profileImage}`;
 }
 
@@ -271,6 +275,10 @@ export default function ProfileSettingsScreen({ navigation }: any) {
 
   const avatarUri = resolveAvatar(profile?.profileImage);
   const initials  = (form.firstName || form.username || "U").charAt(0).toUpperCase();
+  const [imageError, setImageError] = React.useState(false);
+
+  // Reset error when profile image changes (e.g. after upload)
+  React.useEffect(() => { setImageError(false); }, [profile?.profileImage]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -306,8 +314,12 @@ export default function ProfileSettingsScreen({ navigation }: any) {
               <View style={styles.avatarWrap}>
                 {uploading ? (
                   <ActivityIndicator color="#FFF" size="large" />
-                ) : avatarUri ? (
-                  <Image source={{ uri: avatarUri }} style={styles.avatarImg} />
+                ) : avatarUri && !imageError ? (
+                  <Image
+                    source={{ uri: avatarUri }}
+                    style={styles.avatarImg}
+                    onError={() => setImageError(true)}
+                  />
                 ) : (
                   <Text style={styles.avatarInitials}>{initials}</Text>
                 )}
