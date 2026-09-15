@@ -12,6 +12,7 @@ import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
 import { useTheme } from "../../context/ThemeContext";
+import AdBanner from "../../components/AdBanner";
 
 export default function SettingsScreen() {
   const { isDarkMode, toggleTheme, colors } = useTheme();
@@ -23,6 +24,8 @@ export default function SettingsScreen() {
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.content}>
       <Text style={[styles.headerTitle, { color: colors.text }]}>App Settings ⚙️</Text>
       <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Customize security & notifications</Text>
+
+      <AdBanner isPremium={false} marginVertical={10} />
 
       <View style={[styles.section, { backgroundColor: colors.surface }]}>
         <Text style={styles.sectionHeader}>Security Preferences</Text>

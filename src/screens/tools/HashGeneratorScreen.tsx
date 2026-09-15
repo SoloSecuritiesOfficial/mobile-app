@@ -11,6 +11,7 @@ import {
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
+import AdBanner from "../../components/AdBanner";
 
 export default function HashGeneratorScreen() {
   const [textToHash, setTextToHash] = useState("");
@@ -70,6 +71,8 @@ export default function HashGeneratorScreen() {
             <Text style={styles.hashValue}>{hashResult.md5}</Text>
           </View>
         )}
+
+        <AdBanner isPremium={false} marginVertical={10} />
       </View>
     </ScrollView>
   );

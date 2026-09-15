@@ -10,6 +10,8 @@ import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
 import { getCertificates } from "../../services/certificateService";
+import { getCurrentUser } from "../../services/authService";
+import AdBanner from "../../components/AdBanner";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Certificates">;
 
@@ -50,10 +52,15 @@ export default function CertificateScreen({ navigation }: Props) {
   const [refreshing, setRefreshing]   = useState(false);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [showGuide, setShowGuide]     = useState(false);
+  const [isPremium, setIsPremium]     = useState(false);
 
   const loadCertificates = useCallback(async () => {
     try {
-      const res = await getCertificates();
+      const [res, user] = await Promise.all([
+        getCertificates(),
+        getCurrentUser(),
+      ]);
+      setIsPremium(!!(user as any)?.isPremium);
       setCertificates(res.data || res || []);
     } catch (err) {
       console.log("Certificates Error:", err);
@@ -101,6 +108,8 @@ export default function CertificateScreen({ navigation }: Props) {
             <Text style={styles.statLabel}>Verified</Text>
           </View>
         </View>
+
+        <AdBanner isPremium={isPremium} marginVertical={10} />
 
         {/* ── How to earn toggle ── */}
         <TouchableOpacity style={styles.guideToggle} onPress={() => setShowGuide(s => !s)}>

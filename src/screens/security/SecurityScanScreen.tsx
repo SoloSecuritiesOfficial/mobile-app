@@ -11,6 +11,8 @@ import {
   FlatList,
 } from "react-native";
 import { startSecurityScan, getScanHistory } from "../../services/securityService";
+import { getCurrentUser } from "../../services/authService";
+import AdBanner from "../../components/AdBanner";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
@@ -20,6 +22,7 @@ export default function SecurityScanScreen() {
   const [scanning, setScanning] = useState(false);
   const [currentScan, setCurrentScan] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
+  const [isPremium, setIsPremium] = useState(false);
 
   useEffect(() => {
     loadHistory();
@@ -27,10 +30,14 @@ export default function SecurityScanScreen() {
 
   const loadHistory = async () => {
     try {
-      const res = await getScanHistory();
+      const [res, user] = await Promise.all([
+        getScanHistory(),
+        getCurrentUser(),
+      ]);
       if (res.success && res.data) {
         setHistory(res.data);
       }
+      setIsPremium(!!(user as any)?.isPremium);
     } catch (err) {
       console.log("Error loading scan history:", err);
     }
@@ -155,12 +162,12 @@ export default function SecurityScanScreen() {
           </View>
         ))
       )}
+      <AdBanner isPremium={isPremium} marginVertical={12} />
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
+const styles = StyleSheet.create({  container: {
     flex: 1,
     backgroundColor: Colors.background,
   },

@@ -25,6 +25,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import UserAvatar from "../../components/UserAvatar";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
+import AdBanner from "../../components/AdBanner";
 import { getCurrentUser } from "../../services/authService";
 import {
   deleteConversation,
@@ -733,6 +734,7 @@ export default function ChatScreen({ route, navigation }: any) {
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
           onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={<AdBanner isPremium={false} marginVertical={4} />}
           ListEmptyComponent={
             <View style={s.empty}>
               <Text style={s.emptyEmoji}>💬</Text>

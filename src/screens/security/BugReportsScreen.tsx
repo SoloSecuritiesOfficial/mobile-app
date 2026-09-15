@@ -28,6 +28,7 @@ import { getCurrentUser } from "../../services/authService";
 
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
+import AdBanner from "../../components/AdBanner";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -1733,6 +1734,8 @@ export default function BugReportsScreen() {
   const [error, setError] =
     useState<string | null>(null);
 
+  const [isPremium, setIsPremium] = useState(false);
+
   const isTablet = width >= 600;
 
   const loadUser = useCallback(async () => {
@@ -1744,6 +1747,7 @@ export default function BugReportsScreen() {
           user?.id ??
           null
       );
+      setIsPremium(!!(user as any)?.isPremium);
     } catch {
       setCurrentUserId(null);
     }
@@ -2129,6 +2133,9 @@ export default function BugReportsScreen() {
           );
         })}
       </ScrollView>
+
+      {/* AD — shown to free users between filter bar and report list */}
+      <AdBanner isPremium={isPremium} marginVertical={6} />
 
       {/* LIST */}
       <FlatList

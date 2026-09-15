@@ -18,6 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
+import AdBanner from "../../components/AdBanner";
 import Typography from "../../theme/typography";
 import { changePassword, deleteAccount, logout } from "../../services/authService";
 
@@ -297,6 +298,7 @@ export default function AccountSettingsScreen({ navigation }: any) {
           showsVerticalScrollIndicator={false}
         >
           {/* ── Change Password ── */}
+          <AdBanner isPremium={false} marginVertical={10} />
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>🔑 Change Password</Text>
             <PwField label="Current Password"     value={oldPw}     onChangeText={setOldPw} />

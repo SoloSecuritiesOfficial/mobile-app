@@ -14,7 +14,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import api from "../../services/api";
+import { getCurrentUser } from "../../services/authService";
 import Colors from "../../theme/colors";
+import AdBanner from "../../components/AdBanner";
+import { showInterstitialAd } from "../../components/InterstitialAd";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
 
@@ -49,6 +52,7 @@ export default function CTFScreen() {
   const [challenges, setChallenges] = useState<CTFChallenge[]>([]);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [solved, setSolved] = useState<CTFChallenge[]>([]);
+  const [isPremium, setIsPremium] = useState(false);
 
   const [selectedChallenge, setSelectedChallenge] =
     useState<CTFChallenge | null>(null);
@@ -58,14 +62,16 @@ export default function CTFScreen() {
 
   const loadData = useCallback(async () => {
     try {
-      const [cRes, lRes, sRes] = await Promise.all([
+      const [cRes, lRes, sRes, user] = await Promise.all([
         api.get("/ctf"),
         api.get("/ctf/leaderboard"),
         api.get("/ctf/solved"),
+        getCurrentUser(),
       ]);
       setChallenges(cRes.data?.data ?? []);
       setLeaderboard(lRes.data?.data ?? []);
       setSolved(sRes.data?.data ?? []);
+      setIsPremium(!!(user as any)?.isPremium);
     } catch (err) {
       console.log("CTF load error:", err);
     } finally {
@@ -233,6 +239,8 @@ export default function CTFScreen() {
               ))}
             </ScrollView>
 
+            <AdBanner isPremium={isPremium} marginVertical={8} />
+
             {filtered.length === 0 ? (
               <View style={styles.emptyBox}>
                 <Text style={styles.emptyIcon}>🚩</Text>
@@ -248,7 +256,8 @@ export default function CTFScreen() {
                   <TouchableOpacity
                     key={c._id}
                     style={[styles.card, isSolved && styles.cardSolved]}
-                    onPress={() => {
+                    onPress={async () => {
+                      await showInterstitialAd(isPremium);
                       setSelectedChallenge(c);
                       setFlagInput("");
                     }}

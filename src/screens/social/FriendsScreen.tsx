@@ -12,6 +12,8 @@ import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
 import UserAvatar from "../../components/UserAvatar";
+import { getCurrentUser } from "../../services/authService";
+import AdBanner from "../../components/AdBanner";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Friends">;
 type Tab = "friends" | "requests" | "search" | "activity";
@@ -38,6 +40,7 @@ export default function FriendsScreen({ navigation }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searching, setSearching] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
 
   const [friends, setFriends] = useState<FriendUser[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
@@ -46,14 +49,16 @@ export default function FriendsScreen({ navigation }: Props) {
 
   const loadData = useCallback(async () => {
     try {
-      const [friendsRes, requestsRes, activityRes] = await Promise.all([
+      const [friendsRes, requestsRes, activityRes, user] = await Promise.all([
         api.get("/friends/list"),
         api.get("/friends/requests"),
         api.get("/friends/activity"),
+        getCurrentUser(),
       ]);
       setFriends(friendsRes.data?.data ?? []);
       setRequests(requestsRes.data?.data ?? []);
       setActivity(activityRes.data?.data ?? []);
+      setIsPremium(!!(user as any)?.isPremium);
     } catch (err) {
       console.log("Friends load error:", err);
     } finally {
@@ -180,6 +185,7 @@ export default function FriendsScreen({ navigation }: Props) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} colors={[Colors.primary]} />}
         showsVerticalScrollIndicator={false}
       >
+        <AdBanner isPremium={isPremium} marginVertical={8} />
         {/* FRIENDS LIST */}
         {tab === "friends" && (
           friends.length === 0

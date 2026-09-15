@@ -37,6 +37,9 @@ import {
   getCurrentUser,
 } from "../../services/authService";
 
+import AdBanner from "../../components/AdBanner";
+import { showInterstitialAd } from "../../components/InterstitialAd";
+
 import type {
   RootStackParamList,
 } from "../../navigation/AppNavigator";
@@ -644,6 +647,9 @@ export default function QuizScreen() {
   const [error, setError] =
     useState<string | null>(null);
 
+  const [isPremium, setIsPremium] =
+    useState(false);
+
   /* ==========================================================================
    * LOAD QUIZZES + LATEST ATTEMPTS
    * ======================================================================== */
@@ -661,6 +667,8 @@ export default function QuizScreen() {
 
         const user =
           await getCurrentUser();
+
+        setIsPremium(!!(user as any)?.isPremium);
 
         const [
           quizResponse,
@@ -1064,15 +1072,15 @@ export default function QuizScreen() {
 
   const openQuiz =
     useCallback(
-      (quizId: string) => {
+      async (quizId: string) => {
+        // Show interstitial before entering the quiz for free users
+        await showInterstitialAd(!isPremium ? false : true);
         navigation.navigate(
           "QuizQuestion",
-          {
-            quizId,
-          },
+          { quizId },
         );
       },
-      [navigation],
+      [navigation, isPremium],
     );
 
   /* ==========================================================================

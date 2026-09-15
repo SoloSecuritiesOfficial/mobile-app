@@ -32,6 +32,7 @@ import {
 } from "../../services/quizService";
 
 import { getCurrentUser } from "../../services/authService";
+import AdBanner from "../../components/AdBanner";
 
 /* ========================================================================== */
 /* TYPES                                                                      */
@@ -2181,6 +2182,8 @@ function QuizResultScreen({
         >
           Question Review
         </Text>
+
+        <AdBanner isPremium={false} marginVertical={8} />
 
         {questions.map(
           (

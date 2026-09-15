@@ -6,6 +6,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import api from "../../services/api";
+import { getCurrentUser } from "../../services/authService";
+import AdBanner from "../../components/AdBanner";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
@@ -66,14 +68,19 @@ export default function AchievementsScreen() {
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [isPremium, setIsPremium] = useState(false);
   const [filter, setFilter]         = useState<Filter>("all");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const res = await api.get("/gamification/achievements/all");
+      const [res, user] = await Promise.all([
+        api.get("/gamification/achievements/all"),
+        getCurrentUser(),
+      ]);
       setAchievements(res.data?.data ?? []);
+      setIsPremium(!!(user as any)?.isPremium);
     } catch (err) {
       console.log("Achievements error:", err);
     } finally {
@@ -147,6 +154,7 @@ export default function AchievementsScreen() {
         </View>
 
         {/* ── How XP works ── */}
+        <AdBanner isPremium={isPremium} marginVertical={10} />
         <View style={styles.xpGuide}>
           <Text style={styles.xpGuideTitle}>⚡ How to Earn XP & Level Up</Text>
           {[

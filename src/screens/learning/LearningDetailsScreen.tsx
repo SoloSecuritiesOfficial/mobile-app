@@ -11,7 +11,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { RootStackParamList } from "../../navigation/AppNavigator";
-import { getLearningModuleById, completeLearningModule } from "../../services/securityService";
+import {
+  getLearningModuleById, completeLearningModule,
+} from "../../services/securityService";
+import { getCurrentUser } from "../../services/authService";
+import AdBanner from "../../components/AdBanner";
 
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
@@ -43,8 +47,8 @@ export default function LearningDetailsScreen({
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(false);
   const [completed, setCompleted] = useState(false);
-  const [module, setModule] =
-    useState<LearningModule | null>(null);
+  const [isPremium, setIsPremium] = useState(false);
+  const [module, setModule] = useState<LearningModule | null>(null);
 
   useEffect(() => {
     loadModule();
@@ -53,9 +57,11 @@ export default function LearningDetailsScreen({
   const loadModule = async () => {
     try {
       setLoading(true);
-
-      const res = await getLearningModuleById(id);
-
+      const [res, user] = await Promise.all([
+        getLearningModuleById(id),
+        getCurrentUser(),
+      ]);
+      setIsPremium(!!(user as any)?.isPremium);
       if (res.success) {
         setModule(res.data);
       } else {
@@ -151,6 +157,8 @@ export default function LearningDetailsScreen({
             {module.content}
           </Text>
         </View>
+
+        <AdBanner isPremium={isPremium} marginVertical={12} />
 
         <TouchableOpacity
           style={[

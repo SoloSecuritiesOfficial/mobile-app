@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "960176390407-7cc47h5niklu827bu0fj74fvvtm57ggt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.solosecurities.app",
+            "certificate_hash": "1f83127d9f6c69fd9cdbc2ce4a7f15adbc24e43a"
+          }
+        },
+        {
           "client_id": "960176390407-vgfmfvrj6jfjjqpsa5p9ifbftsupiuch.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

@@ -5,7 +5,8 @@ import {
   saveUser,
   getUser,
   getToken,
-  removeToken,
+  saveRefreshToken,
+  clearStorage,
 } from "../utils/storage";
 
 export const registerUser = async (data: {
@@ -46,6 +47,11 @@ export const loginUser = async (data: { email: string; password: string }) => {
 
     if (response.data.token) {
       await saveToken(response.data.token);
+    }
+
+    // Save the refresh token so api.ts can auto-refresh expired access tokens
+    if (response.data.refreshToken) {
+      await saveRefreshToken(response.data.refreshToken);
     }
 
     if (response.data.user) {
@@ -149,7 +155,7 @@ export const getCurrentUser = async () => {
 };
 
 export const logout = async () => {
-  await removeToken();
+  await clearStorage();
 };
 
 export const dailyCheckIn = async () => {
@@ -178,8 +184,7 @@ export const deleteAccount = async (): Promise<{
   try {
     const response = await api.delete("/user/account");
     if (response.data.success) {
-      // Wipe local credentials immediately
-      await removeToken();
+      await clearStorage();
     }
     return response.data;
   } catch (error: any) {

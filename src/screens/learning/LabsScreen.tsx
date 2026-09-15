@@ -26,6 +26,9 @@ import {
   completeLab,
   getLabProgress,
 } from "../../services/lab.service";
+import { getCurrentUser } from "../../services/authService";
+import AdBanner from "../../components/AdBanner";
+import { showInterstitialAd } from "../../components/InterstitialAd";
 
 
 
@@ -63,14 +66,17 @@ export default function LabsScreen(){
   const [selectedLab,setSelectedLab] = useState<Lab | null>(null);
   const [loading,setLoading] = useState(true);
   const [completing,setCompleting] = useState(false);
-
-
+  const [isPremium, setIsPremium] = useState(false);
 
   const loadLabs = useCallback(async () => {
     try {
       setLoading(true);
-      const labsResponse = await getLabs();
-      const progressResponse = await getLabProgress();
+      const [labsResponse, progressResponse, user] = await Promise.all([
+        getLabs(),
+        getLabProgress(),
+        getCurrentUser(),
+      ]);
+      setIsPremium(!!(user as any)?.isPremium);
 
       const progressData = progressResponse.data ?? progressResponse;
       const completedIds = Array.isArray(progressData?.completedLabIds)
@@ -280,6 +286,8 @@ days
   </View>
 )}
 
+<AdBanner isPremium={isPremium} marginVertical={10} />
+
 {selectedLab ? (
 <View style={styles.labCard}>
 <TouchableOpacity
@@ -366,7 +374,10 @@ disabled={completing || selectedLab.completed}
       <TouchableOpacity
         key={lab._id}
         style={styles.card}
-        onPress={() => setSelectedLab(lab)}
+        onPress={async () => {
+          await showInterstitialAd(isPremium);
+          setSelectedLab(lab);
+        }}
       >
         <View style={styles.cardHeader}>
           <Text style={styles.category}>

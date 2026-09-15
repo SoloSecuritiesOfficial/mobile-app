@@ -17,6 +17,7 @@ import {
 } from "../../services/authService";
 import { pickProfileImage, uploadProfileImage } from "../../services/profileImageService";
 import { getSecurityDashboard } from "../../services/securityService";
+import AdBanner from "../../components/AdBanner";
 
 // ─────────────────────────────────────────────────────────────────
 // Subscription tier badge
@@ -294,6 +295,7 @@ export default function ProfileScreen({ navigation }: any) {
         )}
 
         {/* ── Explore ── */}
+        <AdBanner isPremium={tier === "paid" || tier === "admin"} marginVertical={12} />
         <View style={styles.actionsCard}>
           <Text style={styles.sectionHeader}>Explore</Text>
           {[

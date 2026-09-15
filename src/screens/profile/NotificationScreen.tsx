@@ -13,6 +13,7 @@ import {
   deleteNotification,
 } from "../../services/notificationService";
 import Colors from "../../theme/colors";
+import AdBanner from "../../components/AdBanner";
 
 type NotificationItem = {
   _id: string;
@@ -161,6 +162,7 @@ export default function NotificationScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} colors={[Colors.primary]} />}
         contentContainerStyle={styles.list}
         ItemSeparatorComponent={() => <View style={styles.sep} />}
+        ListHeaderComponent={<AdBanner isPremium={false} marginVertical={6} />}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={{ fontSize: 40, marginBottom: 10 }}>🔔</Text>

@@ -16,6 +16,7 @@ import {
 import {
   getScanHistory,
 } from "../../services/securityService";
+import AdBanner from "../../components/AdBanner";
 
 
 
@@ -266,9 +267,9 @@ const ScanHistoryScreen =
           renderScan
         }
 
+        ListHeaderComponent={<AdBanner isPremium={false} marginVertical={6} />}
 
         refreshControl={
-
           <RefreshControl
 
             refreshing={
@@ -280,7 +281,6 @@ const ScanHistoryScreen =
             }
 
           />
-
         }
 
 

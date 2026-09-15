@@ -29,6 +29,10 @@ import {
   getLearningProgress,
 } from "../../services/securityService";
 
+import {
+  getCurrentUser,
+} from "../../services/authService";
+
 import LearningProgressCard from "../../components/LearningProgressCard";
 import AdBanner from "../../components/AdBanner";
 
@@ -96,33 +100,33 @@ export default function LearningScreen({
       total: 0,
     });
 
-
-
   const [loading, setLoading] =
     useState(true);
 
-
-
   const [refreshing, setRefreshing] =
+    useState(false);
+
+  const [isPremium, setIsPremium] =
     useState(false);
 
 
 
   const loadLearningData =
     useCallback(async()=>{
-
-
       try {
-
 
        const [
   modulesResponse,
   progressResponse,
+  user,
 ] =
 await Promise.all([
   getLearningModules(),
   getLearningProgress(),
+  getCurrentUser(),
 ]);
+
+        setIsPremium(!!(user as any)?.isPremium);
 
 
 
@@ -317,7 +321,7 @@ await Promise.all([
       />
 
       {/* Ad — shown to free users between progress and module list */}
-      <AdBanner marginVertical={8} />
+      <AdBanner isPremium={isPremium} marginVertical={8} />
 
 
 

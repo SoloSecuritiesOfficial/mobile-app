@@ -18,6 +18,7 @@ import { useFocusEffect } from "@react-navigation/native";
 
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
+import AdBanner from "../../components/AdBanner";
 import Typography from "../../theme/typography";
 import { BASE_URL } from "../../config/api";
 
@@ -335,6 +336,7 @@ export default function ProfileSettingsScreen({ navigation }: any) {
           </View>
 
           {/* ── Basic info ── */}
+          <AdBanner isPremium={false} marginVertical={10} />
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Basic Info</Text>
             <Field label="Username" value={form.username} onChangeText={setField("username")} placeholder="your_username" autoCapitalize="none" />

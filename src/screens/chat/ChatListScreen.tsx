@@ -9,17 +9,24 @@ import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
 import { getConversations } from "../../services/chatService";
+import { getCurrentUser } from "../../services/authService";
 import UserAvatar from "../../components/UserAvatar";
+import AdBanner from "../../components/AdBanner";
 
 export default function ChatListScreen({ navigation }: any) {
   const [conversations, setConversations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
 
   const loadConversations = async () => {
     try {
-      const res = await getConversations();
+      const [res, user] = await Promise.all([
+        getConversations(),
+        getCurrentUser(),
+      ]);
       setConversations(res.data || []);
+      setIsPremium(!!(user as any)?.isPremium);
     } catch (err) {
       console.log("Load conversations error:", err);
     } finally {
@@ -111,6 +118,8 @@ export default function ChatListScreen({ navigation }: any) {
       <View style={styles.headerBar}>
         <Text style={styles.title}>Messages</Text>
       </View>
+
+      <AdBanner isPremium={isPremium} marginVertical={6} />
 
       {conversations.length === 0 ? (
         <View style={styles.empty}>

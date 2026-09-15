@@ -391,6 +391,9 @@ export default function DashboardScreen({ navigation }: Props) {
           <Text style={styles.streakBannerBtn}>Check In ✓</Text>
         </TouchableOpacity>
 
+        {/* ── Ad banner — shown immediately below check-in for free users ── */}
+        <AdBanner isPremium={user?.isPremium} marginVertical={10} />
+
         {/* ── 3. Security Score (chips + score number are clickable) ── */}
         <SecurityScoreCard
           securityScore={dashboard.securityScore ?? 0}

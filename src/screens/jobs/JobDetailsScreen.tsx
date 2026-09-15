@@ -10,6 +10,7 @@ import { getJobById, trackApply } from "../../services/jobsService";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
+import AdBanner from "../../components/AdBanner";
 
 type Props = NativeStackScreenProps<RootStackParamList, "JobDetails">;
 
@@ -115,6 +116,7 @@ export default function JobDetailsScreen({ route, navigation }: Props) {
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+        <AdBanner isPremium={false} marginVertical={8} />
         {/* Hero card */}
         <View style={s.heroCard}>
           <View style={s.heroInitial}>

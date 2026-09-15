@@ -8,6 +8,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import api from "../../services/api";
 import { getCurrentUser } from "../../services/authService";
 import Colors from "../../theme/colors";
+import AdBanner from "../../components/AdBanner";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
 import UserAvatar from "../../components/UserAvatar";
@@ -43,6 +44,7 @@ export default function LeaderboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<LeaderboardEntry[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isPremium, setIsPremium] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -52,6 +54,7 @@ export default function LeaderboardScreen() {
       ]);
       setData(res.data?.data ?? []);
       setCurrentUserId(user?._id ?? null);
+      setIsPremium(!!(user as any)?.isPremium);
     } catch (err) {
       console.log("Leaderboard error:", err);
     } finally {
@@ -143,6 +146,8 @@ export default function LeaderboardScreen() {
             </View>
           </View>
         )}
+
+        <AdBanner isPremium={isPremium} marginVertical={10} />
 
         {/* Full List */}
         {data.slice(3).map((entry, idx) => {

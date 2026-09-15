@@ -11,6 +11,7 @@ import UserAvatar from "../../components/UserAvatar";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
+import AdBanner from "../../components/AdBanner";
 
 type Props = NativeStackScreenProps<RootStackParamList, "FriendProfile">;
 
@@ -268,9 +269,10 @@ export default function FriendProfileScreen({ route, navigation }: Props) {
           </View>
         </View>
 
+        <AdBanner isPremium={!!p.isPremium} marginVertical={10} />
+
         {/* ── Progress bars ── */}
-        {(p.completedLessonsCount > 0 || p.completedLabsCount > 0) && (
-          <View style={styles.card}>
+        {(p.completedLessonsCount > 0 || p.completedLabsCount > 0) && (          <View style={styles.card}>
             <Text style={styles.sectionTitle}>📈 Progress</Text>
             <ProgressRow
               label="Learning Modules"

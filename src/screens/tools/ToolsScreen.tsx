@@ -11,6 +11,7 @@ import {
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
+import AdBanner from "../../components/AdBanner";
 
 export default function ToolsScreen() {
   const [passwordInput, setPasswordInput] = useState("");
@@ -71,6 +72,8 @@ export default function ToolsScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.headerTitle}>Security Tools 🛠️</Text>
       <Text style={styles.headerSubtitle}>Password auditor & data integrity checksum generators</Text>
+
+      <AdBanner isPremium={false} marginVertical={10} />
 
       {/* Password Strength Meter */}
       <View style={styles.card}>

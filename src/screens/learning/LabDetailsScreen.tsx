@@ -19,6 +19,8 @@ import {
   getLabById,
   completeLab,
 } from "../../services/lab.service";
+import { getCurrentUser } from "../../services/authService";
+import AdBanner from "../../components/AdBanner";
 
 
 
@@ -49,41 +51,24 @@ const targetLabId = route.params?.id || route.params?.labId;
 
 
 
-const [lab,setLab] =
-useState<any>(null);
-
-
-
-const [loading,setLoading] =
-useState(true);
-
-
-
-const [completing,setCompleting] =
-useState(false);
+const [lab,setLab] = useState<any>(null);
+const [loading,setLoading] = useState(true);
+const [completing,setCompleting] = useState(false);
+const [isPremium, setIsPremium] = useState(false);
 
 
 
 
 
 
-const loadLab =
-async()=>{
-
-
-try{
-
-
-const response =
-await getLabById(
-  targetLabId
-);
-
-
-
-setLab(
-  response.data || response
-);
+const loadLab = async()=>{
+  try{
+    const [response, user] = await Promise.all([
+      getLabById(targetLabId),
+      getCurrentUser(),
+    ]);
+    setLab(response.data || response);
+    setIsPremium(!!(user as any)?.isPremium);
 
 
 
@@ -422,17 +407,12 @@ style={styles.text}
 
 
 
+<AdBanner isPremium={isPremium} marginVertical={12} />
+
 <TouchableOpacity
-
 style={styles.button}
-
-disabled={
-completing
-}
-
-onPress={
-handleCompleteLab
-}
+disabled={completing}
+onPress={handleCompleteLab}
 
 >
 

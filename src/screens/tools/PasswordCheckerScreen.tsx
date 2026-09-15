@@ -9,6 +9,7 @@ import {
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
+import AdBanner from "../../components/AdBanner";
 
 export default function PasswordCheckerScreen() {
   const [passwordInput, setPasswordInput] = useState("");
@@ -38,6 +39,8 @@ export default function PasswordCheckerScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.headerTitle}>Password Strength Auditor 🔑</Text>
       <Text style={styles.headerSubtitle}>Analyze password entropy, character length & complexity</Text>
+
+      <AdBanner isPremium={false} marginVertical={10} />
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Password Auditor</Text>

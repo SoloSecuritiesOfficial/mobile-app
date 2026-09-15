@@ -5,19 +5,17 @@
     "scheme": "soloji",
     "version": "1.0.0",
     "orientation": "portrait",
-
     "icon": "./assets/icon.png",
-
     "userInterfaceStyle": "light",
 
     "ios": {
       "supportsTablet": true,
       "icon": "./assets/icon.png",
       "bundleIdentifier": "com.solosecurities.app",
-
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-
+        "NSPhotoLibraryAddUsageDescription": "Allow SoloSecurities to save your certificates to your photo library.",
+        "NSPhotoLibraryUsageDescription": "Allow SoloSecurities to access your photo library.",
         "UIBackgroundModes": [
           "fetch",
           "remote-notification"
@@ -27,21 +25,20 @@
 
     "android": {
       "package": "com.solosecurities.app",
-
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF",
         "monochromeImage": "./assets/monochrome-icon.png"
       },
-
       "googleServicesFile": "./google-services.json",
-
       "predictiveBackGestureEnabled": false,
-
       "permissions": [
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO"
       ]
     },
 
@@ -58,6 +55,15 @@
       "expo-web-browser",
 
       [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow SoloSecurities to save your certificates to your photo library.",
+          "savePhotosPermission": "Allow SoloSecurities to save certificates to your photo library.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#FFFFFF",
@@ -72,8 +78,36 @@
         {
           "icon": "./assets/icon.png",
           "color": "#C62828",
+          "defaultChannel": "default",
           "androidMode": "default",
-          "androidCollapsedTitle": "SoloSecurities"
+          "androidCollapsedTitle": "SoloSecurities",
+          "sounds": [],
+          "channels": [
+            {
+              "id": "default",
+              "name": "SoloSecurities",
+              "importance": "max",
+              "vibrationPattern": [0, 250, 250, 250],
+              "lightColor": "#C62828",
+              "sound": "default",
+              "enableLights": true,
+              "enableVibrate": true,
+              "showBadge": true,
+              "lockscreenVisibility": "public"
+            },
+            {
+              "id": "chat",
+              "name": "Chat Messages",
+              "importance": "max",
+              "vibrationPattern": [0, 250, 250, 250],
+              "lightColor": "#C62828",
+              "sound": "default",
+              "enableLights": true,
+              "enableVibrate": true,
+              "showBadge": true,
+              "lockscreenVisibility": "public"
+            }
+          ]
         }
       ],
 
@@ -82,8 +116,8 @@
         {
           "androidAppId": "ca-app-pub-4705207925908028~8229931071",
           "iosAppId": "ca-app-pub-4705207925908028~8229931071",
-          "delayAppMeasurementInit": true,
-          "userTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you."
+          "delayAppMeasurementInit": false,
+          "userTrackingUsageDescription": "This identifier will be used to deliver personalised ads to you."
         }
       ],
 
@@ -92,7 +126,9 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.960176390407-vgfmfvrj6jfjjqpsa5p9ifbftsupiuch"
         }
-      ]
+      ],
+
+      "expo-sharing"
     ],
 
     "extra": {
