@@ -329,6 +329,9 @@ export default function QuizQuestionScreen() {
   const [selectedAnswers, setSelectedAnswers] =
     useState<number[]>([]);
 
+  const [isPremium, setIsPremium] =
+    useState(false);
+
   const [secondsLeft, setSecondsLeft] =
     useState(0);
 
@@ -363,6 +366,13 @@ export default function QuizQuestionScreen() {
     return () => {
       mountedRef.current = false;
     };
+  }, []);
+
+  // Resolve premium status once on mount so AdBanner hides for paying users.
+  useEffect(() => {
+    getCurrentUser()
+      .then(user => setIsPremium(!!(user as any)?.isPremium))
+      .catch(() => {});
   }, []);
 
   /* ======================================================================== */
@@ -2183,7 +2193,8 @@ function QuizResultScreen({
           Question Review
         </Text>
 
-        <AdBanner isPremium={false} marginVertical={8} />
+        <AdBanner isPremium={isPremium} marginVertical={8} />
+        <AdBanner isPremium={isPremium} marginVertical={6} />
 
         {questions.map(
           (
@@ -2384,6 +2395,7 @@ function QuizResultScreen({
             resultStyles.actions
           }
         >
+          <AdBanner isPremium={isPremium} marginVertical={6} />
           <TouchableOpacity
             style={
               resultStyles.retryButton

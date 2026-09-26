@@ -19,6 +19,7 @@ let WebView: any = null;
 try { WebView = require("react-native-webview").WebView; } catch { /* not installed yet */ }
 import { RootStackParamList } from "../../navigation/AppNavigator";
 import { getCertificateById } from "../../services/certificateService";
+import { getCurrentUser } from "../../services/authService";
 import { generateCertificateHtml } from "../../utils/certificateHtml";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
@@ -66,9 +67,16 @@ export default function CertificateDetailsScreen({ route, navigation }: Props) {
   const [loading,     setLoading]     = useState(true);
   const [generating,  setGenerating]  = useState(false);
   const [webReady,    setWebReady]    = useState(false);
+  const [isPremium,   setIsPremium]   = useState(false);
 
   const fadeAnim  = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.96)).current;
+
+  useEffect(() => {
+    getCurrentUser()
+      .then(user => setIsPremium(!!(user as any)?.isPremium))
+      .catch(() => {});
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -184,6 +192,8 @@ export default function CertificateDetailsScreen({ route, navigation }: Props) {
         contentContainerStyle={s.scroll}
         showsVerticalScrollIndicator={false}
       >
+        <AdBanner isPremium={isPremium} marginVertical={8} />
+
         {/* ── Certificate preview (WebView rendering full HTML) ── */}
         <Animated.View
           style={[
@@ -254,7 +264,7 @@ export default function CertificateDetailsScreen({ route, navigation }: Props) {
         </View>
 
         {/* ── Details card ── */}
-        <AdBanner isPremium={false} marginVertical={10} />
+        <AdBanner isPremium={isPremium} marginVertical={10} />
         <View style={s.detailsCard}>
           <Text style={s.detailsTitle}>{certificate.title}</Text>
 
@@ -314,6 +324,8 @@ export default function CertificateDetailsScreen({ route, navigation }: Props) {
             The certificate includes your name, category, skills, and a unique verification ID.
           </Text>
         </View>
+
+        <AdBanner isPremium={isPremium} marginVertical={10} />
       </ScrollView>
     </SafeAreaView>
   );

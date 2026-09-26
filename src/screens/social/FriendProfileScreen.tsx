@@ -219,6 +219,8 @@ export default function FriendProfileScreen({ route, navigation }: Props) {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
+        <AdBanner isPremium={!!p.isPremium} marginVertical={8} />
+
         {/* ── Hero card ── */}
         <View style={styles.heroCard}>
           <UserAvatar username={p.username} profileImage={p.profileImage} size={90} />
@@ -272,7 +274,8 @@ export default function FriendProfileScreen({ route, navigation }: Props) {
         <AdBanner isPremium={!!p.isPremium} marginVertical={10} />
 
         {/* ── Progress bars ── */}
-        {(p.completedLessonsCount > 0 || p.completedLabsCount > 0) && (          <View style={styles.card}>
+        {(p.completedLessonsCount > 0 || p.completedLabsCount > 0) && (
+          <View style={styles.card}>
             <Text style={styles.sectionTitle}>📈 Progress</Text>
             <ProgressRow
               label="Learning Modules"
@@ -307,6 +310,8 @@ export default function FriendProfileScreen({ route, navigation }: Props) {
             </View>
           </View>
         )}
+
+        <AdBanner isPremium={!!p.isPremium} marginVertical={10} />
 
       </ScrollView>
     </SafeAreaView>

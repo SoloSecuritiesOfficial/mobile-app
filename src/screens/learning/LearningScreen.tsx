@@ -35,6 +35,8 @@ import {
 
 import LearningProgressCard from "../../components/LearningProgressCard";
 import AdBanner from "../../components/AdBanner";
+import { showInterstitialAd } from "../../components/InterstitialAd";
+import RewardedAdGate from "../../components/RewardedAdGate";
 
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
@@ -402,7 +404,7 @@ await Promise.all([
                 }
 
 
-                onPress={()=> {
+                onPress={async ()=> {
                   if ((item as any).isPremiumOnly) {
                     Alert.alert(
                       "👑 Premium Required",
@@ -411,6 +413,7 @@ await Promise.all([
                     );
                     return;
                   }
+                  await showInterstitialAd(isPremium);
                   navigation.navigate("LearningDetails", { id: item._id });
                 }}
 
@@ -510,8 +513,10 @@ await Promise.all([
         }
       </View>
 
+      {/* Bottom banner — shown after module list */}
+      <AdBanner isPremium={isPremium} marginVertical={12} />
 
-
+      <AdBanner isPremium={isPremium} marginVertical={8} />
 
     </ScrollView>
 

@@ -61,6 +61,10 @@ import CTFScreen from "../screens/premium/CTFScreen";
 // ── Tools ──────────────────────────────────────────────────────────────────
 import PasswordCheckerScreen from "../screens/tools/PasswordCheckerScreen";
 import HashGeneratorScreen from "../screens/tools/HashGeneratorScreen";
+import ToolsScreen from "../screens/tools/ToolsScreen";
+
+// ── Rewards ────────────────────────────────────────────────────────────────
+import AdRewardScreen from "../screens/rewards/AdRewardScreen";
 
 export type RootStackParamList = {
   // Auth
@@ -110,6 +114,9 @@ export type RootStackParamList = {
   // Tools
   PasswordChecker: undefined;
   HashGenerator: undefined;
+  Tools: undefined;
+  // Rewards
+  AdRewards: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -160,6 +167,8 @@ export default function AppNavigator() {
         <Stack.Screen name="CTF" component={CTFScreen} />
         <Stack.Screen name="PasswordChecker" component={PasswordCheckerScreen} />
         <Stack.Screen name="HashGenerator" component={HashGeneratorScreen} />
+        <Stack.Screen name="Tools" component={ToolsScreen} />
+        <Stack.Screen name="AdRewards" component={AdRewardScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

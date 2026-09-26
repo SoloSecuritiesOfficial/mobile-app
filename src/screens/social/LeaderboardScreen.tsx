@@ -118,6 +118,7 @@ export default function LeaderboardScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} colors={[Colors.primary]} />}
         showsVerticalScrollIndicator={false}
       >
+        <AdBanner isPremium={isPremium} marginVertical={8} />
         {/* Top 3 Podium */}
         {data.length >= 3 && (
           <View style={styles.podium}>
@@ -175,6 +176,7 @@ export default function LeaderboardScreen() {
             <Text style={styles.emptyText}>Be the first to appear on the leaderboard!</Text>
           </View>
         )}
+        <AdBanner isPremium={isPremium} marginVertical={10} />
       </ScrollView>
     </SafeAreaView>
   );

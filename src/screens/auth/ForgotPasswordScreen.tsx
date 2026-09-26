@@ -14,6 +14,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import InputField from "../../components/InputField";
 import PrimaryButton from "../../components/PrimaryButton";
+import AdBanner from "../../components/AdBanner";
 import { RootStackParamList } from "../../navigation/AppNavigator";
 
 type Props = NativeStackScreenProps<
@@ -60,6 +61,9 @@ export default function ForgotPasswordScreen({
             Forgot Password
           </Text>
 
+          {/* Banner ad */}
+          <AdBanner marginVertical={10} />
+
           <Text style={styles.subtitle}>
             Enter your registered email address.
             {"\n"}
@@ -96,6 +100,10 @@ export default function ForgotPasswordScreen({
               </Text>
             </TouchableOpacity>
           </View>
+
+          {/* Bottom banner ad */}
+          <AdBanner marginVertical={8} />
+          <AdBanner marginVertical={6} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

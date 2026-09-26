@@ -10,21 +10,28 @@ import {
   RefreshControl,
   Linking,
   Share,
+  Alert,
 } from "react-native";
 import { getCVEUpdates } from "../../services/securityService";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
 import AdBanner from "../../components/AdBanner";
+import { showInterstitialAd } from "../../components/InterstitialAd";
+import RewardedAdGate from "../../components/RewardedAdGate";
 
 export default function CVEUpdatesScreen() {
   const [cves, setCves] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isPremium, setIsPremium] = useState(false);
 
   useEffect(() => {
     fetchCVEs();
+    import("../../services/authService").then(m =>
+      m.getCurrentUser().then(u => setIsPremium(!!(u as any)?.isPremium)).catch(() => {})
+    );
   }, []);
 
   const fetchCVEs = async () => {
@@ -114,7 +121,10 @@ export default function CVEUpdatesScreen() {
 
           <TouchableOpacity
             style={styles.linkButton}
-            onPress={() => Linking.openURL(`https://nvd.nist.gov/vuln/detail/${cveCode}`)}
+            onPress={async () => {
+              await showInterstitialAd(isPremium);
+              Linking.openURL(`https://nvd.nist.gov/vuln/detail/${cveCode}`);
+            }}
           >
             <Text style={styles.linkButtonText}>NIST NVD ↗</Text>
           </TouchableOpacity>
@@ -140,6 +150,8 @@ export default function CVEUpdatesScreen() {
         onChangeText={setSearchQuery}
       />
 
+      <AdBanner marginVertical={6} />
+
       {loading ? (
         <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
       ) : (
@@ -149,6 +161,17 @@ export default function CVEUpdatesScreen() {
           renderItem={renderCVEItem}
           contentContainerStyle={styles.listContent}
           ListHeaderComponent={<AdBanner marginVertical={4} />}
+          ListFooterComponent={
+            <>
+              <AdBanner marginVertical={8} />
+              <RewardedAdGate
+                isPremium={isPremium}
+                label="🎁 Watch Ad — Support CVE Research"
+                onReward={() => Alert.alert("🎁 Thanks!", "Reward earned — keep tracking vulnerabilities.")}
+                style={{ marginVertical: 12, marginHorizontal: 4 }}
+              />
+            </>
+          }
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

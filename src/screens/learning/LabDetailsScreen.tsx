@@ -21,6 +21,8 @@ import {
 } from "../../services/lab.service";
 import { getCurrentUser } from "../../services/authService";
 import AdBanner from "../../components/AdBanner";
+import RewardedAdGate from "../../components/RewardedAdGate";
+import { showInterstitialAd } from "../../components/InterstitialAd";
 
 
 
@@ -409,33 +411,22 @@ style={styles.text}
 
 <AdBanner isPremium={isPremium} marginVertical={12} />
 
-<TouchableOpacity
-style={styles.button}
-disabled={completing}
-onPress={handleCompleteLab}
+<RewardedAdGate
+  isPremium={isPremium}
+  label={completing ? "Completing..." : "Complete Lab ✅"}
+  icon="🎯"
+  onReward={async () => {
+    await handleCompleteLab();
+  }}
+  disabled={completing}
+  style={styles.button}
+  textStyle={styles.buttonText}
+/>
 
->
+{/* Bottom banner */}
+<AdBanner isPremium={isPremium} marginVertical={12} />
+<AdBanner isPremium={isPremium} marginVertical={8} />
 
-
-<Text
-style={styles.buttonText}
->
-
-
-{
-completing
-?
-"Completing..."
-:
-"Complete Lab ✅"
-}
-
-
-</Text>
-
-
-
-</TouchableOpacity>
 
 
 
@@ -599,3 +590,4 @@ marginTop:10,
 
 
 });
+

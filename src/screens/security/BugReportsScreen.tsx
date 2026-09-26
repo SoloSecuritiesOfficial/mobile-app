@@ -29,6 +29,8 @@ import { getCurrentUser } from "../../services/authService";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import AdBanner from "../../components/AdBanner";
+import { showInterstitialAd } from "../../components/InterstitialAd";
+import RewardedAdGate from "../../components/RewardedAdGate";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -1988,6 +1990,7 @@ export default function BugReportsScreen() {
       ) : null}
 
       {/* STATS */}
+      <AdBanner isPremium={isPremium} marginVertical={6} />
       <View
         style={[
           screenStyles.stats,
@@ -2157,6 +2160,7 @@ export default function BugReportsScreen() {
           />
         )}
         showsVerticalScrollIndicator={false}
+        ListHeaderComponent={<AdBanner isPremium={isPremium} marginVertical={6} />}
         contentContainerStyle={[
           screenStyles.list,
           isTablet &&
@@ -2224,7 +2228,14 @@ export default function BugReportsScreen() {
             ) : null}
           </View>
         }
-      />
+        ListFooterComponent={
+          <RewardedAdGate
+            isPremium={isPremium}
+            label="🎁 Watch Ad — Support Security Research"
+            onReward={() => Alert.alert("🎁 Thanks!", "Ad reward earned — keep exploring bug reports.")}
+            style={{ marginVertical: 12, marginHorizontal: 4 }}
+          />
+        }      />
     </SafeAreaView>
   );
 }

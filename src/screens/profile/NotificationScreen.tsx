@@ -12,6 +12,7 @@ import {
   markAllNotificationsAsRead,
   deleteNotification,
 } from "../../services/notificationService";
+import { getCurrentUser } from "../../services/authService";
 import Colors from "../../theme/colors";
 import AdBanner from "../../components/AdBanner";
 
@@ -66,6 +67,13 @@ export default function NotificationScreen() {
   const [loading,       setLoading]       = useState(true);
   const [refreshing,    setRefreshing]    = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [isPremium,     setIsPremium]     = useState(false);
+
+  useEffect(() => {
+    getCurrentUser()
+      .then(user => setIsPremium(!!(user as any)?.isPremium))
+      .catch(() => {});
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -156,13 +164,15 @@ export default function NotificationScreen() {
         </View>
       </View>
 
+      <AdBanner isPremium={isPremium} marginVertical={4} />
       <FlatList
         data={notifications}
         keyExtractor={item => item._id}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} colors={[Colors.primary]} />}
         contentContainerStyle={styles.list}
         ItemSeparatorComponent={() => <View style={styles.sep} />}
-        ListHeaderComponent={<AdBanner isPremium={false} marginVertical={6} />}
+        ListHeaderComponent={<AdBanner isPremium={isPremium} marginVertical={6} />}
+        ListFooterComponent={<AdBanner isPremium={isPremium} marginVertical={8} />}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={{ fontSize: 40, marginBottom: 10 }}>🔔</Text>

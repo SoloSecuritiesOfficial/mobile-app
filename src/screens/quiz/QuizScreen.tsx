@@ -39,6 +39,7 @@ import {
 
 import AdBanner from "../../components/AdBanner";
 import { showInterstitialAd } from "../../components/InterstitialAd";
+import RewardedAdGate from "../../components/RewardedAdGate";
 
 import type {
   RootStackParamList,
@@ -581,38 +582,37 @@ const QuizCard = memo(function QuizCard({
        * ACTION
        * ============================================================ */}
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={
-          hasAttempt
-            ? `Retake ${quiz.title}`
-            : `Start ${quiz.title}`
-        }
-        onPress={handlePress}
-        style={({ pressed }) => [
-          styles.startButton,
-
-          quiz.isPremiumOnly &&
-            styles.premiumStartButton,
-
-          pressed &&
-            styles.buttonPressed,
-        ]}
-      >
-
-        <Text style={styles.startButtonText}>
-          {quiz.isPremiumOnly
-            ? "👑  Premium Quiz"
-            : hasAttempt
-              ? "Retake Quiz"
-              : "Start Quiz"}
-        </Text>
-
-        <Text style={styles.startButtonArrow}>
-          →
-        </Text>
-
-      </Pressable>
+      {hasAttempt ? (
+        // Show rewarded video ad gate for quiz retakes
+        <RewardedAdGate
+          isPremium={false}
+          label="Retake Quiz"
+          icon="↻"
+          onReward={handlePress}
+          style={[
+            styles.startButton,
+            quiz.isPremiumOnly && styles.premiumStartButton,
+          ]}
+          textStyle={styles.startButtonText}
+        />
+      ) : (
+        // First-time quiz start - regular button
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Start ${quiz.title}`}
+          onPress={handlePress}
+          style={({ pressed }) => [
+            styles.startButton,
+            quiz.isPremiumOnly && styles.premiumStartButton,
+            pressed && styles.buttonPressed,
+          ]}
+        >
+          <Text style={styles.startButtonText}>
+            {quiz.isPremiumOnly ? "👑  Premium Quiz" : "Start Quiz"}
+          </Text>
+          <Text style={styles.startButtonArrow}>→</Text>
+        </Pressable>
+      )}
 
     </View>
   );
@@ -1073,8 +1073,12 @@ export default function QuizScreen() {
   const openQuiz =
     useCallback(
       async (quizId: string) => {
-        // Show interstitial before entering the quiz for free users
-        await showInterstitialAd(!isPremium ? false : true);
+        // Show interstitial for free users — always navigate even if ad fails.
+        try {
+          await showInterstitialAd(isPremium);
+        } catch {
+          // Ad SDK unavailable or not loaded — proceed silently.
+        }
         navigation.navigate(
           "QuizQuestion",
           { quizId },
@@ -1573,6 +1577,8 @@ export default function QuizScreen() {
              * SECTION
              * ============================================================ */}
 
+            <AdBanner marginVertical={10} />
+
             <View
               style={
                 styles.sectionHeader
@@ -1621,6 +1627,13 @@ export default function QuizScreen() {
             }
           />
         )}
+
+        ListFooterComponent={
+          <>
+            <AdBanner marginVertical={12} />
+            <AdBanner marginVertical={8} />
+          </>
+        }
 
         ListEmptyComponent={
           <View

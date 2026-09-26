@@ -18,6 +18,7 @@ import {
 import { pickProfileImage, uploadProfileImage } from "../../services/profileImageService";
 import { getSecurityDashboard } from "../../services/securityService";
 import AdBanner from "../../components/AdBanner";
+import { showInterstitialAd } from "../../components/InterstitialAd";
 
 // ─────────────────────────────────────────────────────────────────
 // Subscription tier badge
@@ -301,6 +302,7 @@ export default function ProfileScreen({ navigation }: any) {
           {[
             { icon: "👥", label: "Friends",            screen: "Friends" },
             { icon: "👑", label: "Premium Membership", screen: "Premium" },
+            { icon: "💰", label: "Ad Rewards",         screen: "AdRewards" },
             { icon: "🏅", label: "Achievements",       screen: "Achievements" },
             { icon: "🏆", label: "Leaderboard",        screen: "Leaderboard" },
             { icon: "🚩", label: "CTF Challenges",     screen: "CTF" },
@@ -309,7 +311,10 @@ export default function ProfileScreen({ navigation }: any) {
             <TouchableOpacity
               key={screen}
               style={styles.actionBtn}
-              onPress={() => navigation.navigate(screen)}
+              onPress={async () => {
+                await showInterstitialAd(tier === "paid" || tier === "admin");
+                navigation.navigate(screen);
+              }}
               activeOpacity={0.75}
             >
               <Text style={styles.actionBtnText}>{icon}  {label}</Text>
@@ -319,6 +324,7 @@ export default function ProfileScreen({ navigation }: any) {
         </View>
 
         {/* ── Account ── */}
+        <AdBanner isPremium={tier === "paid" || tier === "admin"} marginVertical={8} />
         <View style={[styles.actionsCard, { marginTop: Spacing.md }]}>
           <Text style={styles.sectionHeader}>Account</Text>
 
@@ -351,6 +357,8 @@ export default function ProfileScreen({ navigation }: any) {
             <Text style={[styles.arrow, { color: "#EF4444" }]}>›</Text>
           </TouchableOpacity>
         </View>
+
+        <AdBanner isPremium={tier === "paid" || tier === "admin"} marginVertical={10} />
       </ScrollView>
     </SafeAreaView>
   );

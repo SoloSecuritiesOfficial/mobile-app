@@ -116,8 +116,9 @@
         {
           "androidAppId": "ca-app-pub-4705207925908028~8229931071",
           "iosAppId": "ca-app-pub-4705207925908028~8229931071",
-          "delayAppMeasurementInit": false,
-          "userTrackingUsageDescription": "This identifier will be used to deliver personalised ads to you."
+          "delayAppMeasurementInit": true,
+          "userTrackingUsageDescription": "This identifier will be used to deliver personalised ads to you.",
+          "googleMobileAdsAutoInit": false
         }
       ],
 

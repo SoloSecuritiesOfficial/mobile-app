@@ -90,6 +90,7 @@ export default function CertificateScreen({ navigation }: Props) {
         }
       >
         {/* ── Header ── */}
+        <AdBanner isPremium={isPremium} marginVertical={8} />
         <Text style={styles.pageTitle}>📜 My Certificates</Text>
         <Text style={styles.pageSub}>Certificates are automatically awarded when you reach milestone levels</Text>
 
@@ -220,6 +221,8 @@ export default function CertificateScreen({ navigation }: Props) {
             );
           })
         )}
+
+        <AdBanner isPremium={isPremium} marginVertical={10} />
       </ScrollView>
     </SafeAreaView>
   );

@@ -10,6 +10,7 @@ import { StatusBar } from "expo-status-bar";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import LoadingBar from "../../components/LoadingBar";
+import AdBanner from "../../components/AdBanner";
 import { RootStackParamList } from "../../navigation/AppNavigator";
 import { isLoggedIn } from "../../services/authService";
 
@@ -127,6 +128,8 @@ export default function SplashScreen({
         <Text style={styles.version}>
           Version 1.0.0
         </Text>
+
+        <AdBanner marginVertical={4} />
       </View>
     </View>
   );

@@ -8,6 +8,8 @@ import { useFocusEffect } from "@react-navigation/native";
 import api from "../../services/api";
 import { getCurrentUser } from "../../services/authService";
 import AdBanner from "../../components/AdBanner";
+import { showInterstitialAd } from "../../components/InterstitialAd";
+import RewardedAdGate from "../../components/RewardedAdGate";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
@@ -173,6 +175,7 @@ export default function AchievementsScreen() {
         </View>
 
         {/* ── Filter tabs ── */}
+        <AdBanner isPremium={isPremium} marginVertical={8} />
         <View style={styles.filterRow}>
           {(["all", "unlocked", "locked"] as Filter[]).map(f => (
             <TouchableOpacity
@@ -296,6 +299,7 @@ export default function AchievementsScreen() {
             );
           })
         )}
+        <AdBanner isPremium={isPremium} marginVertical={10} />
       </ScrollView>
     </SafeAreaView>
   );

@@ -24,6 +24,9 @@ import SecurityScoreCard from "../../components/SecurityScoreCard";
 import SecurityTipCard from "../../components/SecurityTipCard";
 import QuickActions from "../../components/QuickAction";
 import AdBanner from "../../components/AdBanner";
+import { showInterstitialAd } from "../../components/InterstitialAd";
+import RewardedAdGate from "../../components/RewardedAdGate";
+import WatchVideoAdButton from "../../components/WatchVideoAdButton";
 
 import {
   fetchCurrentUser,
@@ -36,6 +39,7 @@ import {
   getUnreadNotificationCount,
   checkAndTriggerDeviceNotifications,
 } from "../../services/notificationService";
+import { getWalletSummary } from "../../services/adRewardService";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Dashboard">;
 
@@ -269,6 +273,7 @@ export default function DashboardScreen({ navigation }: Props) {
   const [certificateCount,  setCertificateCount]   = useState(0);
   const [notificationCount, setNotificationCount]  = useState(0);
   const [progressModal,     setProgressModal]      = useState<ProgressDetailConfig | null>(null);
+  const [rewardBalance,     setRewardBalance]      = useState(0);
 
   // ── data loading ────────────────────────────────────────────────────────────
   const loadDashboard = useCallback(async () => {
@@ -288,6 +293,11 @@ export default function DashboardScreen({ navigation }: Props) {
       setNotificationCount(notif.data?.count ?? notif.count ?? 0);
 
       await checkAndTriggerDeviceNotifications();
+
+      // Fetch wallet balance from backend (fire-and-forget, never blocks main load)
+      getWalletSummary().then(wallet => {
+        setRewardBalance(wallet.availableMicroValue);
+      }).catch(() => {});
     } catch (err) {
       console.log("Dashboard Error:", err);
     } finally {
@@ -370,8 +380,8 @@ export default function DashboardScreen({ navigation }: Props) {
           />
         }
       >
-        {/* ── 1. Header ── */}
-        <DashboardHeader user={user} navigation={navigation} />
+        {/* ── 2. Header ── */}
+        <DashboardHeader user={user} navigation={navigation} rewardBalance={rewardBalance} />
 
         {/* ── 2. Daily Check-in ── */}
         <TouchableOpacity
@@ -539,7 +549,10 @@ export default function DashboardScreen({ navigation }: Props) {
         {/* ── 10. Premium banner ── */}
         <TouchableOpacity
           style={styles.premiumBanner}
-          onPress={() => navigation.navigate("Premium")}
+          onPress={async () => {
+            await showInterstitialAd(user?.isPremium);
+            navigation.navigate("Premium");
+          }}
         >
           <Text style={styles.premiumBannerIcon}>👑</Text>
           <View style={{ flex: 1 }}>
@@ -562,6 +575,8 @@ export default function DashboardScreen({ navigation }: Props) {
             <Text style={styles.complianceLink}>View Privacy Policy & Settings →</Text>
           </TouchableOpacity>
         </View>
+
+        <AdBanner isPremium={user?.isPremium} marginVertical={12} />
       </ScrollView>
 
       {/* ── Progress detail modal (rendered outside ScrollView so it overlays) ── */}
@@ -636,6 +651,48 @@ const styles = StyleSheet.create({
   premiumBannerTitle: { color: "#FFF", fontWeight: "700", fontSize: 15 },
   premiumBannerSub:   { color: "#FFD0D0", fontSize: 12, marginTop: 2 },
   premiumBannerArrow: { color: "#FFF", fontSize: 28, fontWeight: "700" },
+
+  // ad reward banner
+  adRewardBanner:      { backgroundColor: "#2E7D32", borderRadius: Spacing.radiusLarge, padding: 16, flexDirection: "row", alignItems: "center", gap: 12, marginBottom: Spacing.md },
+  adRewardBannerIcon:  { fontSize: 28 },
+  adRewardBannerTitle: { color: "#FFF", fontWeight: "700", fontSize: 15 },
+  adRewardBannerSub:   { color: "#C8E6C9", fontSize: 12, marginTop: 2 },
+
+  // ad reward card (expanded version with video button)
+  adRewardCard: {
+    backgroundColor: "#1B5E20",
+    borderRadius: Spacing.radiusLarge,
+    marginBottom: Spacing.md,
+    overflow: "hidden",
+    elevation: 3,
+    shadowColor: "#1B5E20",
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  adRewardTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    gap: 10,
+  },
+  adRewardChevron: { color: "#FFF", fontSize: 24, fontWeight: "700" },
+  adRewardDivider: { height: 1, backgroundColor: "rgba(255,255,255,0.12)", marginHorizontal: 14 },
+  videoAdBtn: {
+    margin: 12,
+    marginTop: 10,
+    elevation: 0,
+    shadowOpacity: 0,
+    backgroundColor: "#2E7D32",
+  },
+  rewardBalanceChip: {
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginRight: 4,
+  },
+  rewardBalanceChipText: { color: "#FFF", fontWeight: "900", fontSize: 15 },
 
   // compliance
   complianceCard:  { backgroundColor: Colors.surface, borderRadius: Spacing.radiusLarge, padding: Spacing.cardPadding, borderWidth: 1, borderColor: Colors.border, marginBottom: Spacing.md },

@@ -141,6 +141,8 @@ export default function ToolsScreen() {
           </View>
         )}
       </View>
+      <AdBanner isPremium={false} marginVertical={8} />
+      <AdBanner isPremium={false} marginVertical={8} />
     </ScrollView>
   );
 }

@@ -343,6 +343,8 @@ export default function CTFScreen() {
             ))
           ))}
 
+        <AdBanner isPremium={isPremium} marginVertical={8} />
+
         {/* SOLVED */}
         {tab === "solved" &&
           (solved.length === 0 ? (
@@ -366,6 +368,7 @@ export default function CTFScreen() {
               </View>
             ))
           ))}
+        <AdBanner isPremium={isPremium} marginVertical={8} />
       </ScrollView>
 
       {/* Challenge Detail Modal */}

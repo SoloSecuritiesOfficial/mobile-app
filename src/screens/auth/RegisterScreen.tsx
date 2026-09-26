@@ -14,6 +14,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import InputField from "../../components/InputField";
 import PrimaryButton from "../../components/PrimaryButton";
 import GoogleSignInButton from "../../components/GoogleSignInButton";
+import { showInterstitialAd } from "../../components/InterstitialAd";
 import { RootStackParamList } from "../../navigation/AppNavigator";
 import { registerUser } from "../../services/authService";
 import { hasPushBeenAsked } from "../../utils/storage";
@@ -80,6 +81,7 @@ export default function RegisterScreen({ navigation }: Props) {
         password,
       });
       if (res?.success) {
+        await showInterstitialAd(false);
         Alert.alert("Account Created", "Welcome to SoloSecurities!", [
           { text: "Continue", onPress: afterAuth },
         ]);

@@ -411,6 +411,7 @@ export default function JobsScreen({ navigation }: Props) {
       </View>
 
       {/* Search & Filter Bar */}
+      <AdBanner marginVertical={4} />
       <View style={styles.searchContainer}>
         <View style={styles.searchBox}>
           <Text style={styles.searchIcon}>🔍</Text>
@@ -522,8 +523,11 @@ export default function JobsScreen({ navigation }: Props) {
             loadingMore
               ? <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: 16 }} />
               : !hasMore && jobs.length > 0
-              ? <Text style={styles.endText}>You've seen all {total} jobs ✓</Text>
-              : null
+              ? <>
+                  <Text style={styles.endText}>You've seen all {total} jobs ✓</Text>
+                  <AdBanner marginVertical={8} />
+                </>
+              : <AdBanner marginVertical={8} />
           }
           ListEmptyComponent={
             <View style={styles.emptyCard}>

@@ -8,6 +8,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/AppNavigator";
 import { registerForPushNotifications } from "../../utils/pushNotifications";
 import { markPushAsked } from "../../utils/storage";
+import AdBanner from "../../components/AdBanner";
 import Colors from "../../theme/colors";
 
 type Props = NativeStackScreenProps<RootStackParamList, "NotificationPermission">;
@@ -39,12 +40,16 @@ export default function NotificationPermissionScreen({ navigation }: Props) {
           <Text style={styles.icon}>🔔</Text>
         </View>
 
+        <AdBanner marginVertical={8} />
+
         {/* Heading */}
         <Text style={styles.title}>Stay in the Loop</Text>
         <Text style={styles.subtitle}>
           Get instant alerts for friend requests, messages, new challenges,
           CVE alerts, quiz results and admin announcements.
         </Text>
+
+        <AdBanner marginVertical={8} />
 
         {/* Feature list */}
         <View style={styles.featureList}>
@@ -80,6 +85,9 @@ export default function NotificationPermissionScreen({ navigation }: Props) {
         <Text style={styles.note}>
           You can change this any time in your device settings.
         </Text>
+
+        {/* Banner ad at bottom of permission screen */}
+        <AdBanner marginVertical={12} />
       </View>
     </SafeAreaView>
   );

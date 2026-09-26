@@ -19,6 +19,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import AdBanner from "../../components/AdBanner";
+import { showInterstitialAd } from "../../components/InterstitialAd";
 import Typography from "../../theme/typography";
 import { BASE_URL } from "../../config/api";
 
@@ -336,7 +337,7 @@ export default function ProfileSettingsScreen({ navigation }: any) {
           </View>
 
           {/* ── Basic info ── */}
-          <AdBanner isPremium={false} marginVertical={10} />
+          <AdBanner isPremium={tier === "paid" || tier === "admin"} marginVertical={10} />
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Basic Info</Text>
             <Field label="Username" value={form.username} onChangeText={setField("username")} placeholder="your_username" autoCapitalize="none" />
@@ -360,6 +361,9 @@ export default function ProfileSettingsScreen({ navigation }: any) {
             <Field label="Website" value={form.website} onChangeText={setField("website")} placeholder="https://yourwebsite.com" keyboardType="url" autoCapitalize="none" />
           </View>
 
+          {/* Second banner between sections and save button */}
+          <AdBanner isPremium={tier === "paid" || tier === "admin"} marginVertical={8} />
+
           {/* ── Save button ── */}
           <TouchableOpacity
             style={[styles.saveBtn, saving && { opacity: 0.6 }]}
@@ -371,6 +375,8 @@ export default function ProfileSettingsScreen({ navigation }: any) {
               ? <ActivityIndicator color="#FFF" />
               : <Text style={styles.saveBtnText}>Save Changes</Text>}
           </TouchableOpacity>
+
+          <AdBanner isPremium={tier === "paid" || tier === "admin"} marginVertical={8} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

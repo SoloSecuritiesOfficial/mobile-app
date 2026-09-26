@@ -48,6 +48,8 @@ export default function HashGeneratorScreen() {
       <Text style={styles.headerTitle}>Cryptographic Hash Generator 🔐</Text>
       <Text style={styles.headerSubtitle}>Generate SHA-256 and MD5 cryptographic checksum digests for data integrity</Text>
 
+      <AdBanner isPremium={false} marginVertical={8} />
+
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Hash & Checksum Computation</Text>
         <TextInput
@@ -73,6 +75,7 @@ export default function HashGeneratorScreen() {
         )}
 
         <AdBanner isPremium={false} marginVertical={10} />
+        <AdBanner isPremium={false} marginVertical={8} />
       </View>
     </ScrollView>
   );

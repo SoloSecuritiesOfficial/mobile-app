@@ -13,6 +13,8 @@ import {
 import { startSecurityScan, getScanHistory } from "../../services/securityService";
 import { getCurrentUser } from "../../services/authService";
 import AdBanner from "../../components/AdBanner";
+import { showInterstitialAd } from "../../components/InterstitialAd";
+import RewardedAdGate from "../../components/RewardedAdGate";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
@@ -52,6 +54,8 @@ export default function SecurityScanScreen() {
     try {
       setScanning(true);
       setCurrentScan(null);
+      // Show interstitial before scan results appear
+      await showInterstitialAd(isPremium);
       const res = await startSecurityScan(target);
       if (res.success && res.data) {
         setCurrentScan(res.data);
@@ -70,6 +74,8 @@ export default function SecurityScanScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.headerTitle}>Security Scan 🛡️</Text>
       <Text style={styles.headerSubtitle}>Analyze target domain HTTPS SSL certificate & security headers</Text>
+
+      <AdBanner isPremium={isPremium} marginVertical={8} />
 
       <View style={styles.inputContainer}>
         <TextInput
@@ -146,6 +152,7 @@ export default function SecurityScanScreen() {
       )}
 
       {/* History */}
+      <AdBanner isPremium={isPremium} marginVertical={8} />
       <Text style={[styles.headerTitle, { fontSize: 20, marginTop: Spacing.xl }]}>Scan History</Text>
       {history.length === 0 ? (
         <Text style={styles.emptyText}>No previous scans logged yet.</Text>
@@ -163,6 +170,14 @@ export default function SecurityScanScreen() {
         ))
       )}
       <AdBanner isPremium={isPremium} marginVertical={12} />
+
+      {/* Rewarded ad — watch to unlock extra scan credits */}
+      <RewardedAdGate
+        isPremium={isPremium}
+        label="🎁 Watch Ad — Unlock Extra Scan"
+        onReward={() => Alert.alert("🎁 Reward Earned", "Extra scan credit unlocked!")}
+        style={{ marginBottom: 16 }}
+      />
     </ScrollView>
   );
 }

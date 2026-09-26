@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -13,19 +13,28 @@ import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
 import { useTheme } from "../../context/ThemeContext";
 import AdBanner from "../../components/AdBanner";
+import { showInterstitialAd } from "../../components/InterstitialAd";
+import { getCurrentUser } from "../../services/authService";
 
 export default function SettingsScreen() {
   const { isDarkMode, toggleTheme, colors } = useTheme();
   const [notifications, setNotifications] = useState(true);
   const [biometrics, setBiometrics] = useState(false);
   const [autoScan, setAutoScan] = useState(true);
+  const [isPremium, setIsPremium] = useState(false);
+
+  useEffect(() => {
+    getCurrentUser()
+      .then(user => setIsPremium(!!(user as any)?.isPremium))
+      .catch(() => {});
+  }, []);
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.content}>
       <Text style={[styles.headerTitle, { color: colors.text }]}>App Settings ⚙️</Text>
       <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Customize security & notifications</Text>
 
-      <AdBanner isPremium={false} marginVertical={10} />
+      <AdBanner isPremium={isPremium} marginVertical={10} />
 
       <View style={[styles.section, { backgroundColor: colors.surface }]}>
         <Text style={styles.sectionHeader}>Security Preferences</Text>
@@ -124,15 +133,22 @@ export default function SettingsScreen() {
 
         <TouchableOpacity
           style={[styles.actionRow, { borderBottomWidth: 0 }]}
-          onPress={() => Alert.alert(
-            "📧 Contact Support",
-            "For support or data deletion requests:\n\nsupport@solosecurities.com\n\nAccount deletion can be done from Profile → Account Actions."
-          )}
+          onPress={async () => {
+            await showInterstitialAd(isPremium);
+            Alert.alert(
+              "📧 Contact Support",
+              "For support or data deletion requests:\n\nsupport@solosecurities.com\n\nAccount deletion can be done from Profile → Account Actions."
+            );
+          }}
         >
-          <Text style={styles.actionText}>📧 Contact & Support</Text>
+          <Text style={styles.actionText}>📧 Contact &amp; Support</Text>
           <Text style={styles.valueText}>↗</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Bottom banner */}
+      <AdBanner isPremium={isPremium} marginVertical={12} />
+      <AdBanner isPremium={isPremium} marginVertical={8} />
     </ScrollView>
   );
 }

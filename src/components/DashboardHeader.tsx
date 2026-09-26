@@ -12,6 +12,7 @@ import { BASE_URL } from "../config/api";
 import Colors from "../theme/colors";
 import Spacing from "../theme/spacing";
 import Typography from "../theme/typography";
+import { formatMicros } from "../services/adRewardService";
 
 interface User {
   _id?: string;
@@ -28,79 +29,39 @@ interface User {
 interface Props {
   user: User | null;
   navigation: NativeStackNavigationProp<RootStackParamList, "Dashboard">;
+  /** Live ad-reward available balance in micro-units (from backend wallet) */
+  rewardBalance?: number;
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Resolve profileImage: 
-// - If it's a data URL (data:image/...), use it directly
-// - If it starts with http(s), use it directly
-// - Otherwise prepend BASE_URL for relative server paths
-// ─────────────────────────────────────────────────────────────────
 function resolveAvatar(profileImage?: string): string | null {
   if (!profileImage) return null;
-  if (profileImage.startsWith("data:image/")) {
-    return profileImage; // Base64 data URL
-  }
-  if (profileImage.startsWith("http://") || profileImage.startsWith("https://")) {
-    return profileImage; // Full URL
-  }
-  return `${BASE_URL}${profileImage}`; // Relative path
+  if (profileImage.startsWith("data:image/")) return profileImage;
+  if (profileImage.startsWith("http://") || profileImage.startsWith("https://")) return profileImage;
+  return `${BASE_URL}${profileImage}`;
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Subscription tier badge shown beneath the avatar
-// ─────────────────────────────────────────────────────────────────
 function SubscriptionBadge({ user }: { user: User | null }) {
   if (!user) return null;
-
   if (user.role === "admin") {
-    return (
-      <View style={[badge.pill, { backgroundColor: "#1A237E" }]}>
-        <Text style={badge.text}>🛡️ ADMIN</Text>
-      </View>
-    );
+    return <View style={[badge.pill, { backgroundColor: "#1A237E" }]}><Text style={badge.text}>🛡️ ADMIN</Text></View>;
   }
-
   if (user.isPremium) {
-    // Determine trial vs paid: if premiumExpiresAt is within 7 days of creation
-    // we can't easily tell — just show PREMIUM.  The backend subscription.service
-    // knows the true tier; we show a simple badge here.
-    return (
-      <View style={[badge.pill, { backgroundColor: "#E65100" }]}>
-        <Text style={badge.text}>👑 PREMIUM</Text>
-      </View>
-    );
+    return <View style={[badge.pill, { backgroundColor: "#E65100" }]}><Text style={badge.text}>👑 PREMIUM</Text></View>;
   }
-
-  return (
-    <View style={[badge.pill, { backgroundColor: "#2E7D32" }]}>
-      <Text style={badge.text}>🆓 FREE</Text>
-    </View>
-  );
+  return <View style={[badge.pill, { backgroundColor: "#2E7D32" }]}><Text style={badge.text}>🆓 FREE</Text></View>;
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Component
-// ─────────────────────────────────────────────────────────────────
-export default function DashboardHeader({ user, navigation }: Props) {
+export default function DashboardHeader({ user, navigation, rewardBalance = 0 }: Props) {
   const avatarUri = resolveAvatar(user?.profileImage);
   const initials  = (user?.firstName || user?.username || "U").charAt(0).toUpperCase();
   const [imageError, setImageError] = React.useState(false);
 
-  // Reset error state when avatar URI changes
-  React.useEffect(() => {
-    setImageError(false);
-  }, [avatarUri]);
-
-  // Debug log to verify profile image URL
-  React.useEffect(() => {
-    if (user?.profileImage) {
-      console.log();
-    }
-  }, [user?.profileImage, avatarUri]);
+  React.useEffect(() => { setImageError(false); }, [avatarUri]);
 
   return (
     <View style={styles.container}>
+
+      {/* Left — greeting + name + tier badge */}
       <View style={styles.leftSection}>
         <Text style={styles.welcome}>Welcome Back 👋</Text>
         <Text style={styles.name} numberOfLines={1}>
@@ -109,31 +70,41 @@ export default function DashboardHeader({ user, navigation }: Props) {
         <SubscriptionBadge user={user} />
       </View>
 
-      <TouchableOpacity
-        activeOpacity={0.85}
-        style={styles.avatarContainer}
-        onPress={() => navigation.navigate("Profile")}
-      >
-        {avatarUri && !imageError ? (
-          <Image
-            source={{ uri: avatarUri }}
-            style={styles.avatar}
-            onError={(e) => {
-              console.log("DashboardHeader - Image Load Error:", e.nativeEvent.error);
-              setImageError(true);
-            }}
-          />
-        ) : (
-          <Text style={styles.avatarText}>{initials}</Text>
-        )}
-      </TouchableOpacity>
+      {/* Right — reward chip + avatar */}
+      <View style={styles.rightSection}>
+
+        {/* Reward balance chip — tap → AdRewards */}
+        <TouchableOpacity
+          style={styles.rewardChip}
+          onPress={() => navigation.navigate("AdRewards")}
+          activeOpacity={0.75}
+        >
+          <Text style={styles.rewardIcon}>💰</Text>
+          <Text style={styles.rewardAmount}>{formatMicros(rewardBalance, "USD")}</Text>
+        </TouchableOpacity>
+
+        {/* Profile avatar */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          style={styles.avatarContainer}
+          onPress={() => navigation.navigate("Profile")}
+        >
+          {avatarUri && !imageError ? (
+            <Image
+              source={{ uri: avatarUri }}
+              style={styles.avatar}
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <Text style={styles.avatarText}>{initials}</Text>
+          )}
+        </TouchableOpacity>
+
+      </View>
     </View>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Styles
-// ─────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
@@ -144,7 +115,7 @@ const styles = StyleSheet.create({
   },
   leftSection: {
     flex: 1,
-    paddingRight: 16,
+    paddingRight: 12,
   },
   welcome: {
     ...Typography.bodyMedium,
@@ -155,6 +126,34 @@ const styles = StyleSheet.create({
     color: Colors.text,
     marginTop: Spacing.xs,
   },
+
+  // right side: chip + avatar side by side
+  rightSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  // reward chip
+  rewardChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#E8F5E9",
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "#A5D6A7",
+  },
+  rewardIcon:   { fontSize: 13 },
+  rewardAmount: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#2E7D32",
+  },
+
+  // avatar
   avatarContainer: {
     width: Spacing.avatarMedium,
     height: Spacing.avatarMedium,
@@ -169,15 +168,8 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
   },
-  avatar: {
-    width: "100%",
-    height: "100%",
-  },
-  avatarText: {
-    ...Typography.h3,
-    color: Colors.textWhite,
-    fontWeight: "700",
-  },
+  avatar:     { width: "100%", height: "100%" },
+  avatarText: { ...Typography.h3, color: Colors.textWhite, fontWeight: "700" },
 });
 
 const badge = StyleSheet.create({

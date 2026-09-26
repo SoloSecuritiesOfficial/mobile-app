@@ -186,6 +186,7 @@ export default function FriendsScreen({ navigation }: Props) {
         showsVerticalScrollIndicator={false}
       >
         <AdBanner isPremium={isPremium} marginVertical={8} />
+        <AdBanner isPremium={isPremium} marginVertical={4} />
         {/* FRIENDS LIST */}
         {tab === "friends" && (
           friends.length === 0
@@ -324,6 +325,7 @@ export default function FriendsScreen({ navigation }: Props) {
               </View>
             ))
         )}
+        <AdBanner isPremium={isPremium} marginVertical={10} />
       </ScrollView>
     </SafeAreaView>
   );

@@ -16,6 +16,8 @@ import {
 } from "../../services/securityService";
 import { getCurrentUser } from "../../services/authService";
 import AdBanner from "../../components/AdBanner";
+import RewardedAdGate from "../../components/RewardedAdGate";
+import { showInterstitialAd } from "../../components/InterstitialAd";
 
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
@@ -113,7 +115,10 @@ export default function LearningDetailsScreen({
         showsVerticalScrollIndicator={false}
       >
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={async () => {
+            await showInterstitialAd(isPremium);
+            navigation.goBack();
+          }}
         >
           <Text style={styles.back}>
             ← Back
@@ -160,13 +165,11 @@ export default function LearningDetailsScreen({
 
         <AdBanner isPremium={isPremium} marginVertical={12} />
 
-        <TouchableOpacity
-          style={[
-            styles.completeBtn,
-            completed && styles.completeBtnDone,
-          ]}
-          disabled={completing || completed}
-          onPress={async () => {
+        <RewardedAdGate
+          isPremium={false}
+          label={completed ? "✓ Lesson Completed (+10 XP)" : "Mark as Completed ✓"}
+          icon={completed ? "✓" : "📚"}
+          onReward={async () => {
             try {
               setCompleting(true);
               const targetId = module._id || module.id || id;
@@ -178,15 +181,17 @@ export default function LearningDetailsScreen({
               setCompleting(false);
             }
           }}
-        >
-          {completing ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <Text style={styles.completeBtnText}>
-              {completed ? "✓ Lesson Completed (+10 XP)" : "Mark as Completed ✓"}
-            </Text>
-          )}
-        </TouchableOpacity>
+          disabled={completing || completed}
+          style={[
+            styles.completeBtn,
+            completed && styles.completeBtnDone,
+          ]}
+          textStyle={styles.completeBtnText}
+        />
+
+        {/* Bottom banner after completion button */}
+        <AdBanner isPremium={isPremium} marginVertical={12} />
+        <AdBanner isPremium={isPremium} marginVertical={8} />
       </ScrollView>
     </SafeAreaView>
   );

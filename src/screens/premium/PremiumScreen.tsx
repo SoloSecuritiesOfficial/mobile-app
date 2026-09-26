@@ -32,6 +32,7 @@ import api from "../../services/api";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
+import AdBanner from "../../components/AdBanner";
 
 const { width } = Dimensions.get("window");
 
@@ -784,6 +785,8 @@ export default function PremiumScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
+        <AdBanner marginVertical={8} />
+
         <Animated.View
           style={[
             styles.hero,
@@ -1109,6 +1112,8 @@ export default function PremiumScreen() {
           Compare Free and Premium access.
         </Text>
 
+        <AdBanner marginVertical={8} />
+
         <View style={styles.comparison}>
           <View style={styles.freeColumn}>
             <Text style={styles.columnTitle}>
@@ -1215,6 +1220,8 @@ export default function PremiumScreen() {
             • Protect
           </Text>
         </View>
+
+        <AdBanner marginVertical={8} />
       </ScrollView>
 
       {/* PLAN MODAL */}

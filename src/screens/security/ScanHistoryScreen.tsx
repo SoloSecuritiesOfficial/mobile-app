@@ -12,11 +12,13 @@ import {
   RefreshControl,
 } from "react-native";
 
-
 import {
   getScanHistory,
 } from "../../services/securityService";
+import { getCurrentUser } from "../../services/authService";
 import AdBanner from "../../components/AdBanner";
+import { showInterstitialAd } from "../../components/InterstitialAd";
+import RewardedAdGate from "../../components/RewardedAdGate";
 
 
 
@@ -41,17 +43,23 @@ interface Scan {
 const ScanHistoryScreen =
 ()=> {
 
-
   const [scans,setScans] =
     useState<Scan[]>([]);
-
 
   const [loading,setLoading] =
     useState(true);
 
-
   const [refreshing,setRefreshing] =
     useState(false);
+
+  const [isPremium, setIsPremium] =
+    useState(false);
+
+  useEffect(() => {
+    getCurrentUser()
+      .then(user => setIsPremium(!!(user as any)?.isPremium))
+      .catch(() => {});
+  }, []);
 
 
 
@@ -253,6 +261,7 @@ const ScanHistoryScreen =
         Scan History
       </Text>
 
+      <AdBanner isPremium={isPremium} marginVertical={6} />
 
       <FlatList
 
@@ -267,7 +276,21 @@ const ScanHistoryScreen =
           renderScan
         }
 
-        ListHeaderComponent={<AdBanner isPremium={false} marginVertical={6} />}
+        ListHeaderComponent={<AdBanner isPremium={isPremium} marginVertical={6} />}
+        ListFooterComponent={
+          <>
+            <AdBanner isPremium={isPremium} marginVertical={8} />
+            <RewardedAdGate
+            isPremium={isPremium}
+            label="🎁 Watch Ad — Unlock Unlimited Scans"
+            onReward={() => {
+              const { Alert } = require("react-native");
+              Alert.alert("🎁 Reward Earned", "Extra scan credits unlocked!");
+            }}
+            style={{ marginVertical: 12, marginHorizontal: 4 }}
+          />
+          </>
+        }
 
         refreshControl={
           <RefreshControl

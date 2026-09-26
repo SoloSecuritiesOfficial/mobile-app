@@ -418,6 +418,7 @@ export default function ChatScreen({ route, navigation }: any) {
   const [loading,       setLoading]       = useState(true);
   const [sending,       setSending]       = useState(false);
   const [currentUserId, setCurrentUserId] = useState("");
+  const [isPremium,     setIsPremium]     = useState(false);
   const [replyTo,       setReplyTo]       = useState<ReplyTo | null>(null);
   const [isTyping,      setIsTyping]      = useState(false);         // other person typing
   const [iAmTyping,     setIAmTyping]     = useState(false);         // I am typing
@@ -439,6 +440,7 @@ export default function ChatScreen({ route, navigation }: any) {
     (async () => {
       const user = await getCurrentUser();
       setCurrentUserId(user?._id ?? user?.id ?? "");
+      setIsPremium(!!(user as any)?.isPremium);
     })();
     loadChat();
     markAsRead(userId).catch(() => {});
@@ -734,7 +736,7 @@ export default function ChatScreen({ route, navigation }: any) {
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
           onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
           showsVerticalScrollIndicator={false}
-          ListHeaderComponent={<AdBanner isPremium={false} marginVertical={4} />}
+          ListHeaderComponent={<AdBanner isPremium={isPremium} marginVertical={4} />}
           ListEmptyComponent={
             <View style={s.empty}>
               <Text style={s.emptyEmoji}>💬</Text>
@@ -749,7 +751,9 @@ export default function ChatScreen({ route, navigation }: any) {
                   <TypingDots />
                 </View>
               </View>
-            ) : null
+            ) : (
+              <AdBanner isPremium={isPremium} marginVertical={6} />
+            )
           }
         />
 
@@ -757,6 +761,8 @@ export default function ChatScreen({ route, navigation }: any) {
         {replyTo && (
           <ReplyBanner replyTo={replyTo} onCancel={() => setReplyTo(null)} />
         )}
+
+        <AdBanner isPremium={isPremium} marginVertical={2} />
 
         {/* ── Input bar ── */}
         <View style={s.inputBar}>

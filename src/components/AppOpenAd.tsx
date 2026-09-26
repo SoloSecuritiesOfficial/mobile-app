@@ -1,15 +1,17 @@
 /**
  * AppOpenAd.tsx — SoloSecurities
  *
- * Shows an App Open ad on TWO occasions:
- *   1. Cold start — when the user first opens the app (after a 2s delay
- *      so the splash / navigator is fully mounted before the ad appears)
- *   2. Foreground resume — when the user brings the app back from the
- *      background (max once every 4 hours so it isn't spammy)
+ * Shows an App Open ad on cold start and foreground resume
+ * (max once every 4 hours so it isn't spammy).
  *
- * Ad unit: "app" — ca-app-pub-4705207925908028/4468848681
- *
- * Call initAppOpenAd(isPremium) once from App.tsx after startup.
+ * Crash-safety rules:
+ *  • initAppOpenAd() must be called from inside App.tsx useEffect only —
+ *    never at module level. The native bridge must be ready first.
+ *  • showOnColdStart() waits for the navigator to mount (2 s hard delay)
+ *    before attempting to show an ad, preventing a native crash caused by
+ *    showing an ad before the React root is attached to a window.
+ *  • All ad operations are wrapped in try/catch.
+ *  • _initialised guard prevents double-registration of the AppState listener.
  */
 
 import { AppState, AppStateStatus } from "react-native";
@@ -19,24 +21,23 @@ import { AD_UNITS } from "../config/adUnits";
 const IS_EXPO_GO =
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
-// Minimum gap between two App Open ads (4 hours in ms)
-const MIN_GAP_MS = 4 * 60 * 60 * 1000;
+const MIN_GAP_MS = 4 * 60 * 60 * 1000; // 4 hours between shows
 
-let _ad: any                   = null;
-let _loaded                     = false;
-let _loading                    = false;
-let _lastShownAt                = 0;
-let _appStateSubscription: any  = null;
-let _isPremium                  = false;
-let _initialised                = false;
+let _ad: any                  = null;
+let _loaded                   = false;
+let _loading                  = false;
+let _lastShownAt               = 0;
+let _appStateSubscription: any = null;
+let _isPremium                 = false;
+let _initialised               = false;
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
-function getAdClasses() {
+function getSdkClasses() {
   if (IS_EXPO_GO) return null;
   try {
     const ads = require("react-native-google-mobile-ads");
-    return { AppOpenAd: ads.AppOpenAd, AdEventType: ads.AdEventType };
+    return { AppOpenAd: ads.AppOpenAd ?? null, AdEventType: ads.AdEventType ?? null };
   } catch {
     return null;
   }
@@ -45,112 +46,102 @@ function getAdClasses() {
 function loadAd() {
   if (IS_EXPO_GO || _isPremium) return;
 
-  const classes = getAdClasses();
-  if (!classes?.AppOpenAd) return;
+  const sdk = getSdkClasses();
+  if (!sdk?.AppOpenAd || !sdk?.AdEventType) return;
   if (_loading) return;
 
   _loading = true;
   _loaded  = false;
 
-  const { AppOpenAd, AdEventType } = classes;
+  try {
+    const ad = sdk.AppOpenAd.createForAdRequest(AD_UNITS.APP_OPEN, {
+      requestNonPersonalizedAdsOnly: false,
+    });
 
-  const ad = AppOpenAd.createForAdRequest(AD_UNITS.APP_OPEN, {
-    requestNonPersonalizedAdsOnly: false,
-  });
+    ad.addAdEventListener(sdk.AdEventType.LOADED, () => {
+      _ad = ad; _loaded = true; _loading = false;
+    });
 
-  ad.addAdEventListener(AdEventType.LOADED, () => {
-    _ad = ad; _loaded = true; _loading = false;
-  });
+    ad.addAdEventListener(sdk.AdEventType.ERROR, () => {
+      _ad = null; _loaded = false; _loading = false;
+      setTimeout(loadAd, 30_000);
+    });
 
-  ad.addAdEventListener(AdEventType.ERROR, () => {
-    _ad = null; _loaded = false; _loading = false;
-    // Retry after 30 s — don't spam the ad server
-    setTimeout(loadAd, 30_000);
-  });
+    ad.addAdEventListener(sdk.AdEventType.CLOSED, () => {
+      _ad = null; _loaded = false;
+      loadAd(); // preload for next foreground event
+    });
 
-  ad.addAdEventListener(AdEventType.CLOSED, () => {
-    _ad = null; _loaded = false;
-    // Immediately start loading the next ad for future foreground events
-    loadAd();
-  });
-
-  ad.load();
+    ad.load();
+  } catch {
+    _loading = false;
+  }
 }
 
 async function tryShowAd(): Promise<void> {
-  if (IS_EXPO_GO || _isPremium) return;
-  if (!_loaded || !_ad) return;
+  if (IS_EXPO_GO || _isPremium)          return;
+  if (!_loaded || !_ad)                  return;
   if (Date.now() - _lastShownAt < MIN_GAP_MS) return;
 
   try {
     _lastShownAt = Date.now();
     await _ad.show();
-  } catch { /* silent — never crash for an ad */ }
+  } catch { /* never crash for an ad */ }
 }
 
 function handleAppStateChange(nextState: AppStateStatus) {
-  // Only fire when coming BACK to foreground
   if (nextState === "active") {
     tryShowAd();
   }
 }
 
-// ─── Public API ───────────────────────────────────────────────────────────────
-
-/**
- * Initialise the App Open ad system.
- *
- * Call once from App.tsx after determining the user's premium status.
- * Safe to call multiple times — de-duplicates the AppState listener.
- *
- * @param isPremium  Suppress all App Open ads for paying users.
- */
-export function initAppOpenAd(isPremium: boolean): void {
-  _isPremium = isPremium;
-
-  if (IS_EXPO_GO || isPremium) return;
-
-  // Remove previous AppState listener if re-initialising (e.g. after login)
-  if (_appStateSubscription) {
-    _appStateSubscription.remove();
-    _appStateSubscription = null;
-  }
-
-  // Start loading the ad immediately
-  loadAd();
-
-  // Wire up the foreground-resume listener
-  _appStateSubscription = AppState.addEventListener("change", handleAppStateChange);
-
-  // ── Show on cold start ──────────────────────────────────────────────────
-  // On first ever call we attempt to show the ad after a short delay so:
-  //   • The splash screen has hidden
-  //   • The navigator is mounted
-  //   • The ad has had a moment to load
-  // We wait up to 5 s for the ad to finish loading, then show it.
-  if (!_initialised) {
-    _initialised = true;
-    showOnColdStart();
-  }
-}
+// ─── Cold-start show ─────────────────────────────────────────────────────────
+// Waits up to 5 s for the ad to load, then adds a hard 2 s delay so the
+// React Navigator and its native window are fully attached before the ad
+// tries to present itself over them.
 
 async function showOnColdStart(): Promise<void> {
-  // Poll up to 5 s (50 × 100 ms) for the ad to load
+  // Poll up to 5 s (50 × 100 ms)
   let attempts = 0;
   while (!_loaded && attempts < 50) {
     await new Promise(r => setTimeout(r, 100));
     attempts++;
   }
 
-  // Add a small extra buffer so the navigator finishes mounting
-  await new Promise(r => setTimeout(r, 500));
+  // Hard delay — navigator must be mounted before we show anything
+  await new Promise(r => setTimeout(r, 2_000));
 
   await tryShowAd();
 }
 
+// ─── Public API ───────────────────────────────────────────────────────────────
+
 /**
- * Call on logout to tear down the AppState listener and reset state.
+ * Call once from App.tsx inside useEffect (never at module level).
+ * Safe to call multiple times — de-duplicates the AppState listener.
  */
+export function initAppOpenAd(isPremium: boolean): void {
+  _isPremium = isPremium;
+
+  if (IS_EXPO_GO || isPremium) return;
+
+  // Remove stale listener before re-registering
+  if (_appStateSubscription) {
+    _appStateSubscription.remove();
+    _appStateSubscription = null;
+  }
+
+  loadAd();
+
+  _appStateSubscription = AppState.addEventListener("change", handleAppStateChange);
+
+  if (!_initialised) {
+    _initialised = true;
+    showOnColdStart();
+  }
+}
+
+/** Call on logout to tear down the listener and reset all state. */
 export function destroyAppOpenAd(): void {
   if (_appStateSubscription) {
     _appStateSubscription.remove();

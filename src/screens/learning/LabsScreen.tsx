@@ -29,6 +29,7 @@ import {
 import { getCurrentUser } from "../../services/authService";
 import AdBanner from "../../components/AdBanner";
 import { showInterstitialAd } from "../../components/InterstitialAd";
+import RewardedAdGate from "../../components/RewardedAdGate";
 
 
 
@@ -353,15 +354,16 @@ Steps
 </View>
 ))}
 
-<TouchableOpacity
-style={[styles.completeBtn, selectedLab.completed && { backgroundColor: Colors.scoreExcellent }]}
-onPress={handleCompleteLab}
-disabled={completing || selectedLab.completed}
->
-<Text style={styles.completeText}>
-{completing ? "Completing..." : selectedLab.completed ? "✓ Lab Completed (+XP Earned)" : "Complete Lab + XP"}
-</Text>
-</TouchableOpacity>
+<RewardedAdGate
+  isPremium={false}
+  label={selectedLab.completed ? "✓ Lab Completed (+XP Earned)" : "Complete Lab + XP"}
+  icon={selectedLab.completed ? "✓" : "🧪"}
+  onReward={handleCompleteLab}
+  disabled={completing || selectedLab.completed}
+  style={[styles.completeBtn, selectedLab.completed && { backgroundColor: Colors.scoreExcellent }]}
+  textStyle={styles.completeText}
+/>
+<AdBanner isPremium={isPremium} marginVertical={8} />
 </View>
 ) : (
   labs
@@ -414,6 +416,7 @@ disabled={completing || selectedLab.completed}
       </TouchableOpacity>
     ))
 )}
+<AdBanner isPremium={isPremium} marginVertical={10} />
 </ScrollView>
 
 

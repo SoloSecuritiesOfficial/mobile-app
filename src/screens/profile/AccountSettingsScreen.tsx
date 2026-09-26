@@ -8,7 +8,7 @@
  *   (no native Alert.alert)
  */
 
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
   ScrollView, ActivityIndicator, Animated, Modal,
@@ -19,8 +19,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import AdBanner from "../../components/AdBanner";
+import { showInterstitialAd } from "../../components/InterstitialAd";
 import Typography from "../../theme/typography";
-import { changePassword, deleteAccount, logout } from "../../services/authService";
+import { changePassword, deleteAccount, logout, getCurrentUser } from "../../services/authService";
 
 // ─────────────────────────────────────────────────────────────────
 // Animated bottom-sheet confirm dialog
@@ -196,6 +197,13 @@ export default function AccountSettingsScreen({ navigation }: any) {
   const [newPw,     setNewPw]     = useState("");
   const [confirmPw, setConfirmPw] = useState("");
   const [changingPw, setChangingPw] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
+
+  useEffect(() => {
+    getCurrentUser()
+      .then(user => setIsPremium(!!(user as any)?.isPremium))
+      .catch(() => {});
+  }, []);
 
   // Bottom-sheet state
   const [sheetVisible, setSheetVisible] = useState(false);
@@ -298,7 +306,7 @@ export default function AccountSettingsScreen({ navigation }: any) {
           showsVerticalScrollIndicator={false}
         >
           {/* ── Change Password ── */}
-          <AdBanner isPremium={false} marginVertical={10} />
+          <AdBanner isPremium={isPremium} marginVertical={10} />
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>🔑 Change Password</Text>
             <PwField label="Current Password"     value={oldPw}     onChangeText={setOldPw} />
@@ -318,6 +326,7 @@ export default function AccountSettingsScreen({ navigation }: any) {
           </View>
 
           {/* ── Danger Zone ── */}
+          <AdBanner isPremium={isPremium} marginVertical={8} />
           <View style={[styles.section, styles.dangerSection]}>
             <Text style={[styles.sectionTitle, { color: "#C62828" }]}>⚠️ Danger Zone</Text>
 
@@ -341,6 +350,8 @@ export default function AccountSettingsScreen({ navigation }: any) {
               <Text style={[styles.dangerChevron, { color: "#C62828" }]}>›</Text>
             </TouchableOpacity>
           </View>
+
+          <AdBanner isPremium={isPremium} marginVertical={8} />
         </ScrollView>
       </KeyboardAvoidingView>
 

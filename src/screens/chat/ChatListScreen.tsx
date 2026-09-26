@@ -135,6 +135,7 @@ export default function ChatListScreen({ navigation }: any) {
           keyExtractor={(item) => item.partner._id}
           renderItem={renderConversation}
           contentContainerStyle={styles.list}
+          ListFooterComponent={<AdBanner isPremium={isPremium} marginVertical={8} />}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -144,6 +145,8 @@ export default function ChatListScreen({ navigation }: any) {
           }
         />
       )}
+
+      <AdBanner isPremium={isPremium} marginVertical={6} />
     </SafeAreaView>
   );
 }
