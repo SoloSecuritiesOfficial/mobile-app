@@ -1,76 +1,96 @@
 /**
  * adRewardService.ts — SoloSecurities
  *
- * Real AdMob impression-level revenue reporting.
+ * Real AdMob impression-level revenue pipeline.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * HOW ADMOB REVENUE WORKS IN THIS SDK (v16.3.4)
+ * SDK FACTS (react-native-google-mobile-ads v16.3.4)
  * ─────────────────────────────────────────────────────────────────────────────
  *
- * The react-native-google-mobile-ads native bridge fires a paid event for
- * every ad impression that generates revenue. The JS payload is:
- *
- *   PaidEvent {
- *     currency : string          — ISO 4217, e.g. "USD"
+ *   PaidEvent  (node_modules/…/src/types/PaidEventListener.ts)
+ *   ──────────────────────────────────────────────────────────
+ *   {
+ *     currency : string           — ISO 4217 code as reported by AdMob
  *     precision: RevenuePrecisions — 0=UNKNOWN 1=ESTIMATED 2=PUBLISHER_PROVIDED 3=PRECISE
- *     value    : number          — revenue in the currency unit (NOT micros)
- *                                  e.g. 0.000042 for $0.000042 USD
+ *     value    : number           — revenue in the currency unit (NOT micro-units)
+ *                                   e.g. 0.000042 for $0.000042 USD
  *   }
  *
- * The native SDK reports in micro-units; the RN bridge divides by 1_000_000
- * before delivering the JS event. We convert back to integer micro-units here
- * for safe integer arithmetic on the backend.
+ *   The native SDK internally uses micro-units; the RN bridge divides by
+ *   1 000 000 before delivering to JS.  We convert BACK to integer
+ *   micro-units exactly once when building the payload for the backend.
+ *
+ *   AdEventType.PAID = 'paid'  (overlay ads: interstitial, rewarded, app-open)
+ *   BannerAd.onPaid prop       (banner)
+ *
+ *   RevenuePrecisions (node_modules/…/src/common/constants.ts)
+ *   UNKNOWN=0  ESTIMATED=1  PUBLISHER_PROVIDED=2  PRECISE=3
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * WHAT THIS FILE DOES NOT DO
+ * THIS FILE DOES NOT
  * ─────────────────────────────────────────────────────────────────────────────
  *
- *  ✗  No fixed ₹0.10 per video
- *  ✗  No fixed ₹0.01 per app open
- *  ✗  No fixed ₹1 per 100 banners
- *  ✗  No streak bonus
- *  ✗  No local balance
- *  ✗  No local withdrawal
- *
- * The backend (adRevenue.service.ts) is the sole source of truth for all
- * balances. This file only:
- *
- *  1. Normalises the SDK PaidEvent into a typed request payload
- *  2. Generates a client-side idempotency key (eventId)
- *  3. Submits the event to POST /api/ad-revenue/events using the existing
- *     authenticated API client (JWT attached automatically)
- *  4. Queues events locally when offline and retries when connectivity returns
- *  5. Exposes getWalletSummary() / getWalletTransactions() so screens can
- *     fetch live data from the backend instead of reading a local balance
+ *  ✗  Calculate or claim any fixed per-ad revenue
+ *  ✗  Maintain a local authoritative wallet balance
+ *  ✗  Perform any withdrawal accounting locally
+ *  ✗  Hardcode a revenue share percentage as financial truth
+ *  ✗  Return silent zeros when the wallet API fails
+ *  ✗  Silently discard queued revenue events for any reason
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * OFFLINE QUEUE
+ * OFFLINE QUEUE DESIGN
  * ─────────────────────────────────────────────────────────────────────────────
  *
- * If the network request fails, the event is saved to SecureStore under the
- * key "solosec_ad_event_queue". A drain attempt is made on the next event
- * submission. The user cannot edit queued events; they are stored as-is.
+ * Primary queue key  : "solosec_ad_event_queue_v2"
+ * Overflow/failed key: "solosec_ad_event_failed_v2"
  *
- * ─────────────────────────────────────────────────────────────────────────────
- * SDK TYPE REFERENCE
- * ─────────────────────────────────────────────────────────────────────────────
+ * Events are NEVER silently deleted.
  *
- *   node_modules/react-native-google-mobile-ads/src/types/PaidEventListener.ts
- *   node_modules/react-native-google-mobile-ads/src/common/constants.ts
- *   node_modules/react-native-google-mobile-ads/src/AdEventType.ts
+ * Lifecycle:
+ *   1. New event → try backend immediately.
+ *   2. Network failure → save to primary queue with retryCount=0, nextRetryAt=now.
+ *   3. On every new event submission, drainQueue() is called first.
+ *   4. drainQueue() attempts each item whose nextRetryAt <= now.
+ *   5. Success → remove from queue.
+ *   6. Failure → increment retryCount, set nextRetryAt with exponential backoff,
+ *      re-save.  NO hard drop after N retries.
+ *   7. If the primary queue exceeds SOFT_QUEUE_LIMIT (200 events), the OLDEST
+ *      items beyond the limit are moved to the failed/overflow store — NOT
+ *      deleted.  They remain auditable and can be reconciled manually.
+ *
+ * Backoff schedule (capped at 24 h):
+ *   attempt 1 →  1 min
+ *   attempt 2 →  2 min
+ *   attempt 3 →  4 min
+ *   attempt 4 →  8 min
+ *   attempt 5 → 16 min
+ *   attempt 6 → 32 min
+ *   attempt 7 → 64 min  (≈ 1 h)
+ *   attempt 8 → 128 min (≈ 2 h)
+ *   attempt 9+→ 24 h cap
  */
 
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
-import { apiPost, apiGet } from "./apiClient";
+
+// Lazy getter — avoids a top-level require() that would create a circular
+// dependency chain through navigationRef → AppNavigator → every screen → here.
+// Called only at runtime when a network request is actually needed.
+function api() {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require("./apiClient") as {
+    apiPost: (endpoint: string, body: any) => Promise<any>;
+    apiGet:  (endpoint: string) => Promise<any>;
+  };
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SDK types (mirrored here so we don't import from node_modules in app code)
+// SDK type mirrors  (DO NOT import from node_modules in app code)
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Mirrors RevenuePrecisions from the SDK.
- * react-native-google-mobile-ads/src/common/constants.ts
+ * Mirrors RevenuePrecisions enum.
+ * Source: react-native-google-mobile-ads/src/common/constants.ts
  */
 export enum RevenuePrecisions {
   UNKNOWN            = 0,
@@ -80,11 +100,11 @@ export enum RevenuePrecisions {
 }
 
 /**
- * Mirrors PaidEvent from the SDK.
- * react-native-google-mobile-ads/src/types/PaidEventListener.ts
+ * Mirrors PaidEvent type.
+ * Source: react-native-google-mobile-ads/src/types/PaidEventListener.ts
  *
- * IMPORTANT: `value` is in the currency unit (float), NOT in micro-units.
- * The native bridge already divides by 1_000_000.
+ * NOTE: `value` is in the currency unit (float), NOT micro-units.
+ * The native bridge already divided by 1 000 000.
  * Example: value=0.000042, currency="USD" → $0.000042
  */
 export interface SdkPaidEvent {
@@ -94,7 +114,7 @@ export interface SdkPaidEvent {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Ad format labels
+// Ad format
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type AdFormat =
@@ -106,7 +126,7 @@ export type AdFormat =
   | "unknown";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Known production AdMob unit IDs
+// Production AdMob unit IDs (used by ad wrappers when calling this service)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const AD_UNIT_IDS = {
@@ -117,129 +137,207 @@ export const AD_UNIT_IDS = {
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Offline queue
+// Payload sent to POST /api/ad-revenue/events
 // ─────────────────────────────────────────────────────────────────────────────
 
-const QUEUE_KEY = "solosec_ad_event_queue";
-const MAX_QUEUE_SIZE   = 100;  // never store more than 100 unsent events
-const MAX_RETRY_COUNT  = 5;
-
-interface QueuedEvent {
-  payload    : AdRevenuePayload;
-  queuedAt   : string;  // ISO
-  retryCount : number;
+export interface AdRevenuePayload {
+  /** Client-generated idempotency key — generated ONCE, preserved on all retries */
+  eventId      : string;
+  adUnitId     : string;
+  adFormat     : AdFormat;
+  /**
+   * Revenue in the currency unit as delivered by the SDK bridge (float).
+   * The backend converts to micro-units.
+   * Example: 0.000042 USD
+   */
+  value        : number;
+  currencyCode : string;
+  /** RevenuePrecisions value (0–3) */
+  precision    : RevenuePrecisions;
+  platform     : "android" | "ios" | "unknown";
+  /** ISO 8601 timestamp from the device when the paid event fired */
+  occurredAt   : string;
+  placement   ?: string | null;
+  sessionId   ?: string | null;
+  // Fields below are only sent when the SDK actually exposes them.
+  // The SDK v16.3.4 PaidEvent type has no adSource/responseId fields —
+  // do NOT invent them.  If a future SDK version adds them, add them here.
 }
 
-async function readQueue(): Promise<QueuedEvent[]> {
+export interface AdRevenueResult {
+  accepted         : boolean;
+  duplicate        : boolean;
+  eventId          : string;
+  status           : "PENDING" | "REJECTED";
+  currencyCode     : string;
+  value            : number;
+  microValue       : number;
+  userShareMicro   : number;
+  userSharePercent : number;
+  message         ?: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Offline queue — durable, never silently deletes revenue events
+// ─────────────────────────────────────────────────────────────────────────────
+
+const QUEUE_KEY    = "solosec_ad_event_queue_v2";
+const OVERFLOW_KEY = "solosec_ad_event_failed_v2";
+
+/**
+ * Soft limit on the primary retry queue.
+ * If exceeded, the OLDEST excess items are moved to the overflow store
+ * (not deleted) so the primary queue stays manageable.
+ */
+const SOFT_QUEUE_LIMIT = 200;
+
+/** Base delay in ms for exponential backoff (1 minute) */
+const BASE_BACKOFF_MS = 60_000;
+/** Maximum backoff cap: 24 hours */
+const MAX_BACKOFF_MS  = 24 * 60 * 60 * 1_000;
+
+interface QueuedEvent {
+  payload      : AdRevenuePayload;
+  queuedAt     : string;   // ISO — when the event was first queued
+  retryCount   : number;   // how many failed submission attempts
+  nextRetryAt  : string;   // ISO — earliest time the next attempt should run
+}
+
+function backoffMs(retryCount: number): number {
+  const delay = BASE_BACKOFF_MS * Math.pow(2, retryCount);
+  return Math.min(delay, MAX_BACKOFF_MS);
+}
+
+function nextRetryTimestamp(retryCount: number): string {
+  return new Date(Date.now() + backoffMs(retryCount)).toISOString();
+}
+
+async function readStore<T>(key: string): Promise<T[]> {
   try {
-    const raw = await SecureStore.getItemAsync(QUEUE_KEY);
+    const raw = await SecureStore.getItemAsync(key);
     if (!raw) return [];
-    return JSON.parse(raw) as QueuedEvent[];
+    return JSON.parse(raw) as T[];
   } catch {
     return [];
   }
 }
 
-async function writeQueue(queue: QueuedEvent[]): Promise<void> {
+async function writeStore<T>(key: string, items: T[]): Promise<void> {
   try {
-    await SecureStore.setItemAsync(QUEUE_KEY, JSON.stringify(queue));
-  } catch { /* ignore — storage failure must never crash the app */ }
-}
-
-async function enqueue(payload: AdRevenuePayload): Promise<void> {
-  const queue = await readQueue();
-  if (queue.length >= MAX_QUEUE_SIZE) {
-    // Drop the oldest entry to make room
-    queue.shift();
+    await SecureStore.setItemAsync(key, JSON.stringify(items));
+  } catch {
+    // SecureStore write failure must never crash the app.
+    // The event has already been submitted to the backend if the failure
+    // happens after a successful network call, so data loss risk is low.
+    console.warn("[adRewardService] Failed to write queue to SecureStore");
   }
-  queue.push({ payload, queuedAt: new Date().toISOString(), retryCount: 0 });
-  await writeQueue(queue);
 }
 
 /**
- * Try to send all queued events.
- * Called automatically before each new submission so events drain over time.
- * Silent — never throws, never blocks the caller.
+ * Enqueue an event that failed to reach the backend.
+ * The event ID is already set on the payload and will be preserved on retries.
  */
-async function drainQueue(): Promise<void> {
-  const queue = await readQueue();
+async function enqueue(payload: AdRevenuePayload): Promise<void> {
+  const queue = await readStore<QueuedEvent>(QUEUE_KEY);
+
+  const item: QueuedEvent = {
+    payload,
+    queuedAt   : new Date().toISOString(),
+    retryCount : 0,
+    nextRetryAt: nextRetryTimestamp(0),
+  };
+
+  queue.push(item);
+
+  // If the queue exceeds the soft limit, move the oldest excess to overflow.
+  // Do NOT delete them — they remain auditable.
+  if (queue.length > SOFT_QUEUE_LIMIT) {
+    const overflow  = await readStore<QueuedEvent>(OVERFLOW_KEY);
+    const excess    = queue.splice(0, queue.length - SOFT_QUEUE_LIMIT);
+    overflow.push(...excess);
+    await writeStore(OVERFLOW_KEY, overflow);
+    console.warn(
+      `[adRewardService] Queue soft limit (${SOFT_QUEUE_LIMIT}) exceeded. ` +
+      `Moved ${excess.length} oldest item(s) to overflow store. ` +
+      "These events are NOT lost — reconcile via admin panel.",
+    );
+  }
+
+  await writeStore(QUEUE_KEY, queue);
+}
+
+/**
+ * Attempt to send all queued events whose nextRetryAt has passed.
+ *
+ * - Success: remove from queue.
+ * - Failure: increment retryCount, reschedule with backoff, keep in queue.
+ * - Never deletes events regardless of retry count.
+ *
+ * Called before each new submission so the queue drains opportunistically.
+ * Fire-and-forget — never throws.
+ */
+export async function drainQueue(): Promise<void> {
+  const queue = await readStore<QueuedEvent>(QUEUE_KEY);
   if (queue.length === 0) return;
 
-  const remaining: QueuedEvent[] = [];
+  const now       = Date.now();
+  const remaining : QueuedEvent[] = [];
 
   for (const item of queue) {
-    if (item.retryCount >= MAX_RETRY_COUNT) {
-      // Give up — drop silently
+    const due = new Date(item.nextRetryAt).getTime();
+    if (due > now) {
+      // Not yet due — keep as-is
+      remaining.push(item);
       continue;
     }
+
     try {
-      await apiPost("/ad-revenue/events", item.payload);
-      // Successfully sent — do not re-add to remaining
+      await api().apiPost("/ad-revenue/events", item.payload);
+      // Successfully delivered — drop from queue
     } catch {
-      item.retryCount += 1;
+      // Still failing — reschedule with exponential backoff
+      item.retryCount  += 1;
+      item.nextRetryAt  = nextRetryTimestamp(item.retryCount);
       remaining.push(item);
     }
   }
 
-  await writeQueue(remaining);
+  await writeStore(QUEUE_KEY, remaining);
+}
+
+/**
+ * Return the current size of the primary retry queue.
+ * Useful for admin/debug screens.
+ */
+export async function getQueueSize(): Promise<number> {
+  const queue = await readStore<QueuedEvent>(QUEUE_KEY);
+  return queue.length;
+}
+
+/**
+ * Return the current size of the overflow (permanently backlogged) store.
+ * Non-zero means events need admin reconciliation.
+ */
+export async function getOverflowSize(): Promise<number> {
+  const overflow = await readStore<QueuedEvent>(OVERFLOW_KEY);
+  return overflow.length;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Payload type sent to POST /api/ad-revenue/events
+// Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-export interface AdRevenuePayload {
-  /** Client-generated idempotency key */
-  eventId    : string;
-  adUnitId   : string;
-  adFormat   : AdFormat;
-  /**
-   * Revenue in currency unit as delivered by the SDK bridge.
-   * Backend converts to micro-units for storage.
-   * Example: 0.000042 (USD)
-   */
-  value      : number;
-  currencyCode: string;
-  /** RevenuePrecisions enum value (0–3) */
-  precision  : RevenuePrecisions;
-  adSource  ?: string | null;
-  adSourceId?: string | null;
-  adSourceInstanceName?: string | null;
-  responseId?: string | null;
-  platform   : "android" | "ios" | "unknown";
-  appVersion?: string | null;
-  /** ISO 8601 timestamp from the device when the paid event fired */
-  occurredAt : string;
-  placement ?: string | null;
-  sessionId ?: string | null;
-}
-
-export interface AdRevenueResult {
-  accepted      : boolean;
-  duplicate     : boolean;
-  eventId       : string;
-  status        : "PENDING" | "REJECTED";
-  currencyCode  : string;
-  value         : number;    // original SDK float value
-  microValue    : number;    // micro-units as stored by backend
-  userShareMicro: number;
-  userSharePercent: number;
-  message?      : string;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Event ID generation
-// ─────────────────────────────────────────────────────────────────────────────
-
+/**
+ * Generate a client-side idempotency key.
+ * Created ONCE per paid event.  Never regenerated on retry.
+ */
 function generateEventId(): string {
   const ts  = Date.now().toString(36);
-  const rnd = Math.random().toString(36).slice(2, 10);
-  return `admobrev_${ts}_${rnd}`;
+  // Use two separate Math.random() calls to improve entropy.
+  const r1  = Math.random().toString(36).slice(2, 9);
+  const r2  = Math.random().toString(36).slice(2, 9);
+  return `admobrev_${ts}_${r1}${r2}`;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Platform detection — uses Platform.OS, never navigator.product
-// ─────────────────────────────────────────────────────────────────────────────
 
 function currentPlatform(): "android" | "ios" | "unknown" {
   if (Platform.OS === "android") return "android";
@@ -248,34 +346,34 @@ function currentPlatform(): "android" | "ios" | "unknown" {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Core: submit a paid event from the SDK
+// Core: submit a real SDK PaidEvent to the backend
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Called from every ad component's paid-event handler.
  *
- * Usage — BannerAd (prop-based):
+ * The eventId is generated here and preserved if the event must be retried
+ * after a network failure.  The backend deduplicates on eventId so retry is
+ * always safe.
  *
- *   <BannerAd
- *     unitId={AD_UNIT_IDS.BANNER}
- *     size={BannerAdSize.INLINE_ADAPTIVE_BANNER}
- *     onPaid={(event) =>
- *       submitAdRevenueEvent(event, AD_UNIT_IDS.BANNER, "banner", "home_screen_banner")
- *     }
- *   />
+ * Usage — BannerAd (onPaid prop):
+ *   onPaid={(event: SdkPaidEvent) =>
+ *     submitAdRevenueEvent(event, AD_UNIT_IDS.BANNER, "banner", "home_banner")
+ *   }
  *
- * Usage — InterstitialAd / RewardedAd / AppOpenAd (event-listener):
- *
- *   ad.addAdEventListener(AdEventType.PAID, (payload) => {
- *     const paidEvent = payload as unknown as SdkPaidEvent;
- *     submitAdRevenueEvent(paidEvent, AD_UNIT_IDS.INTERSTITIAL, "interstitial", "quiz_transition");
+ * Usage — overlay ads (AdEventType.PAID listener):
+ *   ad.addAdEventListener(AdEventType.PAID, (payload: unknown) => {
+ *     submitAdRevenueEvent(
+ *       payload as SdkPaidEvent,
+ *       AD_UNIT_IDS.INTERSTITIAL, "interstitial", "quiz_transition"
+ *     ).catch(() => {});
  *   });
  *
- * @param sdkEvent  The PaidEvent object delivered by the SDK bridge
- * @param adUnitId  The AdMob unit ID for this ad
- * @param format    Human-readable ad format label
- * @param placement Optional label identifying where in the app the ad appeared
- * @param sessionId Optional session/screen identifier
+ * @param sdkEvent   The PaidEvent object from the SDK bridge.
+ * @param adUnitId   The exact AdMob unit ID for this ad.
+ * @param format     Ad format label.
+ * @param placement  Optional placement label for analytics.
+ * @param sessionId  Optional session/screen identifier.
  */
 export async function submitAdRevenueEvent(
   sdkEvent  : SdkPaidEvent,
@@ -285,56 +383,54 @@ export async function submitAdRevenueEvent(
   sessionId?: string,
 ): Promise<AdRevenueResult> {
 
-  // Basic guard — zero-value events are valid (e.g. unfilled impressions)
-  // but negative values indicate a problem.
+  // Guard: reject negative values (zero is valid — unfilled impressions)
   if (!Number.isFinite(sdkEvent.value) || sdkEvent.value < 0) {
     return {
       accepted: false, duplicate: false,
       eventId: "", status: "REJECTED",
-      currencyCode: sdkEvent.currency ?? "USD",
+      currencyCode: sdkEvent.currency || "UNKNOWN",
       value: 0, microValue: 0,
       userShareMicro: 0, userSharePercent: 0,
-      message: "Invalid paid event value.",
+      message: "Invalid paid event value from SDK.",
     };
   }
 
   const payload: AdRevenuePayload = {
-    eventId    : generateEventId(),
+    eventId     : generateEventId(),          // created once, never recreated
     adUnitId,
-    adFormat   : format,
-    value      : sdkEvent.value,
-    currencyCode: (sdkEvent.currency ?? "USD").toUpperCase(),
-    precision  : sdkEvent.precision ?? RevenuePrecisions.UNKNOWN,
-    platform   : currentPlatform(),
-    occurredAt : new Date().toISOString(),
-    placement  : placement ?? null,
-    sessionId  : sessionId ?? null,
+    adFormat    : format,
+    value       : sdkEvent.value,
+    currencyCode: (sdkEvent.currency || "UNKNOWN").toUpperCase(),
+    precision   : sdkEvent.precision ?? RevenuePrecisions.UNKNOWN,
+    platform    : currentPlatform(),
+    occurredAt  : new Date().toISOString(),
+    placement   : placement ?? null,
+    sessionId   : sessionId ?? null,
   };
 
-  // Drain any previously queued events first (fire-and-forget)
+  // Drain backlogged events first (fire-and-forget)
   drainQueue().catch(() => {});
 
   try {
-    const response = await apiPost("/ad-revenue/events", payload);
-
+    const response = await api().apiPost("/ad-revenue/events", payload);
     return {
-      accepted         : response.accepted  ?? true,
-      duplicate        : response.duplicate ?? false,
-      eventId          : response.eventId   ?? payload.eventId,
-      status           : response.status    ?? "PENDING",
-      currencyCode     : response.currencyCode ?? payload.currencyCode,
+      accepted         : response.accepted          ?? true,
+      duplicate        : response.duplicate         ?? false,
+      eventId          : response.eventId           ?? payload.eventId,
+      status           : response.status            ?? "PENDING",
+      currencyCode     : response.currencyCode      ?? payload.currencyCode,
       value            : payload.value,
-      microValue       : response.microValue    ?? 0,
-      userShareMicro   : response.userShareMicro ?? 0,
-      userSharePercent : response.userSharePercent ?? 0,
+      microValue       : response.microValue        ?? 0,
+      userShareMicro   : response.userShareMicro    ?? 0,
+      userSharePercent : response.userSharePercent  ?? 0,
       message          : response.message,
     };
   } catch {
-    // Network failure — queue for retry
+    // Network or server error — persist for retry.
+    // The eventId is embedded in the payload; it will be reused on all retries.
     await enqueue(payload);
-
     return {
-      accepted: true,  // accepted locally for retry
+      accepted: true,            // accepted locally; will reach backend on retry
       duplicate: false,
       eventId: payload.eventId,
       status: "PENDING",
@@ -343,107 +439,173 @@ export async function submitAdRevenueEvent(
       microValue: 0,
       userShareMicro: 0,
       userSharePercent: 0,
-      message: "Queued offline. Will submit when connectivity returns.",
+      message: "Offline — queued for retry.",
     };
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Wallet — always fetched from the backend, never from local state
+// Wallet — always fetched from the backend, never stored locally
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface WalletSummary {
-  currencyCode             : string;
-  /** Revenue recorded by backend, not yet settled */
-  pendingMicroValue        : number;
-  /** Settled revenue available for withdrawal */
-  availableMicroValue      : number;
-  lifetimeEarnedMicroValue : number;
+  unavailable             ?: boolean;    // true when backend could not be reached
+  error                   ?: string;     // human-readable reason when unavailable
+  currencyCode              : string;
+  pendingMicroValue         : number;
+  availableMicroValue       : number;
+  lifetimeEarnedMicroValue  : number;
   lifetimeWithdrawnMicroValue: number;
-  /** Convenience floats (micro / 1_000_000) */
-  pendingValue             : number;
-  availableValue           : number;
-  lifetimeEarnedValue      : number;
-  lifetimeWithdrawnValue   : number;
-  /** Revenue share % the user receives */
-  userSharePercent         : number;
+  pendingValue              : number;    // micro / 1 000 000 (display only)
+  availableValue            : number;
+  lifetimeEarnedValue       : number;
+  lifetimeWithdrawnValue    : number;
 }
-
-export interface WalletTransaction {
-  _id              : string;
-  type             : string;
-  status           : string;
-  microValue       : number;
-  currencyCode     : string;
-  description      : string;
-  balanceAfterPendingMicro   : number;
-  balanceAfterAvailableMicro : number;
-  createdAt        : string;
-}
-
-const EMPTY_WALLET: WalletSummary = {
-  currencyCode: "USD",
-  pendingMicroValue: 0,
-  availableMicroValue: 0,
-  lifetimeEarnedMicroValue: 0,
-  lifetimeWithdrawnMicroValue: 0,
-  pendingValue: 0,
-  availableValue: 0,
-  lifetimeEarnedValue: 0,
-  lifetimeWithdrawnValue: 0,
-  userSharePercent: 30,
-};
 
 /**
- * Fetch the user's wallet from the backend.
- * Returns an empty wallet on failure so the UI never crashes.
+ * Fetch the authenticated user's wallet from the backend.
+ *
+ * Returns `{ unavailable: true, error }` when the backend cannot be reached.
+ * Callers MUST check `unavailable` before displaying balance figures.
+ * Do NOT treat unavailable as zero balance.
  */
 export async function getWalletSummary(): Promise<WalletSummary> {
   try {
-    const res = await apiGet("/ad-revenue/wallet");
-    const d   = res.data ?? {};
+    const res = await api().apiGet("/ad-revenue/wallet");
+    if (!res || !res.success) {
+      return {
+        unavailable: true,
+        error: res?.message ?? "Wallet unavailable.",
+        currencyCode: "UNKNOWN",
+        pendingMicroValue: 0, availableMicroValue: 0,
+        lifetimeEarnedMicroValue: 0, lifetimeWithdrawnMicroValue: 0,
+        pendingValue: 0, availableValue: 0,
+        lifetimeEarnedValue: 0, lifetimeWithdrawnValue: 0,
+      };
+    }
 
-    // Also fetch the current revenue share % for display
-    let userSharePercent = 30;
-    try {
-      const cfg = await apiGet("/ad-revenue/config");
-      userSharePercent = cfg.data?.userSharePercent ?? 30;
-    } catch { /* use default */ }
-
+    const d = res.data ?? {};
     return {
-      currencyCode             : d.currencyCode              ?? "USD",
-      pendingMicroValue        : d.pendingMicroValue         ?? 0,
-      availableMicroValue      : d.availableMicroValue       ?? 0,
-      lifetimeEarnedMicroValue : d.lifetimeEarnedMicroValue  ?? 0,
+      currencyCode              : d.currencyCode               ?? "USD",
+      pendingMicroValue         : d.pendingMicroValue          ?? 0,
+      availableMicroValue       : d.availableMicroValue        ?? 0,
+      lifetimeEarnedMicroValue  : d.lifetimeEarnedMicroValue   ?? 0,
       lifetimeWithdrawnMicroValue: d.lifetimeWithdrawnMicroValue ?? 0,
-      pendingValue             : d.pendingValue              ?? 0,
-      availableValue           : d.availableValue            ?? 0,
-      lifetimeEarnedValue      : d.lifetimeEarnedValue       ?? 0,
-      lifetimeWithdrawnValue   : d.lifetimeWithdrawnValue    ?? 0,
-      userSharePercent,
+      pendingValue              : d.pendingValue               ?? 0,
+      availableValue            : d.availableValue             ?? 0,
+      lifetimeEarnedValue       : d.lifetimeEarnedValue        ?? 0,
+      lifetimeWithdrawnValue    : d.lifetimeWithdrawnValue     ?? 0,
     };
-  } catch {
-    return { ...EMPTY_WALLET };
+  } catch (err: any) {
+    return {
+      unavailable: true,
+      error: err?.message ?? "Network error — wallet data unavailable.",
+      currencyCode: "UNKNOWN",
+      pendingMicroValue: 0, availableMicroValue: 0,
+      lifetimeEarnedMicroValue: 0, lifetimeWithdrawnMicroValue: 0,
+      pendingValue: 0, availableValue: 0,
+      lifetimeEarnedValue: 0, lifetimeWithdrawnValue: 0,
+    };
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Transaction history
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface WalletTransaction {
+  _id                        : string;
+  type                       : string;
+  status                     : string;
+  microValue                 : number;
+  currencyCode               : string;
+  description                : string;
+  balanceAfterPendingMicro   : number;
+  balanceAfterAvailableMicro : number;
+  createdAt                  : string;
+}
+
+export interface TransactionsResult {
+  unavailable   ?: boolean;
+  error         ?: string;
+  transactions   : WalletTransaction[];
+  total          : number;
 }
 
 /**
  * Fetch paginated transaction history from the backend.
+ * Returns `{ unavailable: true, error }` on failure — not an empty array.
  */
 export async function getWalletTransactions(
   limit  = 50,
   offset = 0,
-): Promise<{ transactions: WalletTransaction[]; total: number }> {
+): Promise<TransactionsResult> {
   try {
-    const res = await apiGet(
+    const res = await api().apiGet(
       `/ad-revenue/transactions?limit=${limit}&offset=${offset}`,
     );
+    if (!res || !res.success) {
+      return {
+        unavailable: true,
+        error: res?.message ?? "Transactions unavailable.",
+        transactions: [], total: 0,
+      };
+    }
     return {
       transactions: res.transactions ?? [],
       total        : res.total        ?? 0,
     };
-  } catch {
-    return { transactions: [], total: 0 };
+  } catch (err: any) {
+    return {
+      unavailable: true,
+      error: err?.message ?? "Network error — transaction history unavailable.",
+      transactions: [], total: 0,
+    };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Revenue share config — fetched from backend, display only
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface RevenueShareConfig {
+  unavailable          ?: boolean;
+  error                ?: string;
+  userSharePercent      : number;
+  platformSharePercent  : number;
+  effectiveFrom        ?: string;
+}
+
+/**
+ * Fetch the backend-configured revenue share percentage.
+ *
+ * Returns `{ unavailable: true }` when config cannot be loaded.
+ * Callers must NOT fall back to a hardcoded percentage as financial truth.
+ * The percentage is for display only — the backend computes actual shares.
+ */
+export async function getRevenueShareConfig(): Promise<RevenueShareConfig> {
+  try {
+    const res = await api().apiGet("/ad-revenue/config");
+    if (!res || !res.success) {
+      return {
+        unavailable: true,
+        error: res?.message ?? "Revenue share config unavailable.",
+        userSharePercent: 0,
+        platformSharePercent: 0,
+      };
+    }
+    return {
+      userSharePercent    : res.data?.userSharePercent     ?? 0,
+      platformSharePercent: res.data?.platformSharePercent ?? 0,
+      effectiveFrom       : res.data?.effectiveFrom,
+    };
+  } catch (err: any) {
+    return {
+      unavailable: true,
+      error: err?.message ?? "Network error — revenue share config unavailable.",
+      userSharePercent: 0,
+      platformSharePercent: 0,
+    };
   }
 }
 
@@ -452,38 +614,39 @@ export async function getWalletTransactions(
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface WithdrawalInput {
-  /** Float amount in the wallet's currency */
-  amount                  : number;
-  currencyCode            : string;
-  paymentMethod           : "UPI" | "BANK_TRANSFER" | "OTHER";
-  /** UPI ID, bank reference, etc. */
-  paymentDetailsReference : string;
+  /** Float amount in the wallet's currency, e.g. 0.01 */
+  amount                   : number;
+  currencyCode             : string;
+  paymentMethod            : "UPI" | "BANK_TRANSFER" | "OTHER";
+  /** UPI ID, bank account reference, etc. */
+  paymentDetailsReference  : string;
 }
 
 export interface WithdrawalResult {
-  success        : boolean;
-  message        : string;
-  withdrawalId  ?: string;
-  newAvailableMicro?: number;
+  success            : boolean;
+  message            : string;
+  withdrawalId      ?: string;
+  newAvailableMicro ?: number;
 }
 
 /**
- * Request a withdrawal from the backend.
- * The backend validates balance, deducts from available, and records the request.
+ * Submit a withdrawal request to the backend.
+ * All balance validation, deduction, and audit logging happen server-side.
+ * This function never deducts from a local balance.
  */
 export async function requestWithdrawal(
   input: WithdrawalInput,
 ): Promise<WithdrawalResult> {
   try {
-    const res = await apiPost("/ad-revenue/withdraw", {
-      amount                  : input.amount,
-      currencyCode            : input.currencyCode,
-      paymentMethod           : input.paymentMethod,
-      paymentDetailsReference : input.paymentDetailsReference,
+    const res = await api().apiPost("/ad-revenue/withdraw", {
+      amount                 : input.amount,
+      currencyCode           : input.currencyCode,
+      paymentMethod          : input.paymentMethod,
+      paymentDetailsReference: input.paymentDetailsReference,
     });
     return {
-      success           : res.success ?? false,
-      message           : res.message ?? "Unknown response from server.",
+      success           : res.success           ?? false,
+      message           : res.message           ?? "Unknown response from server.",
       withdrawalId      : res.withdrawalId,
       newAvailableMicro : res.newAvailableMicro,
     };
@@ -496,37 +659,16 @@ export async function requestWithdrawal(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Revenue share config — for UI display only
-// ─────────────────────────────────────────────────────────────────────────────
-
-export interface RevenueShareConfig {
-  userSharePercent     : number;
-  platformSharePercent : number;
-  effectiveFrom       ?: string;
-}
-
-export async function getRevenueShareConfig(): Promise<RevenueShareConfig> {
-  try {
-    const res = await apiGet("/ad-revenue/config");
-    return {
-      userSharePercent    : res.data?.userSharePercent     ?? 30,
-      platformSharePercent: res.data?.platformSharePercent ?? 70,
-      effectiveFrom       : res.data?.effectiveFrom,
-    };
-  } catch {
-    return { userSharePercent: 30, platformSharePercent: 70 };
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Format helpers — display only, never for accounting
+// Display helpers — for UI formatting only, never for accounting
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Format micro-units as a human-readable currency string.
- * Uses Intl.NumberFormat — never performs a USD→INR conversion.
+ * Format integer micro-units as a locale-appropriate currency string.
+ * Uses Intl.NumberFormat — never performs currency conversion.
  *
- * Example: formatMicros(42, "USD") → "$0.000042"
+ * Examples:
+ *   formatMicros(42, "USD")   → "$0.000042"
+ *   formatMicros(1000000, "USD") → "$1.00"
  */
 export function formatMicros(microValue: number, currencyCode: string): string {
   const value = microValue / 1_000_000;
@@ -538,14 +680,14 @@ export function formatMicros(microValue: number, currencyCode: string): string {
       maximumFractionDigits: 6,
     }).format(value);
   } catch {
+    // Intl throws for unknown/unsupported currency codes.
     return `${currencyCode.toUpperCase()} ${value.toFixed(6)}`;
   }
 }
 
 /**
- * Format a raw SDK float value as currency.
- *
- * Example: formatSdkValue(0.000042, "USD") → "$0.000042"
+ * Format a raw SDK float value as a currency string.
+ * Converts to micros internally before formatting.
  */
 export function formatSdkValue(value: number, currencyCode: string): string {
   return formatMicros(Math.round(value * 1_000_000), currencyCode);

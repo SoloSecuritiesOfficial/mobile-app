@@ -83,7 +83,7 @@ export default function CVEUpdatesScreen() {
 
   const renderCVEItem = ({ item }: { item: any }) => {
     const sevColor = getSeverityColor(item.severity || "High");
-    const cveCode = item.cveId || item.id;
+    const cveCode = item.cveId || item.id || "Unknown CVE";
     return (
       <View style={styles.card}>
         <View style={styles.cardHeader}>
@@ -95,14 +95,14 @@ export default function CVEUpdatesScreen() {
               </View>
             )}
             <View style={[styles.badge, { backgroundColor: sevColor }]}>
-              <Text style={styles.badgeText}>{item.severity} ({item.score || 7.5})</Text>
+              <Text style={styles.badgeText}>{item.severity || "Unknown"} ({item.score || 7.5})</Text>
             </View>
           </View>
         </View>
 
-        <Text style={styles.title}>{item.title}</Text>
-        <Text style={styles.date}>Published: {item.published}</Text>
-        <Text style={styles.description}>{item.description}</Text>
+        <Text style={styles.title}>{item.title || "No title"}</Text>
+        <Text style={styles.date}>Published: {item.published || "Unknown date"}</Text>
+        <Text style={styles.description}>{item.description || "No description available"}</Text>
 
         {item.remediation && (
           <View style={styles.remediationBox}>
@@ -123,7 +123,9 @@ export default function CVEUpdatesScreen() {
             style={styles.linkButton}
             onPress={async () => {
               await showInterstitialAd(isPremium);
-              Linking.openURL(`https://nvd.nist.gov/vuln/detail/${cveCode}`);
+              if (cveCode !== "Unknown CVE") {
+                Linking.openURL(`https://nvd.nist.gov/vuln/detail/${cveCode}`);
+              }
             }}
           >
             <Text style={styles.linkButtonText}>NIST NVD ↗</Text>

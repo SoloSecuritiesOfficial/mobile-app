@@ -22,13 +22,13 @@ export default function AdRewardCard({ navigation, onBalanceChange }: Props) {
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
   const refresh = useCallback(async () => {
-    try {
-      const wallet = await getWalletSummary();
+    const wallet = await getWalletSummary();
+    if (wallet.unavailable) {
+      setDisplayValue("—");
+    } else {
       setDisplayValue(formatMicros(wallet.availableMicroValue, wallet.currencyCode));
       setCurrencyCode(wallet.currencyCode);
       onBalanceChange?.(wallet.availableMicroValue);
-    } catch {
-      setDisplayValue("—");
     }
   }, [onBalanceChange]);
 

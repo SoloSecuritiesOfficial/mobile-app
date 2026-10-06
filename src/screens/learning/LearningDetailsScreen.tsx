@@ -6,11 +6,12 @@ import {
   Text,
   View,
   TouchableOpacity,
+  ViewStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
-import { RootStackParamList } from "../../navigation/AppNavigator";
+import { RootStackParamList } from "../../navigation/types";
 import {
   getLearningModuleById, completeLearningModule,
 } from "../../services/securityService";
@@ -182,10 +183,9 @@ export default function LearningDetailsScreen({
             }
           }}
           disabled={completing || completed}
-          style={[
-            styles.completeBtn,
-            completed && styles.completeBtnDone,
-          ]}
+          style={(
+            completed ? [styles.completeBtn, styles.completeBtnDone] : styles.completeBtn
+          ) as ViewStyle}
           textStyle={styles.completeBtnText}
         />
 

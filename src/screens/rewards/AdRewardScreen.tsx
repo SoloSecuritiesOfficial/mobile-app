@@ -144,13 +144,12 @@ const EMPTY_WALLET: WalletSummary = {
   lifetimeEarnedMicroValue: 0, lifetimeWithdrawnMicroValue: 0,
   pendingValue: 0, availableValue: 0,
   lifetimeEarnedValue: 0, lifetimeWithdrawnValue: 0,
-  userSharePercent: 30,
 };
 
 export default function AdRewardScreen({ navigation }: any) {
   const [tab,        setTab]        = useState<Tab>("earn");
   const [wallet,     setWallet]     = useState<WalletSummary>(EMPTY_WALLET);
-  const [config,     setConfig]     = useState<RevenueShareConfig>({ userSharePercent: 30, platformSharePercent: 70 });
+  const [config,     setConfig]     = useState<RevenueShareConfig>({ unavailable: true, userSharePercent: 0, platformSharePercent: 0 });
   const [txs,        setTxs]        = useState<WalletTransaction[]>([]);
   const [txTotal,    setTxTotal]    = useState(0);
   const [loading,    setLoading]    = useState(true);
@@ -194,8 +193,8 @@ export default function AdRewardScreen({ navigation }: any) {
         { text: "Confirm", onPress: async () => {
           setWithdrawing(true);
           const r = await requestWithdrawal({
-            amount,
-            currencyCode: wallet.currencyCode,
+            amount: amt,
+            currencyCode: wallet.currencyCode === "UNKNOWN" ? "USD" : wallet.currencyCode,
             paymentMethod: "UPI",
             paymentDetailsReference: upiId.trim(),
           });
@@ -232,7 +231,7 @@ export default function AdRewardScreen({ navigation }: any) {
         </TouchableOpacity>
         <View style={{ flex: 1, alignItems: "center" }}>
           <Text style={s.headerTitle}>Ad Rewards</Text>
-          <Text style={s.headerSub}>Your share: {config.userSharePercent}% of ad revenue</Text>
+          <Text style={s.headerSub}>Your share: {config.unavailable ? "—" : `${config.userSharePercent}%`} of ad revenue</Text>
         </View>
         <View style={{ width: 36 }} />
       </View>
@@ -278,7 +277,7 @@ export default function AdRewardScreen({ navigation }: any) {
                 <Text style={s.cardBody}>
                   Every ad impression that generates revenue fires a paid event from the Google Mobile Ads SDK.
                   The app captures the real AdMob value and submits it to the backend.
-                  You receive <Text style={s.bold}>{config.userSharePercent}%</Text> of each impression's revenue.
+                  You receive <Text style={s.bold}>{config.unavailable ? "your configured share" : `${config.userSharePercent}%`}</Text> of each impression's revenue.
                   {"\n\n"}
                   Revenue amounts vary with every impression — they depend on the AdMob auction at that moment.
                   There is no fixed amount per view.

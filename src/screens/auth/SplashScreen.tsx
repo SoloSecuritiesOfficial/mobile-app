@@ -11,7 +11,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import LoadingBar from "../../components/LoadingBar";
 import AdBanner from "../../components/AdBanner";
-import { RootStackParamList } from "../../navigation/AppNavigator";
+import { RootStackParamList } from "../../navigation/types";
 import { isLoggedIn } from "../../services/authService";
 
 type Props = NativeStackScreenProps<

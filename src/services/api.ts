@@ -8,7 +8,6 @@ import {
   saveRefreshToken,
   clearStorage,
 } from "../utils/storage";
-import { navigateTo } from "../navigation/navigationRef";
 
 // ─────────────────────────────────────────────────────────────────
 // Axios instance
@@ -159,7 +158,12 @@ api.interceptors.response.use(
 
       // Clear everything and send user to Login
       await clearStorage();
-      navigateTo("Login");
+      try {
+        const { navigateTo } = require("../navigation/navigationRef");
+        navigateTo("Login");
+      } catch {
+        // navigation not ready
+      }
 
       return Promise.reject(refreshError);
     } finally {

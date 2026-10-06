@@ -1,8 +1,4 @@
-import React, {
-  useEffect,
-  useState,
-  useCallback,
-} from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 
 import {
@@ -13,6 +9,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  ViewStyle,
 } from "react-native";
 
 
@@ -360,7 +357,11 @@ Steps
   icon={selectedLab.completed ? "✓" : "🧪"}
   onReward={handleCompleteLab}
   disabled={completing || selectedLab.completed}
-  style={[styles.completeBtn, selectedLab.completed && { backgroundColor: Colors.scoreExcellent }]}
+  style={(
+    selectedLab.completed
+      ? [styles.completeBtn, { backgroundColor: Colors.scoreExcellent }]
+      : styles.completeBtn
+  ) as ViewStyle}
   textStyle={styles.completeText}
 />
 <AdBanner isPremium={isPremium} marginVertical={8} />

@@ -3,6 +3,18 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { navigationRef } from "./navigationRef";
 
+// RootStackParamList lives in types.ts — NOT defined here — so that
+// navigationRef.ts can import it without pulling in AppNavigator and every
+// screen it imports, which was the root cause of the circular-dependency crash.
+import { RootStackParamList } from "./types";
+
+// Re-export so existing imports of RootStackParamList from AppNavigator still
+// compile without changes (tasks 4 will migrate them, but this keeps the
+// build green in the meantime).
+export type { RootStackParamList };
+
+import ErrorBoundary from "../components/ErrorBoundary";
+
 // ── Auth ───────────────────────────────────────────────────────────────────
 import SplashScreen from "../screens/auth/SplashScreen";
 import LoginScreen from "../screens/auth/LoginScreen";
@@ -66,58 +78,15 @@ import ToolsScreen from "../screens/tools/ToolsScreen";
 // ── Rewards ────────────────────────────────────────────────────────────────
 import AdRewardScreen from "../screens/rewards/AdRewardScreen";
 
-export type RootStackParamList = {
-  // Auth
-  Splash: undefined;
-  Login: undefined;
-  Register: undefined;
-  ForgotPassword: undefined;
-  NotificationPermission: undefined;
-  // Core
-  Dashboard: undefined;
-  // Learning
-  Learning: undefined;
-  LearningDetails: { id: string };
-  Labs: undefined;
-  LabDetails: { id: string };
-  // Quiz
-  Quiz: undefined;
-  QuizQuestion: { quizId: string };
-  // Security
-  SecurityScan: undefined;
-  ScanHistory: undefined;
-  CVEUpdates: undefined;
-  BugReports: undefined;
-  // Certificates
-  Certificates: undefined;
-  CertificateDetails: { id: string };
-  // Profile
-  Profile: undefined;
-  ProfileSettings: undefined;
-  AccountSettings: undefined;
-  Settings: undefined;
-  Notifications: undefined;
-  // Jobs
-  Jobs: undefined;
-  JobDetails: { id: string };
-  // Chat
-  ChatList: undefined;
-  Chat: { userId: string; username: string; profileImage?: string };
-  // Social
-  Friends: undefined;
-  FriendProfile: { userId: string; username: string; profileImage?: string };
-  Leaderboard: undefined;
-  Achievements: undefined;
-  // Premium & CTF
-  Premium: undefined;
-  CTF: undefined;
-  // Tools
-  PasswordChecker: undefined;
-  HashGenerator: undefined;
-  Tools: undefined;
-  // Rewards
-  AdRewards: undefined;
-};
+function withErrorBoundary<P extends object>(Component: React.ComponentType<P>) {
+  return function WithErrorBoundary(props: P) {
+    return (
+      <ErrorBoundary>
+        <Component {...props} />
+      </ErrorBoundary>
+    );
+  };
+}
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -132,43 +101,43 @@ export default function AppNavigator() {
           contentStyle: { backgroundColor: "#FFFFFF" },
         }}
       >
-        <Stack.Screen name="Splash" component={SplashScreen} />
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Register" component={RegisterScreen} />
-        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-        <Stack.Screen name="NotificationPermission" component={NotificationPermissionScreen} />
-        <Stack.Screen name="Dashboard" component={DashboardScreen} />
-        <Stack.Screen name="Learning" component={LearningScreen} />
-        <Stack.Screen name="LearningDetails" component={LearningDetailsScreen} />
-        <Stack.Screen name="Labs" component={LabsScreen} />
-        <Stack.Screen name="LabDetails" component={LabDetailsScreen} />
-        <Stack.Screen name="Quiz" component={QuizScreen} />
-        <Stack.Screen name="QuizQuestion" component={QuizQuestionScreen} />
-        <Stack.Screen name="SecurityScan" component={SecurityScanScreen} />
-        <Stack.Screen name="ScanHistory" component={ScanHistoryScreen} />
-        <Stack.Screen name="CVEUpdates" component={CVEUpdatesScreen} />
-        <Stack.Screen name="BugReports" component={BugReportsScreen} />
-        <Stack.Screen name="Certificates" component={CertificateScreen} />
-        <Stack.Screen name="CertificateDetails" component={CertificateDetailsScreen} />
-        <Stack.Screen name="Profile" component={ProfileScreen} />
-        <Stack.Screen name="ProfileSettings" component={ProfileSettingsScreen} />
-        <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} />
-        <Stack.Screen name="Settings" component={SettingsScreen} />
-        <Stack.Screen name="Notifications" component={NotificationScreen} />
-        <Stack.Screen name="Jobs" component={JobsScreen} />
-        <Stack.Screen name="JobDetails" component={JobDetailsScreen} />
-        <Stack.Screen name="ChatList" component={ChatListScreen} />
-        <Stack.Screen name="Chat" component={ChatScreen} />
-        <Stack.Screen name="Friends" component={FriendsScreen} />
-        <Stack.Screen name="FriendProfile" component={FriendProfileScreen} />
-        <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
-        <Stack.Screen name="Achievements" component={AchievementsScreen} />
-        <Stack.Screen name="Premium" component={PremiumScreen} />
-        <Stack.Screen name="CTF" component={CTFScreen} />
-        <Stack.Screen name="PasswordChecker" component={PasswordCheckerScreen} />
-        <Stack.Screen name="HashGenerator" component={HashGeneratorScreen} />
-        <Stack.Screen name="Tools" component={ToolsScreen} />
-        <Stack.Screen name="AdRewards" component={AdRewardScreen} />
+        <Stack.Screen name="Splash"                  component={withErrorBoundary(SplashScreen)} />
+        <Stack.Screen name="Login"                   component={withErrorBoundary(LoginScreen)} />
+        <Stack.Screen name="Register"                component={withErrorBoundary(RegisterScreen)} />
+        <Stack.Screen name="ForgotPassword"          component={withErrorBoundary(ForgotPasswordScreen)} />
+        <Stack.Screen name="NotificationPermission"  component={withErrorBoundary(NotificationPermissionScreen)} />
+        <Stack.Screen name="Dashboard"               component={withErrorBoundary(DashboardScreen)} />
+        <Stack.Screen name="Learning"                component={withErrorBoundary(LearningScreen)} />
+        <Stack.Screen name="LearningDetails"         component={withErrorBoundary(LearningDetailsScreen)} />
+        <Stack.Screen name="Labs"                    component={withErrorBoundary(LabsScreen)} />
+        <Stack.Screen name="LabDetails"              component={withErrorBoundary(LabDetailsScreen)} />
+        <Stack.Screen name="Quiz"                    component={withErrorBoundary(QuizScreen)} />
+        <Stack.Screen name="QuizQuestion"            component={withErrorBoundary(QuizQuestionScreen)} />
+        <Stack.Screen name="SecurityScan"            component={withErrorBoundary(SecurityScanScreen)} />
+        <Stack.Screen name="ScanHistory"             component={withErrorBoundary(ScanHistoryScreen)} />
+        <Stack.Screen name="CVEUpdates"              component={withErrorBoundary(CVEUpdatesScreen)} />
+        <Stack.Screen name="BugReports"              component={withErrorBoundary(BugReportsScreen)} />
+        <Stack.Screen name="Certificates"            component={withErrorBoundary(CertificateScreen)} />
+        <Stack.Screen name="CertificateDetails"      component={withErrorBoundary(CertificateDetailsScreen)} />
+        <Stack.Screen name="Profile"                 component={withErrorBoundary(ProfileScreen)} />
+        <Stack.Screen name="ProfileSettings"         component={withErrorBoundary(ProfileSettingsScreen)} />
+        <Stack.Screen name="AccountSettings"         component={withErrorBoundary(AccountSettingsScreen)} />
+        <Stack.Screen name="Settings"                component={withErrorBoundary(SettingsScreen)} />
+        <Stack.Screen name="Notifications"           component={withErrorBoundary(NotificationScreen)} />
+        <Stack.Screen name="Jobs"                    component={withErrorBoundary(JobsScreen)} />
+        <Stack.Screen name="JobDetails"              component={withErrorBoundary(JobDetailsScreen)} />
+        <Stack.Screen name="ChatList"                component={withErrorBoundary(ChatListScreen)} />
+        <Stack.Screen name="Chat"                    component={withErrorBoundary(ChatScreen)} />
+        <Stack.Screen name="Friends"                 component={withErrorBoundary(FriendsScreen)} />
+        <Stack.Screen name="FriendProfile"           component={withErrorBoundary(FriendProfileScreen)} />
+        <Stack.Screen name="Leaderboard"             component={withErrorBoundary(LeaderboardScreen)} />
+        <Stack.Screen name="Achievements"            component={withErrorBoundary(AchievementsScreen)} />
+        <Stack.Screen name="Premium"                 component={withErrorBoundary(PremiumScreen)} />
+        <Stack.Screen name="CTF"                     component={withErrorBoundary(CTFScreen)} />
+        <Stack.Screen name="PasswordChecker"         component={withErrorBoundary(PasswordCheckerScreen)} />
+        <Stack.Screen name="HashGenerator"           component={withErrorBoundary(HashGeneratorScreen)} />
+        <Stack.Screen name="Tools"                   component={withErrorBoundary(ToolsScreen)} />
+        <Stack.Screen name="AdRewards"               component={withErrorBoundary(AdRewardScreen)} />
       </Stack.Navigator>
     </NavigationContainer>
   );

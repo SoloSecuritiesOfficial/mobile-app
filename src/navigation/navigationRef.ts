@@ -1,5 +1,5 @@
 import { createNavigationContainerRef } from "@react-navigation/native";
-import { RootStackParamList } from "./AppNavigator";
+import { RootStackParamList } from "./types";
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
@@ -9,7 +9,7 @@ export const navigationRef = createNavigationContainerRef<RootStackParamList>();
  */
 export function navigateTo<K extends keyof RootStackParamList>(
   screen: K,
-  params?: RootStackParamList[K]
+  params?: RootStackParamList[K],
 ) {
   if (navigationRef.isReady()) {
     (navigationRef as any).navigate(screen, params);

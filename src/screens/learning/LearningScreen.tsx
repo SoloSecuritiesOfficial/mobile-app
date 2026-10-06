@@ -22,7 +22,7 @@ import {
 
 import {
   RootStackParamList,
-} from "../../navigation/AppNavigator";
+} from "../../navigation/types";
 
 import {
   getLearningModules,

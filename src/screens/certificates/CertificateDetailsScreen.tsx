@@ -17,7 +17,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 // The same pattern used for expo-print / expo-sharing.
 let WebView: any = null;
 try { WebView = require("react-native-webview").WebView; } catch { /* not installed yet */ }
-import { RootStackParamList } from "../../navigation/AppNavigator";
+import { RootStackParamList } from "../../navigation/types";
 import { getCertificateById } from "../../services/certificateService";
 import { getCurrentUser } from "../../services/authService";
 import { generateCertificateHtml } from "../../utils/certificateHtml";

@@ -16,7 +16,7 @@ import InputField from "../../components/InputField";
 import PrimaryButton from "../../components/PrimaryButton";
 import GoogleSignInButton from "../../components/GoogleSignInButton";
 import { showInterstitialAd } from "../../components/InterstitialAd";
-import { RootStackParamList } from "../../navigation/AppNavigator";
+import { RootStackParamList } from "../../navigation/types";
 import { loginUser } from "../../services/authService";
 import { hasPushBeenAsked } from "../../utils/storage";
 

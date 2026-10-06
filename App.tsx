@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from "react";
-import { AppState, AppStateStatus, Platform } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { AppState, AppStateStatus } from "react-native";
 import Constants from "expo-constants";
 import * as SplashScreen from "expo-splash-screen";
 
@@ -18,49 +18,67 @@ import { preloadInterstitialAd } from "./src/components/InterstitialAd";
 import { initAppOpenAd } from "./src/components/AppOpenAd";
 
 // Keep the native splash screen visible until we explicitly hide it.
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
-// ─── Create the Android notification channel at module level ──────────────────
-// This runs BEFORE React mounts, before any login check, before any user
-// interaction. If the channel doesn't exist when a FCM message arrives while
-// the app is killed, Android silently drops the notification. Creating it here
-// guarantees it is registered as early as possible on every cold start.
+// ─── Create the Android notification channel at module level ─────────────────
+// Must run before React mounts so FCM messages received while the app is
+// killed are not silently dropped on Android.
 ensureAndroidChannelEarly();
+
+// ─── Whether we are running inside Expo Go ───────────────────────────────────
+// Computed once at module level so it is available synchronously in the effect.
+const IS_EXPO_GO = Constants.appOwnership === "expo";
 
 export default function App() {
   const appState = useRef(AppState.currentState);
+  const [adsInitialized, setAdsInitialized] = useState(false);
 
   useEffect(() => {
-    SplashScreen.hide();
+    // Hide splash screen
+    SplashScreen.hideAsync().catch(() => {});
 
-    const inExpoGo = Constants.appOwnership === "expo";
-
-    // Configure foreground notification display
-    if (!inExpoGo) {
+    // Configure foreground notification display (not needed in Expo Go)
+    if (!IS_EXPO_GO) {
       configureForegroundNotifications();
     }
 
-    // Preload interstitial so it's ready for the first key navigation
-    preloadInterstitialAd();
+    const init = async () => {
+      // ── Step 1: Initialize the Google Mobile Ads SDK ─────────────────────
+      // app.json has googleMobileAdsAutoInit:false, so the SDK will NOT
+      // self-initialize. We MUST call initialize() before making any ad
+      // request (BannerAd load, RewardedInterstitialAd, AppOpenAd, etc.).
+      // Skipping this causes native crashes when ad components mount.
+      if (!IS_EXPO_GO) {
+        try {
+          const { MobileAds } = await import(
+            "react-native-google-mobile-ads"
+          );
+          await MobileAds().initialize();
+        } catch (err) {
+          // Log but never crash — ads simply won't serve if init fails
+          console.warn("[Ads] SDK initialization failed:", err);
+        }
+      }
 
-    const initPush = async () => {
-      // Init App Open ad — fires immediately on cold start for free users,
-      // and on every foreground resume (max once per 4 hours).
-      // We pass false here; DashboardScreen calls initAppOpenAd(true) for
-      // premium users once it knows their subscription tier.
+      // ── Step 2: Preload overlay ads AFTER SDK is initialized ─────────────
+      // These must come after initialize() — making ad requests before
+      // initialization is what was causing the native crash on every screen.
+      preloadInterstitialAd();
       initAppOpenAd(false);
+      setAdsInitialized(true);
 
+      // ── Step 3: Push notification setup ──────────────────────────────────
       const loggedIn = await isLoggedIn();
 
-      if (!inExpoGo && loggedIn) {
+      if (!IS_EXPO_GO && loggedIn) {
         // Re-register FCM token on every app open (idempotent upsert)
         registerForPushNotifications().catch((err) =>
-          console.warn("[Push] Re-registration failed:", err?.message)
+          console.warn("[Push] Re-registration failed:", err?.message),
         );
       }
 
-      // Cold-start notification tap handler
-      if (!inExpoGo) {
+      // ── Step 4: Handle cold-start notification tap ────────────────────────
+      if (!IS_EXPO_GO) {
         try {
           const N = require("expo-notifications");
           const initialResponse = await N.getLastNotificationResponseAsync();
@@ -70,19 +88,19 @@ export default function App() {
             setTimeout(() => routeNotification(data), 500);
           }
         } catch {
-          /* expo-notifications not available */
+          /* expo-notifications not available in this build */
         }
       }
     };
 
-    initPush();
+    init();
 
-    // ── Foreground / tap listeners ─────────────────────────────────────────
+    // ── Foreground / tap notification listeners ───────────────────────────
     const cleanup = addNotificationListeners({
       onForeground: (notification: any) => {
         console.log(
           "[Push] Foreground:",
-          notification?.request?.content?.title
+          notification?.request?.content?.title,
         );
       },
       onTap: (response: any) => {
@@ -90,15 +108,11 @@ export default function App() {
         const data = response?.notification?.request?.content?.data as
           | Record<string, string>
           | undefined;
-        console.log(
-          "[Push] Tapped:",
-          data?.actionUrl ?? data?.type ?? "(no url)"
-        );
         routeNotification(data);
       },
     });
 
-    // ── Badge clear when app comes back to foreground ─────────────────────
+    // ── Clear badge when app returns to foreground ────────────────────────
     const appStateSub = AppState.addEventListener(
       "change",
       (nextState: AppStateStatus) => {
@@ -109,7 +123,7 @@ export default function App() {
           clearBadge();
         }
         appState.current = nextState;
-      }
+      },
     );
 
     return () => {
@@ -117,6 +131,10 @@ export default function App() {
       appStateSub.remove();
     };
   }, []);
+
+  if (!adsInitialized) {
+    return null;
+  }
 
   return (
     <ThemeProvider>

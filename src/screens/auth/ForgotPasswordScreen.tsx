@@ -15,7 +15,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import InputField from "../../components/InputField";
 import PrimaryButton from "../../components/PrimaryButton";
 import AdBanner from "../../components/AdBanner";
-import { RootStackParamList } from "../../navigation/AppNavigator";
+import { RootStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<
   RootStackParamList,

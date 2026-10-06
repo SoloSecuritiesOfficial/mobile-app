@@ -14,7 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
-import { RootStackParamList } from "../../navigation/AppNavigator";
+import { RootStackParamList } from "../../navigation/types";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
@@ -296,7 +296,10 @@ export default function DashboardScreen({ navigation }: Props) {
 
       // Fetch wallet balance from backend (fire-and-forget, never blocks main load)
       getWalletSummary().then(wallet => {
-        setRewardBalance(wallet.availableMicroValue);
+        if (!wallet.unavailable) {
+          setRewardBalance(wallet.availableMicroValue);
+        }
+        // If unavailable, leave rewardBalance at whatever it was — do not reset to 0
       }).catch(() => {});
     } catch (err) {
       console.log("Dashboard Error:", err);

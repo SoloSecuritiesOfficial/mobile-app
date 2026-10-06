@@ -17,6 +17,7 @@ import {
   Text,
   TextInput,
   View,
+  ViewStyle,
 } from "react-native";
 
 import {
@@ -43,7 +44,7 @@ import RewardedAdGate from "../../components/RewardedAdGate";
 
 import type {
   RootStackParamList,
-} from "../../navigation/AppNavigator";
+} from "../../navigation/types";
 
 /* ============================================================================
  * TYPES
@@ -589,10 +590,11 @@ const QuizCard = memo(function QuizCard({
           label="Retake Quiz"
           icon="↻"
           onReward={handlePress}
-          style={[
-            styles.startButton,
-            quiz.isPremiumOnly && styles.premiumStartButton,
-          ]}
+          style={(
+            quiz.isPremiumOnly
+              ? [styles.startButton, styles.premiumStartButton]
+              : styles.startButton
+          ) as ViewStyle}
           textStyle={styles.startButtonText}
         />
       ) : (
@@ -603,9 +605,9 @@ const QuizCard = memo(function QuizCard({
           onPress={handlePress}
           style={({ pressed }) => [
             styles.startButton,
-            quiz.isPremiumOnly && styles.premiumStartButton,
-            pressed && styles.buttonPressed,
-          ]}
+            quiz.isPremiumOnly ? styles.premiumStartButton : null,
+            pressed ? styles.buttonPressed : null,
+          ].filter(Boolean)}
         >
           <Text style={styles.startButtonText}>
             {quiz.isPremiumOnly ? "👑  Premium Quiz" : "Start Quiz"}

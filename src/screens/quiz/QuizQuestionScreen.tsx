@@ -1805,6 +1805,7 @@ export default function QuizQuestionScreen() {
             onDone={() =>
               navigation.goBack()
             }
+            isPremium={isPremium}
           />
         )}
       </Modal>
@@ -1824,6 +1825,7 @@ function QuizResultScreen({
   autoSubmitted,
   onRetry,
   onDone,
+  isPremium,
 }: {
   result: QuizResult;
   quizTitle: string;
@@ -1832,6 +1834,7 @@ function QuizResultScreen({
   autoSubmitted: boolean;
   onRetry: () => void;
   onDone: () => void;
+  isPremium: boolean;
 }) {
   const motivation =
     getMotivation(

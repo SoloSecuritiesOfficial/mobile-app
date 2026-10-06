@@ -7,7 +7,7 @@ import {
   Image,
 } from "react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../navigation/AppNavigator";
+import { RootStackParamList } from "../navigation/types";
 import { BASE_URL } from "../config/api";
 import Colors from "../theme/colors";
 import Spacing from "../theme/spacing";
