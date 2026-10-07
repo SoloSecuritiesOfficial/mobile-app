@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from "react";
 import {
   ScrollView,
-  StyleSheet,
   ActivityIndicator,
   RefreshControl,
   Text,
@@ -9,6 +8,7 @@ import {
   TouchableOpacity,
   Modal,
   Pressable,
+  StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
@@ -16,8 +16,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { RootStackParamList } from "../../navigation/types";
 import Colors from "../../theme/colors";
-import Spacing from "../../theme/spacing";
-import Typography from "../../theme/typography";
+import { useResponsive, useStyles } from "../../hooks";
 
 import DashboardHeader from "../../components/DashboardHeader";
 import SecurityScoreCard from "../../components/SecurityScoreCard";
@@ -109,9 +108,11 @@ interface ProgressDetailConfig {
 function ProgressDetailModal({
   config,
   onClose,
+  pd,
 }: {
   config: ProgressDetailConfig | null;
   onClose: () => void;
+  pd: ReturnType<typeof StyleSheet.create>;
 }) {
   if (!config) return null;
   const { emoji, label, color, entry, navigate, navLabel } = config;
@@ -213,6 +214,7 @@ function ProgressRow({
   entry,
   onPress,
   isLast,
+  pr,
 }: {
   emoji:   string;
   label:   string;
@@ -220,6 +222,7 @@ function ProgressRow({
   entry:   ProgressEntry;
   onPress: () => void;
   isLast:  boolean;
+  pr: ReturnType<typeof StyleSheet.create>;
 }) {
   return (
     <>
@@ -265,7 +268,175 @@ function ProgressRow({
 
 // ─── DashboardScreen ──────────────────────────────────────────────────────────
 
+const styleFactory = (spacing: any, typography: any) => StyleSheet.create({
+  loader: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: Colors.background },
+  content: { padding: spacing.screen, paddingBottom: spacing.xxl },
+
+  sectionTitle: { ...typography.h3, color: Colors.text, marginTop: spacing.lg, marginBottom: spacing.md },
+
+  // streak banner
+  streakBanner: {
+    backgroundColor: Colors.dashboardHeader,
+    borderRadius: spacing.radiusLarge,
+    padding: spacing.md,
+    marginVertical: spacing.md,
+    flexDirection: "row", alignItems: "center", gap: 12,
+  },
+  streakBannerIcon:  { fontSize: spacing.iconLarge },
+  streakBannerTitle: { color: "#FFFFFF", ...typography.bodyMedium, fontWeight: "700" },
+  streakBannerSub:   { color: "#AAAAAA", ...typography.caption, marginTop: 2 },
+  streakBannerBtn:   {
+    backgroundColor: Colors.primary, color: "#FFFFFF",
+    ...typography.labelSmall,
+    paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: 8, overflow: "hidden",
+  },
+
+  // overview
+  overviewRow:      { flexDirection: "row", justifyContent: "space-between", marginBottom: spacing.md },
+  overviewItem:     { alignItems: "center", flex: 1 },
+  overviewIconWrap: {
+    width: spacing.avatarMedium, height: spacing.avatarMedium, borderRadius: spacing.radiusMedium,
+    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
+    justifyContent: "center", alignItems: "center", marginBottom: 6, position: "relative",
+  },
+  overviewEmoji: { fontSize: spacing.iconLarge },
+  overviewLabel: { ...typography.labelSmall, color: Colors.textSecondary, textAlign: "center", maxWidth: 54 },
+
+  badge:       { position: "absolute", top: -5, right: -5, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: Colors.primary, justifyContent: "center", alignItems: "center", paddingHorizontal: 3, borderWidth: 2, borderColor: Colors.background },
+  badgeOrange: { backgroundColor: "#F59E0B" },
+  badgeRed:    { backgroundColor: "#EF4444" },
+  badgeText:   { color: "#FFF", ...typography.labelSmall, lineHeight: 11 },
+
+  // progress header row (title + overall pill side-by-side)
+  progressHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: spacing.lg, marginBottom: spacing.md },
+  overallPill:    { backgroundColor: Colors.primary + "22", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: Colors.primary + "44" },
+  overallText:    { color: Colors.primary, ...typography.labelSmall },
+
+  // progress card
+  progressCard: { backgroundColor: Colors.surface, borderRadius: spacing.radiusLarge, padding: spacing.cardPadding, borderWidth: 1, borderColor: Colors.border, marginBottom: spacing.md },
+
+  // activity
+  activityCard:  { backgroundColor: Colors.surface, borderRadius: spacing.radiusLarge, padding: spacing.cardPadding, borderWidth: 1, borderColor: Colors.border, marginBottom: spacing.md },
+  activityItem:  { flexDirection: "row", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.border, gap: 10 },
+  activityIcon:  { fontSize: spacing.iconMedium },
+  activityTitle: { flex: 1, ...typography.bodySmall, color: Colors.text, fontWeight: "600" },
+  activityXP:    { color: "#10B981", ...typography.labelSmall },
+
+  // premium banner
+  premiumBanner:      { backgroundColor: Colors.primary, borderRadius: spacing.radiusLarge, padding: spacing.md, flexDirection: "row", alignItems: "center", gap: 12, marginBottom: spacing.md },
+  premiumBannerIcon:  { fontSize: spacing.iconXL },
+  premiumBannerTitle: { color: "#FFF", ...typography.h4 },
+  premiumBannerSub:   { color: "#FFD0D0", ...typography.caption, marginTop: 2 },
+  premiumBannerArrow: { color: "#FFF", fontSize: spacing.iconXL, fontWeight: "700" },
+
+  // ad reward banner
+  adRewardBanner:      { backgroundColor: "#2E7D32", borderRadius: spacing.radiusLarge, padding: spacing.md, flexDirection: "row", alignItems: "center", gap: 12, marginBottom: spacing.md },
+  adRewardBannerIcon:  { fontSize: spacing.iconXL },
+  adRewardBannerTitle: { color: "#FFF", ...typography.h4 },
+  adRewardBannerSub:   { color: "#C8E6C9", ...typography.caption, marginTop: 2 },
+
+  // ad reward card (expanded version with video button)
+  adRewardCard: {
+    backgroundColor: "#1B5E20",
+    borderRadius: spacing.radiusLarge,
+    marginBottom: spacing.md,
+    overflow: "hidden",
+    elevation: 3,
+    shadowColor: "#1B5E20",
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  adRewardTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: spacing.md,
+    gap: 10,
+  },
+  adRewardChevron: { color: "#FFF", fontSize: spacing.iconLarge, fontWeight: "700" },
+  adRewardDivider: { height: 1, backgroundColor: "rgba(255,255,255,0.12)", marginHorizontal: spacing.md },
+  videoAdBtn: {
+    margin: spacing.md,
+    marginTop: spacing.sm,
+    elevation: 0,
+    shadowOpacity: 0,
+    backgroundColor: "#2E7D32",
+  },
+  rewardBalanceChip: {
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginRight: 4,
+  },
+  rewardBalanceChipText: { color: "#FFF", fontWeight: "900", ...typography.bodyMedium },
+
+  // compliance
+  complianceCard:  { backgroundColor: Colors.surface, borderRadius: spacing.radiusLarge, padding: spacing.cardPadding, borderWidth: 1, borderColor: Colors.border, marginBottom: spacing.md },
+  complianceTitle: { ...typography.bodyMedium, fontWeight: "700", color: Colors.text, marginBottom: 10 },
+  complianceItem:  { ...typography.caption, color: Colors.textSecondary, marginBottom: 5, lineHeight: 18 },
+  complianceLink:  { color: Colors.primary, fontWeight: "700", ...typography.caption, marginTop: 8 },
+
+  // error state
+  errorContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: spacing.screen },
+  errorCard: { backgroundColor: Colors.surface, borderRadius: spacing.radiusLarge, padding: spacing.xl, alignItems: "center", borderWidth: 1, borderColor: Colors.border },
+  errorIcon: { fontSize: spacing.iconXL, marginBottom: spacing.md },
+  errorTitle: { ...typography.h3, color: Colors.text, marginBottom: spacing.sm, textAlign: "center" },
+  errorMessage: { ...typography.bodyMedium, color: Colors.textSecondary, textAlign: "center", marginBottom: spacing.lg },
+  errorButton: { backgroundColor: Colors.primary, paddingHorizontal: spacing.xl, paddingVertical: spacing.md, borderRadius: spacing.radiusMedium },
+  errorButtonText: { color: "#FFF", ...typography.button },
+});
+
+const prStyleFactory = (spacing: any, typography: any) => StyleSheet.create({
+  row:     { flexDirection: "row", alignItems: "flex-start", gap: 12, paddingVertical: 8 },
+  icon:    { fontSize: spacing.iconLarge, marginTop: 2 },
+  info:    { flex: 1 },
+  topRow:  { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 },
+  label:   { ...typography.bodySmall, fontWeight: "700", color: Colors.text, flex: 1 },
+  countWrap: { alignItems: "flex-end" },
+  count:   { fontWeight: "800", ...typography.bodySmall },
+  tapHint: { ...typography.caption, color: Colors.textSecondary, marginTop: 1 },
+  track:   { height: 8, backgroundColor: Colors.border, borderRadius: 10, overflow: "hidden" },
+  fill:    { height: "100%", borderRadius: 10, minWidth: 2 },
+  meta:    { ...typography.caption, color: Colors.textSecondary, marginTop: 5 },
+  divider: { height: 1, backgroundColor: Colors.border, marginVertical: 6 },
+});
+
+const pdStyleFactory = (spacing: any, typography: any) => StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
+  sheet:   { backgroundColor: Colors.surface ?? "#1A1A2E", borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 36, maxHeight: "80%" },
+  handle:  { width: 40, height: 4, backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 2, alignSelf: "center", marginTop: 10, marginBottom: 4 },
+
+  header:   { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1 },
+  iconWrap: { width: spacing.avatarMedium, height: spacing.avatarMedium, borderRadius: spacing.radiusMedium, justifyContent: "center", alignItems: "center" },
+  emoji:    { fontSize: spacing.iconLarge },
+  title:    { flex: 1, ...typography.h3, fontWeight: "800", color: Colors.text ?? "#FFF" },
+  closeBtn: { padding: 6 },
+  closeText:{ ...typography.bodyMedium, color: Colors.textSecondary ?? "#AAA", fontWeight: "700" },
+
+  pctRow:  { alignItems: "center", paddingTop: 18, paddingBottom: 6 },
+  pctNum:  { fontSize: 52, fontWeight: "900", lineHeight: 58 },
+  pctSub:  { ...typography.bodySmall, color: Colors.textSecondary ?? "#AAA", marginTop: 2, fontWeight: "600" },
+
+  barWrap:  { paddingHorizontal: 24, marginBottom: 8 },
+  barTrack: { height: 10, backgroundColor: Colors.border ?? "#333", borderRadius: 10, overflow: "hidden" },
+  barFill:  { height: "100%", borderRadius: 10, minWidth: 4 },
+
+  row:      { flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.06)", marginHorizontal: 20, gap: 10 },
+  rowIcon:  { fontSize: spacing.iconMedium, width: 24, textAlign: "center" },
+  rowLabel: { flex: 1, ...typography.bodySmall, color: Colors.textSecondary ?? "#AAA", fontWeight: "500" },
+  rowValue: { ...typography.bodyMedium, fontWeight: "800" },
+
+  navBtn:     { marginHorizontal: 20, marginTop: 18, borderRadius: 12, paddingVertical: 14, alignItems: "center" },
+  navBtnText: { color: "#FFF", ...typography.button },
+});
+
 export default function DashboardScreen({ navigation }: Props) {
+  const styles = useStyles(styleFactory);
+  const pr = useStyles(prStyleFactory);
+  const pd = useStyles(pdStyleFactory);
+
   const [loading,           setLoading]           = useState(true);
   const [refreshing,        setRefreshing]         = useState(false);
   const [user,              setUser]               = useState<any>(null);
@@ -274,10 +445,12 @@ export default function DashboardScreen({ navigation }: Props) {
   const [notificationCount, setNotificationCount]  = useState(0);
   const [progressModal,     setProgressModal]      = useState<ProgressDetailConfig | null>(null);
   const [rewardBalance,     setRewardBalance]      = useState(0);
+  const [error,             setError]              = useState<string | null>(null);
 
   // ── data loading ────────────────────────────────────────────────────────────
   const loadDashboard = useCallback(async () => {
     try {
+      setError(null);
       const latestUser   = await fetchCurrentUser();
       const fallbackUser = await getCurrentUser();
       setUser(latestUser ?? fallbackUser);
@@ -303,6 +476,7 @@ export default function DashboardScreen({ navigation }: Props) {
       }).catch(() => {});
     } catch (err) {
       console.log("Dashboard Error:", err);
+      setError(err instanceof Error ? err.message : "Failed to load dashboard");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -322,6 +496,22 @@ export default function DashboardScreen({ navigation }: Props) {
     return (
       <SafeAreaView style={styles.loader}>
         <ActivityIndicator size="large" color={Colors.primary} />
+      </SafeAreaView>
+    );
+  }
+
+  // ── error state ────────────────────────────────────────────────────────────
+  if (error) {
+    return (
+      <SafeAreaView style={styles.errorContainer}>
+        <View style={styles.errorCard}>
+          <Text style={styles.errorIcon}>⚠️</Text>
+          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorMessage}>{error}</Text>
+          <TouchableOpacity style={styles.errorButton} onPress={loadDashboard}>
+            <Text style={styles.errorButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
@@ -508,6 +698,7 @@ export default function DashboardScreen({ navigation }: Props) {
                   navLabel: row.navLabel,
                 })
               }
+              pr={pr}
             />
           ))}
         </View>
@@ -586,168 +777,8 @@ export default function DashboardScreen({ navigation }: Props) {
       <ProgressDetailModal
         config={progressModal}
         onClose={() => setProgressModal(null)}
+        pd={pd}
       />
     </>
   );
 }
-
-// ─── styles ───────────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  loader: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: Colors.background },
-  content: { padding: Spacing.screen, paddingBottom: Spacing.xxl },
-
-  sectionTitle: { ...Typography.h3, color: Colors.text, marginTop: Spacing.lg, marginBottom: Spacing.md },
-
-  // streak banner
-  streakBanner: {
-    backgroundColor: Colors.dashboardHeader,
-    borderRadius: Spacing.radiusLarge,
-    padding: Spacing.md,
-    marginVertical: Spacing.md,
-    flexDirection: "row", alignItems: "center", gap: 12,
-  },
-  streakBannerIcon:  { fontSize: 24 },
-  streakBannerTitle: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
-  streakBannerSub:   { color: "#AAAAAA", fontSize: 12, marginTop: 2 },
-  streakBannerBtn:   {
-    backgroundColor: Colors.primary, color: "#FFFFFF",
-    fontSize: 12, fontWeight: "700",
-    paddingHorizontal: 12, paddingVertical: 6,
-    borderRadius: 8, overflow: "hidden",
-  },
-
-  // overview
-  overviewRow:      { flexDirection: "row", justifyContent: "space-between", marginBottom: Spacing.md },
-  overviewItem:     { alignItems: "center", flex: 1 },
-  overviewIconWrap: {
-    width: 52, height: 52, borderRadius: 16,
-    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
-    justifyContent: "center", alignItems: "center", marginBottom: 6, position: "relative",
-  },
-  overviewEmoji: { fontSize: 24 },
-  overviewLabel: { fontSize: 10, fontWeight: "600", color: Colors.textSecondary, textAlign: "center", maxWidth: 54 },
-
-  badge:       { position: "absolute", top: -5, right: -5, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: Colors.primary, justifyContent: "center", alignItems: "center", paddingHorizontal: 3, borderWidth: 2, borderColor: Colors.background },
-  badgeOrange: { backgroundColor: "#F59E0B" },
-  badgeRed:    { backgroundColor: "#EF4444" },
-  badgeText:   { color: "#FFF", fontSize: 9, fontWeight: "800", lineHeight: 11 },
-
-  // progress header row (title + overall pill side-by-side)
-  progressHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: Spacing.lg, marginBottom: Spacing.md },
-  overallPill:    { backgroundColor: Colors.primary + "22", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: Colors.primary + "44" },
-  overallText:    { color: Colors.primary, fontSize: 11, fontWeight: "700" },
-
-  // progress card
-  progressCard: { backgroundColor: Colors.surface, borderRadius: Spacing.radiusLarge, padding: Spacing.cardPadding, borderWidth: 1, borderColor: Colors.border, marginBottom: Spacing.md },
-
-  // activity
-  activityCard:  { backgroundColor: Colors.surface, borderRadius: Spacing.radiusLarge, padding: Spacing.cardPadding, borderWidth: 1, borderColor: Colors.border, marginBottom: Spacing.md },
-  activityItem:  { flexDirection: "row", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.border, gap: 10 },
-  activityIcon:  { fontSize: 18 },
-  activityTitle: { flex: 1, fontSize: 13, color: Colors.text, fontWeight: "600" },
-  activityXP:    { color: "#10B981", fontWeight: "700", fontSize: 12 },
-
-  // premium banner
-  premiumBanner:      { backgroundColor: Colors.primary, borderRadius: Spacing.radiusLarge, padding: 16, flexDirection: "row", alignItems: "center", gap: 12, marginBottom: Spacing.md },
-  premiumBannerIcon:  { fontSize: 28 },
-  premiumBannerTitle: { color: "#FFF", fontWeight: "700", fontSize: 15 },
-  premiumBannerSub:   { color: "#FFD0D0", fontSize: 12, marginTop: 2 },
-  premiumBannerArrow: { color: "#FFF", fontSize: 28, fontWeight: "700" },
-
-  // ad reward banner
-  adRewardBanner:      { backgroundColor: "#2E7D32", borderRadius: Spacing.radiusLarge, padding: 16, flexDirection: "row", alignItems: "center", gap: 12, marginBottom: Spacing.md },
-  adRewardBannerIcon:  { fontSize: 28 },
-  adRewardBannerTitle: { color: "#FFF", fontWeight: "700", fontSize: 15 },
-  adRewardBannerSub:   { color: "#C8E6C9", fontSize: 12, marginTop: 2 },
-
-  // ad reward card (expanded version with video button)
-  adRewardCard: {
-    backgroundColor: "#1B5E20",
-    borderRadius: Spacing.radiusLarge,
-    marginBottom: Spacing.md,
-    overflow: "hidden",
-    elevation: 3,
-    shadowColor: "#1B5E20",
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-  },
-  adRewardTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 14,
-    gap: 10,
-  },
-  adRewardChevron: { color: "#FFF", fontSize: 24, fontWeight: "700" },
-  adRewardDivider: { height: 1, backgroundColor: "rgba(255,255,255,0.12)", marginHorizontal: 14 },
-  videoAdBtn: {
-    margin: 12,
-    marginTop: 10,
-    elevation: 0,
-    shadowOpacity: 0,
-    backgroundColor: "#2E7D32",
-  },
-  rewardBalanceChip: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    marginRight: 4,
-  },
-  rewardBalanceChipText: { color: "#FFF", fontWeight: "900", fontSize: 15 },
-
-  // compliance
-  complianceCard:  { backgroundColor: Colors.surface, borderRadius: Spacing.radiusLarge, padding: Spacing.cardPadding, borderWidth: 1, borderColor: Colors.border, marginBottom: Spacing.md },
-  complianceTitle: { fontWeight: "700", color: Colors.text, fontSize: 13, marginBottom: 10 },
-  complianceItem:  { fontSize: 12, color: Colors.textSecondary, marginBottom: 5, lineHeight: 18 },
-  complianceLink:  { color: Colors.primary, fontWeight: "700", fontSize: 12, marginTop: 8 },
-});
-
-// ── ProgressRow sub-styles ────────────────────────────────────────────────────
-
-const pr = StyleSheet.create({
-  row:     { flexDirection: "row", alignItems: "flex-start", gap: 12, paddingVertical: 8 },
-  icon:    { fontSize: 22, marginTop: 2 },
-  info:    { flex: 1 },
-  topRow:  { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 },
-  label:   { fontWeight: "700", color: Colors.text, fontSize: 13, flex: 1 },
-  countWrap: { alignItems: "flex-end" },
-  count:   { fontWeight: "800", fontSize: 13 },
-  tapHint: { fontSize: 9, color: Colors.textSecondary, marginTop: 1 },
-  track:   { height: 8, backgroundColor: Colors.border, borderRadius: 10, overflow: "hidden" },
-  fill:    { height: "100%", borderRadius: 10, minWidth: 2 },
-  meta:    { fontSize: 11, color: Colors.textSecondary, marginTop: 5 },
-  divider: { height: 1, backgroundColor: Colors.border, marginVertical: 6 },
-});
-
-// ── ProgressDetailModal sub-styles ───────────────────────────────────────────
-
-const pd = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
-  sheet:   { backgroundColor: Colors.surface ?? "#1A1A2E", borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 36, maxHeight: "80%" },
-  handle:  { width: 40, height: 4, backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 2, alignSelf: "center", marginTop: 10, marginBottom: 4 },
-
-  header:   { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1 },
-  iconWrap: { width: 40, height: 40, borderRadius: 12, justifyContent: "center", alignItems: "center" },
-  emoji:    { fontSize: 20 },
-  title:    { flex: 1, fontSize: 17, fontWeight: "800", color: Colors.text ?? "#FFF" },
-  closeBtn: { padding: 6 },
-  closeText:{ fontSize: 14, color: Colors.textSecondary ?? "#AAA", fontWeight: "700" },
-
-  pctRow:  { alignItems: "center", paddingTop: 18, paddingBottom: 6 },
-  pctNum:  { fontSize: 52, fontWeight: "900", lineHeight: 58 },
-  pctSub:  { fontSize: 12, color: Colors.textSecondary ?? "#AAA", marginTop: 2, fontWeight: "600" },
-
-  barWrap:  { paddingHorizontal: 24, marginBottom: 8 },
-  barTrack: { height: 10, backgroundColor: Colors.border ?? "#333", borderRadius: 10, overflow: "hidden" },
-  barFill:  { height: "100%", borderRadius: 10, minWidth: 4 },
-
-  row:      { flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.06)", marginHorizontal: 20, gap: 10 },
-  rowIcon:  { fontSize: 16, width: 24, textAlign: "center" },
-  rowLabel: { flex: 1, fontSize: 13, color: Colors.textSecondary ?? "#AAA", fontWeight: "500" },
-  rowValue: { fontSize: 14, fontWeight: "800" },
-
-  navBtn:     { marginHorizontal: 20, marginTop: 18, borderRadius: 12, paddingVertical: 14, alignItems: "center" },
-  navBtnText: { color: "#FFF", fontWeight: "800", fontSize: 15 },
-});

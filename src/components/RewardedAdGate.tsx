@@ -28,6 +28,11 @@ import {
 import Constants, { ExecutionEnvironment } from "expo-constants";
 import Colors from "../theme/colors";
 import { AD_UNITS, isAdUnitReady } from "../config/adUnits";
+import {
+  RewardedInterstitialAd,
+  RewardedAdEventType,
+  AdEventType,
+} from "react-native-google-mobile-ads";
 
 const IS_EXPO_GO =
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
@@ -52,18 +57,8 @@ export default function RewardedAdGate({
     if (IS_EXPO_GO || isPremium) return;
     if (!isAdUnitReady(AD_UNITS.REWARDED)) return;
 
-    let RewardedInterstitialAd: any, RewardedAdEventType: any;
-    try {
-      const ads = require("react-native-google-mobile-ads");
-      // Use RewardedInterstitialAd — matches the ad unit type created in AdMob
-      RewardedInterstitialAd = ads.RewardedInterstitialAd;
-      RewardedAdEventType    = ads.RewardedAdEventType;
-    } catch {
-      return;
-    }
-
-    if (!RewardedInterstitialAd) {
-      console.warn("[RewardedAdGate] RewardedInterstitialAd not found in SDK");
+    if (!RewardedInterstitialAd || !RewardedAdEventType || !AdEventType) {
+      console.warn("[RewardedAdGate] AdMob SDK not available");
       return;
     }
 
@@ -73,25 +68,25 @@ export default function RewardedAdGate({
       requestNonPersonalizedAdsOnly: false,
     });
 
-    // Ad loaded and ready to show
+    // LOADED — RewardedAdEventType (not AdEventType.LOADED — SDK throws on that)
     ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
       adRef.current = ad;
       setLoading(false);
     });
 
-    // User earned the reward — fire the action
+    // EARNED_REWARD — user completed the ad
     ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
       onReward();
     });
 
-    // Ad failed to load — allow action without ad
-    ad.addAdEventListener(RewardedAdEventType.ERROR, () => {
+    // ERROR — AdEventType (RewardedAdEventType has no ERROR)
+    ad.addAdEventListener(AdEventType.ERROR, () => {
       adRef.current = null;
       setLoading(false);
     });
 
-    // Ad closed — reload for next use
-    ad.addAdEventListener(RewardedAdEventType.CLOSED, () => {
+    // CLOSED — AdEventType (RewardedAdEventType has no CLOSED)
+    ad.addAdEventListener(AdEventType.CLOSED, () => {
       adRef.current = null;
       loadAd();
     });

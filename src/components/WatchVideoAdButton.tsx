@@ -35,6 +35,11 @@ import Constants, { ExecutionEnvironment } from "expo-constants";
 import { submitAdRevenueEvent, SdkPaidEvent } from "../services/adRewardService";
 import { AD_UNITS } from "../config/adUnits";
 import Colors from "../theme/colors";
+import {
+  RewardedInterstitialAd,
+  RewardedAdEventType,
+  AdEventType,
+} from "react-native-google-mobile-ads";
 
 const IS_EXPO_GO =
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
@@ -61,20 +66,7 @@ export default function WatchVideoAdButton({ onRewarded, style, compact = false 
   const loadAd = useCallback(() => {
     if (IS_EXPO_GO || !mountedRef.current) return;
 
-    let RewardedInterstitialAd: any;
-    let RewardedAdEventType: any;
-    let AdEventType: any;
-    try {
-      const ads              = require("react-native-google-mobile-ads");
-      RewardedInterstitialAd = ads.RewardedInterstitialAd;
-      RewardedAdEventType    = ads.RewardedAdEventType;
-      AdEventType            = ads.AdEventType;
-    } catch {
-      if (mountedRef.current) setAdState("error");
-      return;
-    }
-
-    if (!RewardedInterstitialAd) {
+    if (!RewardedInterstitialAd || !RewardedAdEventType || !AdEventType) {
       if (mountedRef.current) setAdState("error");
       return;
     }
@@ -90,15 +82,12 @@ export default function WatchVideoAdButton({ onRewarded, style, compact = false 
       if (mountedRef.current) setAdState("ready");
     });
 
-    // EARNED_REWARD — the user completed watching the ad (engagement reward).
-    // This is separate from the AdMob PAID revenue event.
+    // EARNED_REWARD — engagement reward (separate from revenue)
     ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
       if (mountedRef.current) onRewarded?.();
     });
 
-    // PAID — actual AdMob revenue event. Submit to backend.
-    // Cast required: AdEventType.PAID is typed as `undefined` payload by the
-    // SDK's generic but the runtime value IS a PaidEvent object.
+    // PAID — AdEventType (revenue event, valid on RewardedInterstitialAd)
     ad.addAdEventListener(AdEventType.PAID, (payload: unknown) => {
       const paidEvent = payload as SdkPaidEvent;
       submitAdRevenueEvent(
@@ -109,13 +98,15 @@ export default function WatchVideoAdButton({ onRewarded, style, compact = false 
       ).catch(() => { /* queued for retry */ });
     });
 
-    ad.addAdEventListener(RewardedAdEventType.ERROR, () => {
+    // ERROR — AdEventType (RewardedAdEventType has no ERROR)
+    ad.addAdEventListener(AdEventType.ERROR, () => {
       adRef.current = null;
       if (mountedRef.current) setAdState("error");
       setTimeout(() => { if (mountedRef.current) loadAd(); }, 60_000);
     });
 
-    ad.addAdEventListener(RewardedAdEventType.CLOSED, () => {
+    // CLOSED — AdEventType (RewardedAdEventType has no CLOSED)
+    ad.addAdEventListener(AdEventType.CLOSED, () => {
       adRef.current = null;
       if (mountedRef.current) {
         setAdState("idle");

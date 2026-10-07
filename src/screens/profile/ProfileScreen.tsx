@@ -7,8 +7,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import Colors from "../../theme/colors";
-import Spacing from "../../theme/spacing";
-import Typography from "../../theme/typography";
+import { useResponsive, useStyles } from "../../hooks";
 import { BASE_URL } from "../../config/api";
 
 import {
@@ -39,7 +38,7 @@ function safeTier(raw: string | undefined | null): Tier {
 }
 
 function TierBadge({ tier }: { tier: Tier }) {
-  const cfg = TIER[tier] ?? TIER.free;   // always defined — never crashes
+  const cfg = TIER[tier] ?? TIER.free;
   const scale = useRef(new Animated.Value(0.7)).current;
   useEffect(() => {
     Animated.spring(scale, { toValue: 1, damping: 12, stiffness: 160, useNativeDriver: true }).start();
@@ -52,12 +51,6 @@ function TierBadge({ tier }: { tier: Tier }) {
   );
 }
 
-const badge = StyleSheet.create({
-  pill:  { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, marginTop: 8, gap: 5 },
-  icon:  { fontSize: 13 },
-  label: { fontSize: 11, fontWeight: "700" },
-});
-
 // ─────────────────────────────────────────────────────────────────
 // Helper — resolve avatar URL (prepend BASE_URL for relative paths)
 // ─────────────────────────────────────────────────────────────────
@@ -67,10 +60,88 @@ function resolveAvatar(img?: string): string | null {
   return `${BASE_URL}${img}`;
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Screen
-// ─────────────────────────────────────────────────────────────────
+const styleFactory = (spacing: any, typography: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.background },
+  center:    { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: Colors.background },
+  content:   { paddingTop: 24, paddingHorizontal: spacing.screen, paddingBottom: spacing.xxl },
+
+  headerCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: spacing.radiusLarge,
+    padding: spacing.cardPadding,
+    alignItems: "center",
+    marginBottom: spacing.md,
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  avatarCircle: {
+    width: 86, height: 86, borderRadius: 43,
+    backgroundColor: Colors.primary,
+    justifyContent: "center", alignItems: "center",
+    marginBottom: 12, position: "relative",
+    elevation: 4,
+    shadowColor: Colors.primary, shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 4 },
+  },
+  avatarImage:     { width: 86, height: 86, borderRadius: 43 },
+  cameraIconBadge: {
+    position: "absolute", bottom: 0, right: 0,
+    backgroundColor: Colors.surface, width: 26, height: 26,
+    borderRadius: 13, justifyContent: "center", alignItems: "center",
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  avatarText: { color: "#FFF", fontSize: 32, fontWeight: "800" },
+  username:   { ...typography.h2, color: Colors.text, marginBottom: 2 },
+  email:      { ...typography.bodySmall, color: Colors.textSecondary, marginBottom: 6 },
+  chipRow:    { flexDirection: "row", gap: 8, marginTop: 4 },
+  levelChip:  { backgroundColor: Colors.primary + "22", paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
+  levelChipText: { color: Colors.primary, fontWeight: "700", fontSize: 12 },
+  rankBadge:  { backgroundColor: Colors.background, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20, borderWidth: 1, borderColor: Colors.border },
+  rankBadgeText: { color: Colors.text, fontWeight: "600", fontSize: 12 },
+  bioText:    { ...typography.bodySmall, color: Colors.textMuted, marginTop: 10, textAlign: "center" },
+
+  statsCard:     { backgroundColor: Colors.surface, borderRadius: spacing.radiusLarge, padding: spacing.cardPadding, marginBottom: spacing.md, borderWidth: 1, borderColor: Colors.border },
+  sectionHeader: { ...typography.labelLarge, color: Colors.text, marginBottom: 12 },
+  statsRow:      { flexDirection: "row", justifyContent: "space-between" },
+  statBox:       { flex: 1, alignItems: "center", backgroundColor: Colors.background, paddingVertical: 10, marginHorizontal: 3, borderRadius: spacing.radiusMedium },
+  statVal:       { fontSize: 17, fontWeight: "800", color: Colors.primary },
+  statLabel:     { fontSize: 10, color: Colors.textSecondary, marginTop: 3 },
+
+  badgesCard:  { backgroundColor: Colors.surface, borderRadius: spacing.radiusLarge, padding: spacing.cardPadding, marginBottom: spacing.md, borderWidth: 1, borderColor: Colors.border },
+  badgesGrid:  { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  badgeChip:   { backgroundColor: Colors.primary + "18", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: Colors.primary + "33" },
+  badgeChipText: { color: Colors.primary, fontWeight: "700", fontSize: 12 },
+  badgeDate:   { color: Colors.textMuted, fontSize: 10, marginTop: 2 },
+
+  noBadgesCard: { backgroundColor: Colors.surface, borderRadius: spacing.radiusLarge, padding: 20, marginBottom: spacing.md, alignItems: "center", borderWidth: 1, borderColor: Colors.border },
+  noBadgesIcon: { fontSize: 40, marginBottom: 8 },
+  noBadgesTitle:{ fontWeight: "700", color: Colors.text, fontSize: 15, marginBottom: 6 },
+  noBadgesText: { color: Colors.textSecondary, fontSize: 12, textAlign: "center", lineHeight: 18, marginBottom: 12 },
+  noBadgesBtn:  { backgroundColor: Colors.primary, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8 },
+  noBadgesBtnText: { color: "#FFF", fontWeight: "700", fontSize: 13 },
+
+  actionsCard: { backgroundColor: Colors.surface, borderRadius: spacing.radiusLarge, padding: spacing.cardPadding, borderWidth: 1, borderColor: Colors.border },
+  actionBtn:   { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  actionBtnText: { ...typography.bodyMedium, color: Colors.text, fontWeight: "600" },
+  arrow:       { color: Colors.textMuted, fontSize: 20, fontWeight: "700" },
+
+  // error state
+  errorContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: spacing.screen },
+  errorCard: { backgroundColor: Colors.surface, borderRadius: spacing.radiusLarge, padding: spacing.xl, alignItems: "center", borderWidth: 1, borderColor: Colors.border },
+  errorIcon: { fontSize: spacing.iconXL, marginBottom: spacing.md },
+  errorTitle: { ...typography.h3, color: Colors.text, marginBottom: spacing.sm, textAlign: "center" },
+  errorMessage: { ...typography.bodyMedium, color: Colors.textSecondary, textAlign: "center", marginBottom: spacing.lg },
+  errorButton: { backgroundColor: Colors.primary, paddingHorizontal: spacing.xl, paddingVertical: spacing.md, borderRadius: spacing.radiusMedium },
+  errorButtonText: { color: "#FFF", ...typography.button },
+});
+
+const badge = StyleSheet.create({
+  pill:  { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, marginTop: 8, gap: 5 },
+  icon:  { fontSize: 13 },
+  label: { fontSize: 11, fontWeight: "700" },
+});
+
 export default function ProfileScreen({ navigation }: any) {
+  const styles = useStyles(styleFactory);
+
   const [profile,   setProfile]   = useState<any>(null);
   const [dashboard, setDashboard] = useState<any>(null);
   const [badges,    setBadges]    = useState<any[]>([]);
@@ -78,6 +149,7 @@ export default function ProfileScreen({ navigation }: any) {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [tier, setTier] = useState<Tier>("free");
   const [imageError, setImageError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const headerAnim = useRef(new Animated.Value(0)).current;
 
@@ -85,6 +157,7 @@ export default function ProfileScreen({ navigation }: any) {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       setImageError(false); // Reset on reload
 
       // Each call is wrapped individually so one failure never
@@ -125,6 +198,7 @@ export default function ProfileScreen({ navigation }: any) {
     } catch (err) {
       // Last-resort catch — should not normally be reached
       console.log("Profile load error:", err);
+      setError(err instanceof Error ? err.message : "Failed to load profile");
     } finally {
       setLoading(false);
     }
@@ -168,6 +242,22 @@ export default function ProfileScreen({ navigation }: any) {
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color={Colors.primary} />
+      </SafeAreaView>
+    );
+  }
+
+  // ── Error state ────────────────────────────────────────────────
+  if (error && !profile) {
+    return (
+      <SafeAreaView style={styles.errorContainer}>
+        <View style={styles.errorCard}>
+          <Text style={styles.errorIcon}>⚠️</Text>
+          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorMessage}>{error}</Text>
+          <TouchableOpacity style={styles.errorButton} onPress={loadData}>
+            <Text style={styles.errorButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
@@ -325,7 +415,7 @@ export default function ProfileScreen({ navigation }: any) {
 
         {/* ── Account ── */}
         <AdBanner isPremium={tier === "paid" || tier === "admin"} marginVertical={8} />
-        <View style={[styles.actionsCard, { marginTop: Spacing.md }]}>
+        <View style={[styles.actionsCard, { marginTop: 16 }]}>
           <Text style={styles.sectionHeader}>Account</Text>
 
           {/* Profile Settings → new screen */}
@@ -363,70 +453,3 @@ export default function ProfileScreen({ navigation }: any) {
     </SafeAreaView>
   );
 }
-
-// ─────────────────────────────────────────────────────────────────
-// Styles
-// ─────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  center:    { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: Colors.background },
-  content:   { paddingTop: 24, paddingHorizontal: Spacing.screen, paddingBottom: Spacing.xxl },
-
-  headerCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: Spacing.radiusLarge,
-    padding: Spacing.cardPadding,
-    alignItems: "center",
-    marginBottom: Spacing.md,
-    borderWidth: 1, borderColor: Colors.border,
-  },
-  avatarCircle: {
-    width: 86, height: 86, borderRadius: 43,
-    backgroundColor: Colors.primary,
-    justifyContent: "center", alignItems: "center",
-    marginBottom: 12, position: "relative",
-    elevation: 4,
-    shadowColor: Colors.primary, shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 4 },
-  },
-  avatarImage:     { width: 86, height: 86, borderRadius: 43 },
-  cameraIconBadge: {
-    position: "absolute", bottom: 0, right: 0,
-    backgroundColor: Colors.surface, width: 26, height: 26,
-    borderRadius: 13, justifyContent: "center", alignItems: "center",
-    borderWidth: 1, borderColor: Colors.border,
-  },
-  avatarText: { color: "#FFF", fontSize: 32, fontWeight: "800" },
-  username:   { ...Typography.h2, color: Colors.text, marginBottom: 2 },
-  email:      { ...Typography.bodySmall, color: Colors.textSecondary, marginBottom: 6 },
-  chipRow:    { flexDirection: "row", gap: 8, marginTop: 4 },
-  levelChip:  { backgroundColor: Colors.primary + "22", paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
-  levelChipText: { color: Colors.primary, fontWeight: "700", fontSize: 12 },
-  rankBadge:  { backgroundColor: Colors.background, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20, borderWidth: 1, borderColor: Colors.border },
-  rankBadgeText: { color: Colors.text, fontWeight: "600", fontSize: 12 },
-  bioText:    { ...Typography.bodySmall, color: Colors.textMuted, marginTop: 10, textAlign: "center" },
-
-  statsCard:     { backgroundColor: Colors.surface, borderRadius: Spacing.radiusLarge, padding: Spacing.cardPadding, marginBottom: Spacing.md, borderWidth: 1, borderColor: Colors.border },
-  sectionHeader: { ...Typography.labelLarge, color: Colors.text, marginBottom: 12 },
-  statsRow:      { flexDirection: "row", justifyContent: "space-between" },
-  statBox:       { flex: 1, alignItems: "center", backgroundColor: Colors.background, paddingVertical: 10, marginHorizontal: 3, borderRadius: Spacing.radiusMedium },
-  statVal:       { fontSize: 17, fontWeight: "800", color: Colors.primary },
-  statLabel:     { fontSize: 10, color: Colors.textSecondary, marginTop: 3 },
-
-  badgesCard:  { backgroundColor: Colors.surface, borderRadius: Spacing.radiusLarge, padding: Spacing.cardPadding, marginBottom: Spacing.md, borderWidth: 1, borderColor: Colors.border },
-  badgesGrid:  { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  badgeChip:   { backgroundColor: Colors.primary + "18", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: Colors.primary + "33" },
-  badgeChipText: { color: Colors.primary, fontWeight: "700", fontSize: 12 },
-  badgeDate:   { color: Colors.textMuted, fontSize: 10, marginTop: 2 },
-
-  noBadgesCard: { backgroundColor: Colors.surface, borderRadius: Spacing.radiusLarge, padding: 20, marginBottom: Spacing.md, alignItems: "center", borderWidth: 1, borderColor: Colors.border },
-  noBadgesIcon: { fontSize: 40, marginBottom: 8 },
-  noBadgesTitle:{ fontWeight: "700", color: Colors.text, fontSize: 15, marginBottom: 6 },
-  noBadgesText: { color: Colors.textSecondary, fontSize: 12, textAlign: "center", lineHeight: 18, marginBottom: 12 },
-  noBadgesBtn:  { backgroundColor: Colors.primary, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8 },
-  noBadgesBtnText: { color: "#FFF", fontWeight: "700", fontSize: 13 },
-
-  actionsCard: { backgroundColor: Colors.surface, borderRadius: Spacing.radiusLarge, padding: Spacing.cardPadding, borderWidth: 1, borderColor: Colors.border },
-  actionBtn:   { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  actionBtnText: { ...Typography.bodyMedium, color: Colors.text, fontWeight: "600" },
-  arrow:       { color: Colors.textMuted, fontSize: 20, fontWeight: "700" },
-});
