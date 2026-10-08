@@ -19,6 +19,11 @@
  *  • Claim any fixed rupee amount per view
  *  • Credit any local balance
  *  • Perform any revenue accounting
+ *
+ * NOTE: react-native-google-mobile-ads is loaded lazily via require() inside
+ * loadAd() — never at module level — so the app does not crash with
+ * "TurboModule RNGoogleMobileAdsModule could not be found" when the native
+ * binary does not include the SDK (e.g. Expo Go or a misconfigured build).
  */
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -35,11 +40,6 @@ import Constants, { ExecutionEnvironment } from "expo-constants";
 import { submitAdRevenueEvent, SdkPaidEvent } from "../services/adRewardService";
 import { AD_UNITS } from "../config/adUnits";
 import Colors from "../theme/colors";
-import {
-  RewardedInterstitialAd,
-  RewardedAdEventType,
-  AdEventType,
-} from "react-native-google-mobile-ads";
 
 const IS_EXPO_GO =
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
@@ -65,6 +65,21 @@ export default function WatchVideoAdButton({ onRewarded, style, compact = false 
 
   const loadAd = useCallback(() => {
     if (IS_EXPO_GO || !mountedRef.current) return;
+
+    // Lazy require — never imported at module level so the TurboModule
+    // registration error cannot fire during bundle initialisation.
+    let RewardedInterstitialAd: any;
+    let RewardedAdEventType: any;
+    let AdEventType: any;
+    try {
+      const sdk          = require("react-native-google-mobile-ads");
+      RewardedInterstitialAd = sdk.RewardedInterstitialAd;
+      RewardedAdEventType    = sdk.RewardedAdEventType;
+      AdEventType            = sdk.AdEventType;
+    } catch {
+      if (mountedRef.current) setAdState("error");
+      return;
+    }
 
     if (!RewardedInterstitialAd || !RewardedAdEventType || !AdEventType) {
       if (mountedRef.current) setAdState("error");

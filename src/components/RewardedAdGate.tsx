@@ -4,20 +4,22 @@
  * Button that shows a REWARDED INTERSTITIAL video ad for free users
  * before executing an action (e.g. retake quiz, retry lab).
  *
- * Ad unit: "Quiz Retake Reward" — ca-app-pub-4705207925908028/4722420545
- *
- * RewardedInterstitialAd plays automatically (no explicit "Watch" click
- * required from user). Reward is earned after the ad completes.
- *
  * Premium users get the action directly — no ad shown.
  *
- * Usage:
- *   <RewardedAdGate
- *     isPremium={user?.isPremium}
- *     label="Retake Quiz"
- *     icon="↻"
- *     onReward={handleRetake}
- *   />
+ * NOTE: react-native-google-mobile-ads is loaded lazily via require() inside
+ * loadAd() — never at module level — so the app does not crash with
+ * "TurboModule RNGoogleMobileAdsModule could not be found" when the native
+ * binary does not include the SDK (e.g. Expo Go or a misconfigured build).
+ *
+ * Event type rules for RewardedInterstitialAd:
+ *   LOADED        → RewardedAdEventType.LOADED        ('rewarded_loaded')
+ *   EARNED_REWARD → RewardedAdEventType.EARNED_REWARD ('rewarded_earned_reward')
+ *   ERROR         → AdEventType.ERROR                 ('error')
+ *   CLOSED        → AdEventType.CLOSED                ('closed')
+ *   PAID          → AdEventType.PAID                  ('paid')
+ *
+ * Using AdEventType.LOADED on a RewardedInterstitialAd throws at runtime —
+ * the SDK explicitly rejects it.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -28,11 +30,6 @@ import {
 import Constants, { ExecutionEnvironment } from "expo-constants";
 import Colors from "../theme/colors";
 import { AD_UNITS, isAdUnitReady } from "../config/adUnits";
-import {
-  RewardedInterstitialAd,
-  RewardedAdEventType,
-  AdEventType,
-} from "react-native-google-mobile-ads";
 
 const IS_EXPO_GO =
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
@@ -57,6 +54,21 @@ export default function RewardedAdGate({
     if (IS_EXPO_GO || isPremium) return;
     if (!isAdUnitReady(AD_UNITS.REWARDED)) return;
 
+    // Lazy require — never imported at module level so the TurboModule
+    // registration error cannot fire during bundle initialisation.
+    let RewardedInterstitialAd: any;
+    let RewardedAdEventType: any;
+    let AdEventType: any;
+    try {
+      const sdk          = require("react-native-google-mobile-ads");
+      RewardedInterstitialAd = sdk.RewardedInterstitialAd;
+      RewardedAdEventType    = sdk.RewardedAdEventType;
+      AdEventType            = sdk.AdEventType;
+    } catch {
+      // Native module not available — allow action without ad
+      return;
+    }
+
     if (!RewardedInterstitialAd || !RewardedAdEventType || !AdEventType) {
       console.warn("[RewardedAdGate] AdMob SDK not available");
       return;
@@ -68,24 +80,24 @@ export default function RewardedAdGate({
       requestNonPersonalizedAdsOnly: false,
     });
 
-    // LOADED — RewardedAdEventType (not AdEventType.LOADED — SDK throws on that)
+    // LOADED — must use RewardedAdEventType (SDK throws if you use AdEventType.LOADED)
     ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
       adRef.current = ad;
       setLoading(false);
     });
 
-    // EARNED_REWARD — user completed the ad
+    // EARNED_REWARD — user completed the ad (engagement reward)
     ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
       onReward();
     });
 
-    // ERROR — AdEventType (RewardedAdEventType has no ERROR)
+    // ERROR — AdEventType (RewardedAdEventType has no ERROR value)
     ad.addAdEventListener(AdEventType.ERROR, () => {
       adRef.current = null;
       setLoading(false);
     });
 
-    // CLOSED — AdEventType (RewardedAdEventType has no CLOSED)
+    // CLOSED — AdEventType (RewardedAdEventType has no CLOSED value)
     ad.addAdEventListener(AdEventType.CLOSED, () => {
       adRef.current = null;
       loadAd();
@@ -109,7 +121,7 @@ export default function RewardedAdGate({
       Alert.alert(
         "Video Ad Not Ready",
         "The video ad is still loading. You can proceed for free this time.",
-        [{ text: "Continue", onPress: onReward }]
+        [{ text: "Continue", onPress: onReward }],
       );
       return;
     }
@@ -137,7 +149,6 @@ export default function RewardedAdGate({
         <>
           {icon ? <Text style={[s.icon, textStyle]}>{icon}</Text> : null}
           <Text style={[s.label, textStyle]}>{label}</Text>
-          {/* Show video-ad hint badge only for free users in real builds */}
           {!isPremium && !IS_EXPO_GO && unitReady && (
             <View style={s.hint}>
               <Text style={s.hintText}>📺 Watch Video</Text>

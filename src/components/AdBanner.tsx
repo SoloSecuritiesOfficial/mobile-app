@@ -35,17 +35,19 @@ const IS_EXPO_GO =
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
 // ─── Resolve SDK once at module load ─────────────────────────────────────────
+// The try/catch handles two cases:
+//  1. Running in Expo Go — native module not included in the Go binary
+//  2. Running in a dev build where the native module failed to link
+// In either case BannerAd/BannerAdSize stay null and the component renders nothing.
 let BannerAd: any     = null;
 let BannerAdSize: any = null;
 
-if (!IS_EXPO_GO) {
-  try {
-    const ads = require("react-native-google-mobile-ads");
-    BannerAd     = ads.BannerAd     ?? null;
-    BannerAdSize = ads.BannerAdSize ?? null;
-  } catch {
-    // Native module not linked — component renders nothing.
-  }
+try {
+  const ads = require("react-native-google-mobile-ads");
+  BannerAd     = ads.BannerAd     ?? null;
+  BannerAdSize = ads.BannerAdSize ?? null;
+} catch {
+  // Native module not available — ads silently disabled.
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -155,6 +155,15 @@ export const getCurrentUser = async () => {
 };
 
 export const logout = async () => {
+  // Unregister FCM push token BEFORE clearing storage so we can still
+  // read the token from SecureStore inside unregisterPushToken().
+  // Fire-and-forget — a failed unregister never blocks sign-out.
+  try {
+    const { unregisterPushToken } = await import("../utils/pushNotifications");
+    await unregisterPushToken();
+  } catch {
+    /* non-fatal */
+  }
   await clearStorage();
 };
 

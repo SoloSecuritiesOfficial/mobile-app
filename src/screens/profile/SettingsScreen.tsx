@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
@@ -15,6 +16,24 @@ import { useTheme } from "../../context/ThemeContext";
 import AdBanner from "../../components/AdBanner";
 import { showInterstitialAd } from "../../components/InterstitialAd";
 import { getCurrentUser } from "../../services/authService";
+
+const SETTINGS_KEY = "solosec_app_settings";
+
+async function loadSettings(): Promise<{ notifications: boolean; biometrics: boolean; autoScan: boolean }> {
+  try {
+    const raw = await AsyncStorage.getItem(SETTINGS_KEY);
+    if (!raw) return { notifications: true, biometrics: false, autoScan: true };
+    return JSON.parse(raw);
+  } catch {
+    return { notifications: true, biometrics: false, autoScan: true };
+  }
+}
+
+async function saveSettings(settings: { notifications: boolean; biometrics: boolean; autoScan: boolean }) {
+  try {
+    await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  } catch { /* non-fatal */ }
+}
 
 export default function SettingsScreen() {
   const { isDarkMode, toggleTheme, colors } = useTheme();
@@ -27,7 +46,20 @@ export default function SettingsScreen() {
     getCurrentUser()
       .then(user => setIsPremium(!!(user as any)?.isPremium))
       .catch(() => {});
+    loadSettings().then(s => {
+      setNotifications(s.notifications);
+      setBiometrics(s.biometrics);
+      setAutoScan(s.autoScan);
+    });
   }, []);
+
+  const updateSetting = (key: "notifications" | "biometrics" | "autoScan", value: boolean) => {
+    const next = { notifications, biometrics, autoScan, [key]: value };
+    if (key === "notifications") setNotifications(value);
+    if (key === "biometrics")    setBiometrics(value);
+    if (key === "autoScan")      setAutoScan(value);
+    saveSettings(next);
+  };
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.content}>
@@ -41,17 +73,17 @@ export default function SettingsScreen() {
 
         <View style={[styles.row, { borderBottomColor: colors.border }]}>
           <Text style={[styles.rowLabel, { color: colors.text }]}>Push Notifications (CVEs & Alert)</Text>
-          <Switch value={notifications} onValueChange={setNotifications} />
+          <Switch value={notifications} onValueChange={v => updateSetting("notifications", v)} />
         </View>
 
         <View style={[styles.row, { borderBottomColor: colors.border }]}>
           <Text style={[styles.rowLabel, { color: colors.text }]}>Biometric App Lock (Fingerprint/FaceID)</Text>
-          <Switch value={biometrics} onValueChange={setBiometrics} />
+          <Switch value={biometrics} onValueChange={v => updateSetting("biometrics", v)} />
         </View>
 
         <View style={[styles.row, { borderBottomColor: colors.border }]}>
           <Text style={[styles.rowLabel, { color: colors.text }]}>Automatic Background Domain Audit</Text>
-          <Switch value={autoScan} onValueChange={setAutoScan} />
+          <Switch value={autoScan} onValueChange={v => updateSetting("autoScan", v)} />
         </View>
       </View>
 
@@ -141,7 +173,7 @@ export default function SettingsScreen() {
             );
           }}
         >
-          <Text style={styles.actionText}>📧 Contact &amp; Support</Text>
+          <Text style={styles.actionText}>📧 Contact & Support</Text>
           <Text style={styles.valueText}>↗</Text>
         </TouchableOpacity>
       </View>

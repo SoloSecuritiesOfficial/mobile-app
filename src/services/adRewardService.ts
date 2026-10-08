@@ -72,6 +72,7 @@
 
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import { AD_UNITS } from "../config/adUnits";
 
 // Lazy getter — avoids a top-level require() that would create a circular
 // dependency chain through navigationRef → AppNavigator → every screen → here.
@@ -126,15 +127,10 @@ export type AdFormat =
   | "unknown";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Production AdMob unit IDs (used by ad wrappers when calling this service)
+// Production AdMob unit IDs — imported from adUnits.ts (single source of truth)
 // ─────────────────────────────────────────────────────────────────────────────
-
-export const AD_UNIT_IDS = {
-  BANNER       : "ca-app-pub-4705207925908028/4786224093",
-  REWARDED     : "ca-app-pub-4705207925908028/4722420545",
-  INTERSTITIAL : "ca-app-pub-4705207925908028/8366152086",
-  APP_OPEN     : "ca-app-pub-4705207925908028/4468848681",
-} as const;
+// Re-export so existing callers that import AD_UNIT_IDS from this file keep working.
+export const AD_UNIT_IDS = AD_UNITS;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Payload sent to POST /api/ad-revenue/events

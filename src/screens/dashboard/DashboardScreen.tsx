@@ -25,7 +25,6 @@ import QuickActions from "../../components/QuickAction";
 import AdBanner from "../../components/AdBanner";
 import { showInterstitialAd } from "../../components/InterstitialAd";
 import RewardedAdGate from "../../components/RewardedAdGate";
-import WatchVideoAdButton from "../../components/WatchVideoAdButton";
 
 import {
   fetchCurrentUser,

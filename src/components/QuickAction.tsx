@@ -12,22 +12,22 @@ type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "Dashboard">;
 };
 
-const actions = [
-  { title: "Bug Reports",   icon: "🐞", screen: "BugReports" as const },
-  { title: "Security Scan", icon: "🛡️", screen: "SecurityScan" as const },
-  { title: "Learning",      icon: "📚", screen: "Learning" as const },
-  { title: "Quiz",          icon: "📝", screen: "Quiz" as const },
-  { title: "Labs",          icon: "🎯", screen: "Labs" as const },
-  { title: "CVE Updates",   icon: "📢", screen: "CVEUpdates" as const },
-  { title: "Certificates",  icon: "🏆", screen: "Certificates" as const },
-  { title: "Jobs",          icon: "💼", screen: "Jobs" as const },
-  { title: "Friends",       icon: "👥", screen: "Friends" as const },
-  { title: "CTF Arena",     icon: "🚩", screen: "CTF" as const },
-  { title: "Leaderboard",   icon: "🥇", screen: "Leaderboard" as const },
-  { title: "Achievements",  icon: "🏅", screen: "Achievements" as const },
-  { title: "Premium",       icon: "👑", screen: "Premium" as const },
-  { title: "Settings",      icon: "⚙️", screen: "Settings" as const },
-] as const;
+const actions: ReadonlyArray<{ title: string; icon: string; screen: keyof RootStackParamList }> = [
+  { title: "Bug Reports",   icon: "🐞", screen: "BugReports"   },
+  { title: "Security Scan", icon: "🛡️", screen: "SecurityScan" },
+  { title: "Learning",      icon: "📚", screen: "Learning"      },
+  { title: "Quiz",          icon: "📝", screen: "Quiz"          },
+  { title: "Labs",          icon: "🎯", screen: "Labs"          },
+  { title: "CVE Updates",   icon: "📢", screen: "CVEUpdates"    },
+  { title: "Certificates",  icon: "🏆", screen: "Certificates"  },
+  { title: "Jobs",          icon: "💼", screen: "Jobs"          },
+  { title: "Friends",       icon: "👥", screen: "Friends"       },
+  { title: "CTF Arena",     icon: "🚩", screen: "CTF"           },
+  { title: "Leaderboard",   icon: "🥇", screen: "Leaderboard"   },
+  { title: "Achievements",  icon: "🏅", screen: "Achievements"  },
+  { title: "Tools",         icon: "🛠️", screen: "Tools"         },
+  { title: "Settings",      icon: "⚙️", screen: "Settings"      },
+];
 
 export default function QuickActions({ navigation }: Props) {
   return (
@@ -43,7 +43,6 @@ export default function QuickActions({ navigation }: Props) {
             onPress={() => navigation.navigate(item.screen)}
           >
             <Text style={styles.icon}>{item.icon}</Text>
-
             <Text style={styles.title}>{item.title}</Text>
           </TouchableOpacity>
         ))}
@@ -59,42 +58,26 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
     marginTop: Spacing.lg,
   },
-
   container: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
     marginBottom: Spacing.xxl,
   },
-
   card: {
     width: "48%",
     backgroundColor: Colors.surface,
     borderRadius: Spacing.radiusLarge,
     padding: Spacing.cardPadding,
     marginBottom: Spacing.md,
-
     borderWidth: 1,
     borderColor: "#F2F2F2",
-
     shadowColor: "#000",
     shadowOpacity: 0.06,
     shadowRadius: 8,
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-
+    shadowOffset: { width: 0, height: 3 },
     elevation: 3,
   },
-
-  icon: {
-    fontSize: 30,
-    marginBottom: 12,
-  },
-
-  title: {
-    ...Typography.labelMedium,
-    color: Colors.text,
-  },
+  icon:  { fontSize: 30, marginBottom: 12 },
+  title: { ...Typography.labelMedium, color: Colors.text },
 });

@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View, Text, StyleSheet, ActivityIndicator, ScrollView,
-  TouchableOpacity, Image, Animated,
+  TouchableOpacity, Image, Animated, Alert,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -232,9 +232,22 @@ export default function ProfileScreen({ navigation }: any) {
   };
 
   // ── Logout ──────────────────────────────────────────────────────
-  const handleLogout = async () => {
-    await logout();
-    navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+  const handleLogout = () => {
+    Alert.alert(
+      "Sign Out",
+      "Are you sure you want to sign out?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Sign Out",
+          style: "destructive",
+          onPress: async () => {
+            await logout();
+            navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+          },
+        },
+      ],
+    );
   };
 
   // ── Loading state ───────────────────────────────────────────────

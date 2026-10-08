@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
-  Clipboard,
   Dimensions,
   Linking,
   Modal,
@@ -578,18 +577,11 @@ export default function PremiumScreen() {
   };
 
   const copyUPI = async () => {
+    // Clipboard was removed from React Native core — use Share as fallback
     try {
-      Clipboard.setString(UPI_ID);
-
-      Alert.alert(
-        "Copied",
-        `${UPI_ID} copied to clipboard.`
-      );
+      await Share.share({ message: UPI_ID });
     } catch {
-      Alert.alert(
-        "UPI ID",
-        UPI_ID
-      );
+      Alert.alert("UPI ID", UPI_ID);
     }
   };
 
