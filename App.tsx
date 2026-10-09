@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { AppState, AppStateStatus } from "react-native";
 import Constants from "expo-constants";
 import * as SplashScreen from "expo-splash-screen";
@@ -31,7 +31,6 @@ const IS_EXPO_GO = Constants.appOwnership === "expo";
 
 export default function App() {
   const appState = useRef(AppState.currentState);
-  const [adsInitialized, setAdsInitialized] = useState(false);
 
   useEffect(() => {
     // Hide splash screen
@@ -61,11 +60,8 @@ export default function App() {
       }
 
       // ── Step 2: Preload overlay ads AFTER SDK is initialized ─────────────
-      // These must come after initialize() — making ad requests before
-      // initialization is what was causing the native crash on every screen.
       preloadInterstitialAd();
       initAppOpenAd(false);
-      setAdsInitialized(true);
 
       // ── Step 3: Push notification setup ──────────────────────────────────
       const loggedIn = await isLoggedIn();
@@ -131,10 +127,6 @@ export default function App() {
       appStateSub.remove();
     };
   }, []);
-
-  if (!adsInitialized) {
-    return null;
-  }
 
   return (
     <ThemeProvider>
