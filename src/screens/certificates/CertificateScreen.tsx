@@ -53,17 +53,19 @@ export default function CertificateScreen({ navigation }: Props) {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [showGuide, setShowGuide]     = useState(false);
   const [isPremium, setIsPremium]     = useState(false);
+  const [error, setError]             = useState<string | null>(null);
 
   const loadCertificates = useCallback(async () => {
     try {
+      setError(null);
       const [res, user] = await Promise.all([
         getCertificates(),
         getCurrentUser(),
       ]);
       setIsPremium(!!(user as any)?.isPremium);
       setCertificates(res.data || res || []);
-    } catch (err) {
-      console.log("Certificates Error:", err);
+    } catch (err: any) {
+      setError(err?.message ?? "Failed to load certificates. Please try again.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -76,6 +78,26 @@ export default function CertificateScreen({ navigation }: Props) {
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color={Colors.primary} />
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.center}>
+        <Text style={{ fontSize: 44, marginBottom: 12 }}>⚠️</Text>
+        <Text style={{ fontWeight: "700", fontSize: 18, color: Colors.text, marginBottom: 8, textAlign: "center" }}>
+          Failed to Load Certificates
+        </Text>
+        <Text style={{ color: Colors.textSecondary, textAlign: "center", marginBottom: 20, paddingHorizontal: 32 }}>
+          {error}
+        </Text>
+        <TouchableOpacity
+          style={{ backgroundColor: Colors.primary, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 12 }}
+          onPress={() => { setLoading(true); loadCertificates(); }}
+        >
+          <Text style={{ color: "#FFF", fontWeight: "700", fontSize: 15 }}>Try Again</Text>
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }

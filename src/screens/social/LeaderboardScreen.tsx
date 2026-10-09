@@ -45,9 +45,11 @@ export default function LeaderboardScreen() {
   const [data, setData] = useState<LeaderboardEntry[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isPremium, setIsPremium] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
+      setError(null);
       const [res, user] = await Promise.all([
         api.get(`/gamification/leaderboard?type=${tab}&limit=50`),
         getCurrentUser(),
@@ -55,8 +57,8 @@ export default function LeaderboardScreen() {
       setData(res.data?.data ?? []);
       setCurrentUserId(user?._id ?? null);
       setIsPremium(!!(user as any)?.isPremium);
-    } catch (err) {
-      console.log("Leaderboard error:", err);
+    } catch (err: any) {
+      setError(err?.message ?? "Failed to load leaderboard.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -80,6 +82,26 @@ export default function LeaderboardScreen() {
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color={Colors.primary} />
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.center}>
+        <Text style={{ fontSize: 44, marginBottom: 12 }}>⚠️</Text>
+        <Text style={{ fontWeight: "700", fontSize: 18, color: Colors.text, marginBottom: 8 }}>
+          Failed to Load Leaderboard
+        </Text>
+        <Text style={{ color: Colors.textSecondary, textAlign: "center", marginBottom: 20, paddingHorizontal: 32 }}>
+          {error}
+        </Text>
+        <TouchableOpacity
+          style={{ backgroundColor: Colors.primary, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 12 }}
+          onPress={() => { setLoading(true); load(); }}
+        >
+          <Text style={{ color: "#FFF", fontWeight: "700", fontSize: 15 }}>Try Again</Text>
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }

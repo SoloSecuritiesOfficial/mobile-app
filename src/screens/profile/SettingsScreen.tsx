@@ -7,6 +7,7 @@ import {
   Switch,
   TouchableOpacity,
   Alert,
+  Linking,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Colors from "../../theme/colors";
@@ -114,14 +115,21 @@ export default function SettingsScreen() {
             "SoloSecurities collects minimal data required to operate:\n\n" +
             "• Email & username for account creation\n" +
             "• Learning progress & quiz scores\n" +
-            "• Device FCM token for push notifications\n\n" +
+            "• Device FCM token for push notifications\n" +
+            "• AdMob advertising ID for personalized ads (optional)\n\n" +
+            "Data sharing:\n" +
+            "• Firebase (Google) — push notification tokens, crash analytics\n" +
+            "• AdMob (Google) — advertising ID, ad interactions, estimated revenue\n" +
+            "• Render — API request logs (IP, user agent) for security\n" +
+            "• MongoDB Atlas — encrypted database storage\n\n" +
             "We DO NOT:\n" +
-            "• Sell your data to third parties\n" +
-            "• Store passwords in plain text\n" +
+            "• Sell your personal data to third parties\n" +
+            "• Store passwords in plain text (bcrypt hashed)\n" +
             "• Access device contacts, camera, or location\n\n" +
             "All data is encrypted in transit via HTTPS/TLS.\n" +
-            "JWT tokens are stored securely on device.\n\n" +
-            "You can delete your account at any time from Profile > Account Actions."
+            "JWT tokens are stored securely in platform SecureStore.\n\n" +
+            "You can delete your account at any time from Profile > Account Actions.\n\n" +
+            "Full policy: https://solosecurities.app/privacy"
           )}
         >
           <Text style={styles.actionText}>🔐 Privacy Policy</Text>
@@ -151,15 +159,30 @@ export default function SettingsScreen() {
             "Data collected:\n" +
             "• Account info (email, username) — required\n" +
             "• App activity (progress, scores) — required\n" +
-            "• Device token (push notifications) — optional\n\n" +
+            "• Device token (push notifications) — optional\n" +
+            "• Advertising ID (AdMob) — optional, for personalized ads\n\n" +
+            "Data shared with:\n" +
+            "• Google Firebase — push tokens, analytics\n" +
+            "• Google AdMob — ad ID, ad interactions, revenue estimates\n" +
+            "• Render (hosting) — request logs (IP, user agent)\n" +
+            "• MongoDB Atlas — encrypted database\n\n" +
             "Data NOT collected:\n" +
             "• Location, contacts, camera, microphone\n" +
             "• Financial information\n" +
             "• Browsing history\n\n" +
-            "Data is encrypted and never shared with advertisers."
+            "Data is encrypted in transit and at rest.\n" +
+            "You can opt out of personalized ads in device settings."
           )}
         >
           <Text style={styles.actionText}>🛡️ Data Safety (Play Store)</Text>
+          <Text style={styles.valueText}>↗</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionRow}
+          onPress={() => Linking.openURL("https://solosecurities.app/privacy")}
+        >
+          <Text style={styles.actionText}>🌐 View Full Privacy Policy Online</Text>
           <Text style={styles.valueText}>↗</Text>
         </TouchableOpacity>
 

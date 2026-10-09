@@ -333,6 +333,7 @@ export default function JobsScreen({ navigation }: Props) {
   const [page,       setPage]       = useState(1);
   const [hasMore,    setHasMore]    = useState(true);
   const [loadingMore,setLoadingMore]= useState(false);
+  const [error,      setError]      = useState<string | null>(null);
 
   const [search,         setSearch]         = useState("");
   const [locationType,   setLocationType]   = useState<string>("");
@@ -345,7 +346,7 @@ export default function JobsScreen({ navigation }: Props) {
   const activeFilterCount = [locationType, experienceLevel, jobType].filter(Boolean).length;
 
   const load = useCallback(async (reset = true) => {
-    if (reset) { setLoading(true); setPage(1); }
+    if (reset) { setLoading(true); setPage(1); setError(null); }
     try {
       const p = reset ? 1 : page + 1;
       const res = await getJobs({
@@ -365,8 +366,8 @@ export default function JobsScreen({ navigation }: Props) {
       }
       setTotal(res?.total ?? 0);
       setHasMore(data.length === LIMIT);
-    } catch (e) {
-      console.log("Jobs load error:", e);
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to load jobs. Please try again.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -497,6 +498,22 @@ export default function JobsScreen({ navigation }: Props) {
         <View style={styles.loader}>
           <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loaderText}>Finding jobs…</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.loader}>
+          <Text style={{ fontSize: 44, marginBottom: 12 }}>⚠️</Text>
+          <Text style={{ fontWeight: "700", fontSize: 18, color: Colors.text, marginBottom: 8, textAlign: "center" }}>
+            Failed to Load Jobs
+          </Text>
+          <Text style={{ color: Colors.textSecondary, textAlign: "center", marginBottom: 20, paddingHorizontal: 32 }}>
+            {error}
+          </Text>
+          <TouchableOpacity
+            style={{ backgroundColor: Colors.primary, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 12 }}
+            onPress={() => load(true)}
+          >
+            <Text style={{ color: "#FFF", fontWeight: "700", fontSize: 15 }}>Try Again</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList

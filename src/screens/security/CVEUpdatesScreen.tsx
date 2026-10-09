@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   StyleSheet,
   Text,
@@ -12,6 +12,7 @@ import {
   Share,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { getCVEUpdates } from "../../services/securityService";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
@@ -26,28 +27,30 @@ export default function CVEUpdatesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isPremium, setIsPremium] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchCVEs = useCallback(async (silent = false) => {
+    try {
+      if (!silent) setLoading(true);
+      setError(null);
+      const res = await getCVEUpdates();
+      if (res.success && res.data) {
+        setCves(res.data);
+      }
+    } catch (err: any) {
+      setError(err?.message ?? "Failed to load CVE advisories. Please try again.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchCVEs();
     import("../../services/authService").then(m =>
       m.getCurrentUser().then(u => setIsPremium(!!(u as any)?.isPremium)).catch(() => {})
     );
-  }, []);
-
-  const fetchCVEs = async () => {
-    try {
-      setLoading(true);
-      const res = await getCVEUpdates();
-      if (res.success && res.data) {
-        setCves(res.data);
-      }
-    } catch (err) {
-      console.log("Error fetching CVEs:", err);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  }, [fetchCVEs]);
 
   const handleShareCVE = async (item: any) => {
     const cveCode = item.cveId || item.id;
@@ -136,7 +139,8 @@ export default function CVEUpdatesScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
       <View style={styles.headerRow}>
         <View>
           <Text style={styles.headerTitle}>CVE Vulnerability Feed 📢</Text>
@@ -156,6 +160,15 @@ export default function CVEUpdatesScreen() {
 
       {loading ? (
         <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
+      ) : error ? (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorIcon}>⚠️</Text>
+          <Text style={styles.errorTitle}>Failed to Load CVEs</Text>
+          <Text style={styles.errorMessage}>{error}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => fetchCVEs()}>
+            <Text style={styles.retryText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <FlatList
           data={filteredCVEs}
@@ -177,27 +190,34 @@ export default function CVEUpdatesScreen() {
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => {
-                setRefreshing(true);
-                fetchCVEs();
-              }}
+              onRefresh={() => { setRefreshing(true); fetchCVEs(true); }}
               tintColor={Colors.primary}
             />
           }
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No CVE advisories found.</Text>
+            <View style={styles.emptyBox}>
+              <Text style={styles.emptyIcon}>🔐</Text>
+              <Text style={styles.emptyTitle}>No CVE Advisories Found</Text>
+              <Text style={styles.emptyText}>
+                {searchQuery
+                  ? "No results match your search. Try a different keyword."
+                  : "No vulnerability advisories available yet. Check back soon."}
+              </Text>
+            </View>
           }
         />
       )}
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea:  { flex: 1, backgroundColor: Colors.background },
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-    paddingTop: 50,
+    paddingTop: 16,
     paddingHorizontal: Spacing.screen,
   },
   headerRow: {
@@ -320,9 +340,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 13,
   },
-  emptyText: {
-    textAlign: "center",
-    color: Colors.textMuted,
-    marginTop: 30,
-  },
+  emptyBox:    { alignItems: "center", paddingTop: 60, paddingHorizontal: 24 },
+  emptyIcon:   { fontSize: 52, marginBottom: 12 },
+  emptyTitle:  { fontSize: 18, fontWeight: "700", color: Colors.text, marginBottom: 8, textAlign: "center" },
+  emptyText:   { fontSize: 14, color: Colors.textSecondary, textAlign: "center", lineHeight: 20 },
+  errorBox:    { alignItems: "center", paddingTop: 60, paddingHorizontal: 24 },
+  errorIcon:   { fontSize: 48, marginBottom: 12 },
+  errorTitle:  { fontSize: 18, fontWeight: "700", color: Colors.text, marginBottom: 8, textAlign: "center" },
+  errorMessage:{ fontSize: 14, color: Colors.textSecondary, textAlign: "center", lineHeight: 20, marginBottom: 20 },
+  retryBtn:    { backgroundColor: Colors.primary, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 12 },
+  retryText:   { color: "#FFF", fontWeight: "700", fontSize: 15 },
 });

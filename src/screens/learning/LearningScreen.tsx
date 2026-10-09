@@ -404,10 +404,18 @@ export default function LearningScreen({
           }).length === 0 ? (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyTitle}>
-                {activeTab === "completed" ? "No Completed Modules Yet" : activeTab === "remaining" ? "All Modules Completed! 🎉" : "No Learning Modules"}
+                {activeTab === "completed"
+                  ? "No Completed Modules Yet"
+                  : activeTab === "remaining"
+                  ? "All Modules Completed! 🎉"
+                  : "No Learning Modules Available"}
               </Text>
               <Text style={styles.emptyText}>
-                {activeTab === "completed" ? "Select a module and tap 'Mark as Completed' to track your progress." : "Check back later for newly added security lessons."}
+                {activeTab === "completed"
+                  ? "Select a module and tap 'Mark as Completed' to track your progress."
+                  : activeTab === "remaining"
+                  ? "Great work! You have completed all available modules."
+                  : "Learning modules are being added. Pull down to refresh."}
               </Text>
             </View>
           ) : (

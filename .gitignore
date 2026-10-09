@@ -29,3 +29,17 @@ Thumbs.db
 # Temporary
 *.tmp
 *.temp
+
+# ── Secrets that must NEVER be committed ─────────────────────────
+# Firebase config files (contain API keys and OAuth client IDs)
+google-services.json
+GoogleService-Info.plist
+
+# Release keystores (contain signing private keys)
+*.keystore
+*.jks
+!android/app/debug.keystore
+
+# Local env overrides
+.env.local
+.env.production

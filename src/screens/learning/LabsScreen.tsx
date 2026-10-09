@@ -65,10 +65,12 @@ export default function LabsScreen(){
   const [loading,setLoading] = useState(true);
   const [completing,setCompleting] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadLabs = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const [labsResponse, progressResponse, user] = await Promise.all([
         getLabs(),
         getLabProgress(),
@@ -91,8 +93,8 @@ export default function LabsScreen(){
 
       setLabs(updatedLabs);
       setProgress(progressData);
-    } catch (error) {
-      console.log("Labs Fetch Error:", error);
+    } catch (error: any) {
+      setError(error?.message ?? "Failed to load labs. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -182,6 +184,26 @@ color={Colors.primary}
 
 );
 
+}
+
+if (error) {
+  return (
+    <View style={styles.loader}>
+      <Text style={{ fontSize: 44, marginBottom: 12 }}>⚠️</Text>
+      <Text style={{ fontWeight: "700", fontSize: 18, color: Colors.text, marginBottom: 8, textAlign: "center" }}>
+        Failed to Load Labs
+      </Text>
+      <Text style={{ color: Colors.textSecondary, textAlign: "center", marginBottom: 20, paddingHorizontal: 32 }}>
+        {error}
+      </Text>
+      <TouchableOpacity
+        style={{ backgroundColor: Colors.primary, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 12 }}
+        onPress={() => loadLabs()}
+      >
+        <Text style={{ color: "#FFF", fontWeight: "700", fontSize: 15 }}>Try Again</Text>
+      </TouchableOpacity>
+    </View>
+  );
 }
 
 
@@ -367,6 +389,30 @@ Steps
 <AdBanner isPremium={isPremium} marginVertical={8} />
 </View>
 ) : (
+  <>
+    {labs.filter(lab => {
+      if (activeTab === "completed") return lab.completed;
+      if (activeTab === "available") return !lab.completed;
+      return true;
+    }).length === 0 ? (
+      <View style={{ alignItems: "center", paddingTop: 60, paddingHorizontal: 24 }}>
+        <Text style={{ fontSize: 48, marginBottom: 12 }}>🎯</Text>
+        <Text style={{ fontWeight: "700", fontSize: 18, color: Colors.text, marginBottom: 8, textAlign: "center" }}>
+          {activeTab === "completed"
+            ? "No Completed Labs Yet"
+            : activeTab === "available"
+            ? "All Labs Completed! 🎉"
+            : "No Labs Available"}
+        </Text>
+        <Text style={{ color: Colors.textSecondary, textAlign: "center", lineHeight: 20 }}>
+          {activeTab === "completed"
+            ? "Open a lab, follow the steps, and tap Complete Lab to track progress."
+            : activeTab === "available"
+            ? "Great work! You have completed all available labs."
+            : "Labs are being added. Pull down to refresh."}
+        </Text>
+      </View>
+    ) : (
   labs
     .filter(lab => {
       if (activeTab === "completed") return lab.completed;
@@ -416,6 +462,8 @@ Steps
         </Text>
       </TouchableOpacity>
     ))
+    )}
+  </>
 )}
 <AdBanner isPremium={isPremium} marginVertical={10} />
 </ScrollView>

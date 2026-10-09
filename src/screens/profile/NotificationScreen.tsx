@@ -68,6 +68,7 @@ export default function NotificationScreen() {
   const [refreshing,    setRefreshing]    = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isPremium,     setIsPremium]     = useState(false);
+  const [error,         setError]         = useState<string | null>(null);
 
   useEffect(() => {
     getCurrentUser()
@@ -77,9 +78,12 @@ export default function NotificationScreen() {
 
   const load = useCallback(async () => {
     try {
+      setError(null);
       const res = await getNotifications();
       setNotifications(res.data || []);
-    } catch {}
+    } catch (err: any) {
+      setError(err?.message ?? "Failed to load notifications.");
+    }
     finally { setLoading(false); setRefreshing(false); }
   }, []);
 
@@ -135,6 +139,26 @@ export default function NotificationScreen() {
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color={Colors.primary} />
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.center}>
+        <Text style={{ fontSize: 44, marginBottom: 12 }}>⚠️</Text>
+        <Text style={{ fontWeight: "700", fontSize: 18, color: "#111", marginBottom: 8, textAlign: "center" }}>
+          Failed to Load Notifications
+        </Text>
+        <Text style={{ color: "#666", textAlign: "center", marginBottom: 20, paddingHorizontal: 32 }}>
+          {error}
+        </Text>
+        <TouchableOpacity
+          style={{ backgroundColor: Colors.primary, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 12 }}
+          onPress={() => { setLoading(true); load(); }}
+        >
+          <Text style={{ color: "#FFF", fontWeight: "700", fontSize: 15 }}>Try Again</Text>
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }

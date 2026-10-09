@@ -43,7 +43,8 @@ export default function ForgotPasswordScreen({
 
     setLoading(true);
     try {
-      await api.post("/auth/request-reset", { email: trimmed });
+      // Route matches backend: POST /api/auth/request-password-reset
+      await api.post("/auth/request-password-reset", { email: trimmed });
       Alert.alert(
         "Email Sent",
         "If an account exists for that email, a password reset link has been sent. Please check your inbox.",
