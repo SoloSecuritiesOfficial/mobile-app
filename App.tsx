@@ -20,19 +20,18 @@ import { initAppOpenAd } from "./src/components/AppOpenAd";
 // Keep the native splash screen visible until we explicitly hide it.
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-// ─── Create the Android notification channel at module level ─────────────────
-// Must run before React mounts so FCM messages received while the app is
-// killed are not silently dropped on Android.
-ensureAndroidChannelEarly();
-
-// ─── Whether we are running inside Expo Go ───────────────────────────────────
-// Computed once at module level so it is available synchronously in the effect.
-const IS_EXPO_GO = Constants.appOwnership === "expo";
-
 export default function App() {
   const appState = useRef(AppState.currentState);
 
   useEffect(() => {
+    // Compute IS_EXPO_GO here where Constants is guaranteed to be ready
+    const IS_EXPO_GO = Constants.appOwnership === "expo";
+
+    // Create Android notification channel early (after Constants is ready)
+    if (!IS_EXPO_GO) {
+      ensureAndroidChannelEarly();
+    }
+
     // Hide splash screen
     SplashScreen.hideAsync().catch(() => {});
 
