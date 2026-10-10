@@ -34,20 +34,22 @@ import { AD_UNITS } from "../config/adUnits";
 const IS_EXPO_GO =
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
-// ─── Resolve SDK once at module load ─────────────────────────────────────────
-// The try/catch handles two cases:
-//  1. Running in Expo Go — native module not included in the Go binary
-//  2. Running in a dev build where the native module failed to link
-// In either case BannerAd/BannerAdSize stay null and the component renders nothing.
-let BannerAd: any     = null;
-let BannerAdSize: any = null;
-
-try {
-  const ads = require("react-native-google-mobile-ads");
-  BannerAd     = ads.BannerAd     ?? null;
-  BannerAdSize = ads.BannerAdSize ?? null;
-} catch {
-  // Native module not available — ads silently disabled.
+// ─── Lazy SDK loader — called inside the component, NEVER at module level ─────
+// Resolving the SDK at module level causes a native crash on cold start because
+// the TurboModule bridge is not yet ready when the JS bundle first evaluates.
+// All other ad components (InterstitialAd, AppOpenAd, WatchVideoAdButton, etc.)
+// already use this lazy pattern — AdBanner must follow the same rule.
+function getAdSdk(): { BannerAd: any; BannerAdSize: any } {
+  if (IS_EXPO_GO) return { BannerAd: null, BannerAdSize: null };
+  try {
+    const ads = require("react-native-google-mobile-ads");
+    return {
+      BannerAd:     ads.BannerAd     ?? null,
+      BannerAdSize: ads.BannerAdSize ?? null,
+    };
+  } catch {
+    return { BannerAd: null, BannerAdSize: null };
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -68,6 +70,9 @@ export default function AdBanner({
   const [adLoaded, setAdLoaded] = useState(false);
   const [failed,   setFailed]   = useState(false);
 
+  // Resolve the SDK lazily inside the component — safe after the bridge is ready
+  const { BannerAd, BannerAdSize } = getAdSdk();
+
   // iOS: reload ad when app returns to foreground (avoids blank WKWebView)
   useEffect(() => {
     if (Platform.OS !== "ios") return;
@@ -81,6 +86,7 @@ export default function AdBanner({
 
   // All hooks above — safe to early-return now.
   if (IS_EXPO_GO)                 return null;
+  if (isPremium)                  return null;
   if (failed)                     return null;
   if (!BannerAd || !BannerAdSize) return null;
 
