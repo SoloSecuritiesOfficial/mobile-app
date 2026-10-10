@@ -59,8 +59,9 @@ export default function App() {
       }
 
       // ── Step 2: Preload overlay ads AFTER SDK is initialized ─────────────
-      preloadInterstitialAd();
-      initAppOpenAd(false);
+      // Fire-and-forget — never block the UI thread for ads
+      try { preloadInterstitialAd(); } catch { /* non-fatal */ }
+      try { initAppOpenAd(false); } catch { /* non-fatal */ }
 
       // ── Step 3: Push notification setup ──────────────────────────────────
       const loggedIn = await isLoggedIn();
