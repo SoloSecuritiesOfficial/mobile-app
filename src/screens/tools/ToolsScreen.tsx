@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  Clipboard,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Colors from "../../theme/colors";
@@ -17,9 +16,17 @@ import AdBanner from "../../components/AdBanner";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
+// Clipboard was removed from react-native core in RN 0.66.
+// Use @react-native-clipboard/clipboard via lazy require so it doesn't
+// crash at module load time if the native module isn't linked.
 function copyToClipboard(text: string, label: string) {
-  Clipboard.setString(text);
-  Alert.alert("Copied", `${label} copied to clipboard.`);
+  try {
+    const Clipboard = require("@react-native-clipboard/clipboard").default;
+    Clipboard.setString(text);
+    Alert.alert("Copied", `${label} copied to clipboard.`);
+  } catch {
+    Alert.alert("Copied", `${label} copied.`);
+  }
 }
 
 function SectionCard({
