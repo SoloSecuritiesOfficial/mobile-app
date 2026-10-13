@@ -155,15 +155,35 @@ export const getCurrentUser = async () => {
 };
 
 export const logout = async () => {
+  // H3: Revoke the refresh token on the server BEFORE clearing local storage,
+  // so the token is never valid again even if exfiltrated before this call.
+  try {
+    const storedRefreshToken = await getRefreshToken();
+    if (storedRefreshToken) {
+      // Fire-and-forget — a network failure here must never block sign-out.
+      // Use the raw axios instance to avoid the Axios interceptor retrying
+      // a logout call that has already cleared credentials.
+      const { default: axios } = await import("axios");
+      const { API_URL } = await import("../config/api");
+      await axios.post(
+        `${API_URL}/auth/logout`,
+        { refreshToken: storedRefreshToken },
+        { timeout: 5000 }
+      );
+    }
+  } catch {
+    // Non-fatal — local clear always proceeds.
+  }
+
   // Unregister FCM push token BEFORE clearing storage so we can still
   // read the token from SecureStore inside unregisterPushToken().
-  // Fire-and-forget — a failed unregister never blocks sign-out.
   try {
     const { unregisterPushToken } = await import("../utils/pushNotifications");
     await unregisterPushToken();
   } catch {
     /* non-fatal */
   }
+
   await clearStorage();
 };
 

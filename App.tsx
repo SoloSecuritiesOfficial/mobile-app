@@ -5,6 +5,7 @@ import * as SplashScreen from "expo-splash-screen";
 
 import AppNavigator from "./src/navigation/AppNavigator";
 import { ThemeProvider } from "./src/context/ThemeContext";
+import { AuthProvider } from "./src/context/AuthContext";
 import {
   configureForegroundNotifications,
   addNotificationListeners,
@@ -110,8 +111,10 @@ export default function App() {
   }, []);
 
   return (
-    <ThemeProvider>
-      <AppNavigator />
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <AppNavigator />
+      </ThemeProvider>
+    </AuthProvider>
   );
 }

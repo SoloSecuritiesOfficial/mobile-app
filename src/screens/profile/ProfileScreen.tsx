@@ -12,8 +12,9 @@ import { resolveAvatar } from "../../utils/avatar";
 
 import {
   fetchCurrentUser, getCurrentUser,
-  logout, getSubscriptionStatus,
+  getSubscriptionStatus,
 } from "../../services/authService";
+import { useAuth } from "../../context/AuthContext";
 import { pickProfileImage, uploadProfileImage } from "../../services/profileImageService";
 import { getSecurityDashboard } from "../../services/securityService";
 import AdBanner from "../../components/AdBanner";
@@ -136,6 +137,7 @@ const badge = StyleSheet.create({
 
 export default function ProfileScreen({ navigation }: any) {
   const styles = useStyles(styleFactory);
+  const { signOut } = useAuth();
 
   const [profile,   setProfile]   = useState<any>(null);
   const [dashboard, setDashboard] = useState<any>(null);
@@ -237,8 +239,8 @@ export default function ProfileScreen({ navigation }: any) {
           text: "Sign Out",
           style: "destructive",
           onPress: async () => {
-            await logout();
-            navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+            await signOut();
+            // C3: signOut() clears auth state — AppNavigator swaps to AuthStack automatically.
           },
         },
       ],

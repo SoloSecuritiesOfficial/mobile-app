@@ -1,4 +1,15 @@
-import React, { useEffect, useRef } from "react";
+/**
+ * SplashScreen.tsx
+ *
+ * Checks whether a stored access token exists, then updates the
+ * global AuthContext so AppNavigator can render the correct stack.
+ *
+ * C3: This screen no longer navigates directly to Dashboard or Login.
+ * Instead it calls signIn() or leaves the AuthStack in place —
+ * the navigator automatically transitions between stacks.
+ */
+
+import React, { useCallback, useEffect, useRef } from "react";
 import {
   Animated,
   Dimensions,
@@ -8,26 +19,17 @@ import {
   View,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
-import { RootStackParamList } from "../../navigation/types";
 import { isLoggedIn } from "../../services/authService";
-
-type Props = NativeStackScreenProps<RootStackParamList, "Splash">;
+import { useAuth } from "../../context/AuthContext";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
-export default function SplashScreen({ navigation }: Props) {
-  const fadeAnim    = useRef(new Animated.Value(0)).current;
-  const barAnim     = useRef(new Animated.Value(0)).current;
-  const didNavigate = useRef(false);
-
-  // Safe navigate — only once, never crashes
-  const goNext = (loggedIn: boolean) => {
-    if (didNavigate.current) return;
-    didNavigate.current = true;
-    navigation.replace(loggedIn ? "Dashboard" : "Login");
-  };
+export default function SplashScreen() {
+  const { signIn } = useAuth();
+  const fadeAnim   = useRef(new Animated.Value(0)).current;
+  const barAnim    = useRef(new Animated.Value(0)).current;
+  const didRun     = useRef(false);
 
   useEffect(() => {
     // Fade in the splash content
@@ -44,19 +46,27 @@ export default function SplashScreen({ navigation }: Props) {
       useNativeDriver: false,
     }).start();
 
-    // Hard timeout — if anything hangs, navigate after 3 s no matter what
-    const hardTimeout = setTimeout(() => goNext(false), 3000);
+    // Hard timeout — navigate no matter what after 3 s
+    const hardTimeout = setTimeout(() => {
+      if (!didRun.current) {
+        didRun.current = true;
+        // No stored token → stay on AuthStack (Login will render)
+      }
+    }, 3000);
 
-    // Check auth token — resolves quickly from SecureStore
     const checkAuth = async () => {
       try {
         const loggedIn = await isLoggedIn();
         clearTimeout(hardTimeout);
-        // Small delay so the bar visually finishes
-        setTimeout(() => goNext(loggedIn), 300);
+        if (loggedIn && !didRun.current) {
+          didRun.current = true;
+          // Small delay so the bar visually finishes
+          setTimeout(() => signIn(), 300);
+        }
+        // If not logged in, the AuthStack stays rendered — Login is next.
       } catch {
         clearTimeout(hardTimeout);
-        setTimeout(() => goNext(false), 300);
+        // Auth check failed — stay on AuthStack
       }
     };
 
@@ -67,7 +77,7 @@ export default function SplashScreen({ navigation }: Props) {
       clearTimeout(hardTimeout);
       clearTimeout(startTimer);
     };
-  }, []);
+  }, [signIn]);
 
   const barWidth = barAnim.interpolate({
     inputRange:  [0, 1],
@@ -80,20 +90,17 @@ export default function SplashScreen({ navigation }: Props) {
       <StatusBar style="dark" />
 
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-        {/* Logo */}
         <Image
           source={require("../../../assets/images/logo.png")}
           style={styles.logo}
           resizeMode="contain"
         />
 
-        {/* Loading bar */}
         <View style={styles.barTrack}>
           <Animated.View style={[styles.barFill, { width: barWidth }]} />
         </View>
       </Animated.View>
 
-      {/* Footer */}
       <View style={styles.footer}>
         <Text style={styles.powered}>Powered by SoloSecurities</Text>
         <Text style={styles.version}>Version 1.0.0</Text>

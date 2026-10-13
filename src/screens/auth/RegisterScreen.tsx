@@ -20,10 +20,12 @@ import { RootStackParamList } from "../../navigation/types";
 import { registerUser } from "../../services/authService";
 import { hasPushBeenAsked } from "../../utils/storage";
 import { getEmailError } from "../../utils/emailValidator";
+import { useAuth } from "../../context/AuthContext";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Register">;
 
 export default function RegisterScreen({ navigation }: Props) {
+  const { signIn } = useAuth();
   const [name,            setName]            = useState("");
   const [email,           setEmail]           = useState("");
   const [password,        setPassword]        = useState("");
@@ -33,10 +35,11 @@ export default function RegisterScreen({ navigation }: Props) {
     name: "", email: "", password: "", confirmPassword: "",
   });
 
-  // ── shared post-auth navigation ────────────────────────────────
+  // C3: signIn() triggers AuthContext to swap to AppStack — no explicit navigate needed.
   const afterAuth = async () => {
     const asked = await hasPushBeenAsked();
-    navigation.replace(asked ? "Dashboard" : "NotificationPermission");
+    if (!asked) navigation.replace("NotificationPermission");
+    else signIn();
   };
 
   const validate = () => {

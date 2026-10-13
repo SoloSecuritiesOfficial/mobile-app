@@ -176,13 +176,20 @@ api.interceptors.response.use(
       // Refresh failed — session is truly over
       processQueue(refreshError, null);
 
-      // Clear everything and send user to Login
+      // Clear storage and signal the auth context to swap to the AuthStack.
+      // We can't import the React context here (not a component), so we emit
+      // a module-level event that AuthContext listens for.
       await clearStorage();
       try {
-        const { navigateTo } = require("../navigation/navigationRef");
-        navigateTo("Login");
+        // Lazy require to avoid circular dependency — AuthContext re-exports signOut
+        const { triggerForcedSignOut } = require("../context/AuthContext");
+        triggerForcedSignOut();
       } catch {
-        // navigation not ready
+        // Fallback: direct navigation if the event bus isn't ready
+        try {
+          const { navigateTo } = require("../navigation/navigationRef");
+          navigateTo("Login");
+        } catch { /* navigation not ready */ }
       }
 
       return Promise.reject(createAppError(refreshError));

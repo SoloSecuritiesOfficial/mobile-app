@@ -19,19 +19,21 @@ import { showInterstitialAd } from "../../components/InterstitialAd";
 import { RootStackParamList } from "../../navigation/types";
 import { loginUser } from "../../services/authService";
 import { hasPushBeenAsked } from "../../utils/storage";
+import { useAuth } from "../../context/AuthContext";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
 export default function LoginScreen({ navigation }: Props) {
+  const { signIn } = useAuth();
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
   const [loading,  setLoading]  = useState(false);
   const [errors,   setErrors]   = useState({ email: "", password: "" });
-
-  // ── shared post-auth navigation ────────────────────────────────
+  // C3: signIn() triggers AuthContext to swap to AppStack — no explicit navigate needed.
   const afterAuth = async () => {
     const asked = await hasPushBeenAsked();
-    navigation.replace(asked ? "Dashboard" : "NotificationPermission");
+    if (!asked) navigation.replace("NotificationPermission");
+    else signIn();
   };
 
   const validate = () => {

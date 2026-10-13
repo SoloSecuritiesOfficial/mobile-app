@@ -21,7 +21,8 @@ import Spacing from "../../theme/spacing";
 import AdBanner from "../../components/AdBanner";
 import { showInterstitialAd } from "../../components/InterstitialAd";
 import Typography from "../../theme/typography";
-import { changePassword, deleteAccount, logout, getCurrentUser } from "../../services/authService";
+import { changePassword, deleteAccount, getCurrentUser } from "../../services/authService";
+import { useAuth } from "../../context/AuthContext";
 
 // ─────────────────────────────────────────────────────────────────
 // Animated bottom-sheet confirm dialog
@@ -192,6 +193,7 @@ function PwField({ label, value, onChangeText }: { label: string; value: string;
 // ─────────────────────────────────────────────────────────────────
 export default function AccountSettingsScreen({ navigation }: any) {
   const { show: showToast, component: toastComponent } = useToast();
+  const { signOut } = useAuth();
 
   const [oldPw,     setOldPw]     = useState("");
   const [newPw,     setNewPw]     = useState("");
@@ -215,9 +217,20 @@ export default function AccountSettingsScreen({ navigation }: any) {
   };
 
   // ── Change password ────────────────────────────────────────────
+  // H8: Apply the same complexity regex as registration so the client
+  // and server stay in sync. The server enforces this too — this is
+  // just to give the user immediate feedback before the network call.
+  const PASSWORD_REGEX =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&^#()[\]{}\-_=+])[A-Za-z\d@$!%*?&^#()[\]{}\-_=+]{8,64}$/;
+
   const handleChangePassword = async () => {
     if (!oldPw || !newPw) { showToast("Fill in all password fields.", false); return; }
     if (newPw.length < 8)  { showToast("New password must be at least 8 characters.", false); return; }
+    if (newPw.length > 64) { showToast("New password must not exceed 64 characters.", false); return; }
+    if (!PASSWORD_REGEX.test(newPw)) {
+      showToast("Password must contain uppercase, lowercase, a number, and a special character.", false);
+      return;
+    }
     if (newPw !== confirmPw) { showToast("New passwords don't match.", false); return; }
 
     setChangingPw(true);
@@ -241,8 +254,8 @@ export default function AccountSettingsScreen({ navigation }: any) {
       confirmText: "Sign Out",
       confirmColor: "#D32F2F",
       onConfirm: async () => {
-        await logout();
-        navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+        await signOut();
+        // C3: signOut() clears auth state — AppNavigator swaps to AuthStack automatically.
       },
     });
   };
@@ -273,7 +286,8 @@ export default function AccountSettingsScreen({ navigation }: any) {
           try {
             const res = await deleteAccount();
             if (res.success) {
-              navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+              await signOut();
+              // C3: signOut() clears auth state — AppNavigator swaps to AuthStack automatically.
             } else {
               showToast(res.message || "Failed to delete account.", false);
             }
