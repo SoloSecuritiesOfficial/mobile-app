@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from "react";
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ActivityIndicator, RefreshControl, Image,
+  ActivityIndicator, RefreshControl,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -9,17 +9,24 @@ import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
 import { getConversations } from "../../services/chatService";
-import { BASE_URL } from "../../config/api";
+import { getCurrentUser } from "../../services/authService";
+import UserAvatar from "../../components/UserAvatar";
+import AdBanner from "../../components/AdBanner";
 
 export default function ChatListScreen({ navigation }: any) {
   const [conversations, setConversations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
 
   const loadConversations = async () => {
     try {
-      const res = await getConversations();
+      const [res, user] = await Promise.all([
+        getConversations(),
+        getCurrentUser(),
+      ]);
       setConversations(res.data || []);
+      setIsPremium(!!(user as any)?.isPremium);
     } catch (err) {
       console.log("Load conversations error:", err);
     } finally {
@@ -31,6 +38,13 @@ export default function ChatListScreen({ navigation }: any) {
   useFocusEffect(
     useCallback(() => {
       loadConversations();
+      
+      // ✅ AUTO-REFRESH: Poll for new conversations every 5 seconds
+      const pollInterval = setInterval(() => {
+        loadConversations();
+      }, 5000);
+      
+      return () => clearInterval(pollInterval);
     }, [])
   );
 
@@ -41,12 +55,6 @@ export default function ChatListScreen({ navigation }: any) {
 
   const renderConversation = ({ item }: any) => {
     const { partner, lastMessage, unreadCount } = item;
-    const avatarUri = partner.profileImage?.startsWith("http")
-      ? partner.profileImage
-      : partner.profileImage
-      ? `${BASE_URL}${partner.profileImage}`
-      : null;
-
     const timeAgo = getTimeAgo(new Date(lastMessage.createdAt));
 
     return (
@@ -54,23 +62,19 @@ export default function ChatListScreen({ navigation }: any) {
         style={styles.conversationCard}
         onPress={() =>
           navigation.navigate("Chat", {
-            userId: partner._id,
-            username: partner.username,
+            userId:       partner._id,
+            username:     partner.username,
             profileImage: partner.profileImage,
           })
         }
         activeOpacity={0.7}
       >
         <View style={styles.avatarContainer}>
-          {avatarUri ? (
-            <Image source={{ uri: avatarUri }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarText}>
-                {partner.username?.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-          )}
+          <UserAvatar
+            username={partner.username}
+            profileImage={partner.profileImage}
+            size={56}
+          />
           {unreadCount > 0 && (
             <View style={styles.unreadBadge}>
               <Text style={styles.unreadText}>
@@ -94,7 +98,7 @@ export default function ChatListScreen({ navigation }: any) {
             ]}
             numberOfLines={2}
           >
-            {lastMessage.content}
+            {lastMessage.isDeleted ? "🗑 Message deleted" : lastMessage.content}
           </Text>
         </View>
       </TouchableOpacity>
@@ -115,6 +119,8 @@ export default function ChatListScreen({ navigation }: any) {
         <Text style={styles.title}>Messages</Text>
       </View>
 
+      <AdBanner isPremium={isPremium} marginVertical={6} />
+
       {conversations.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyIcon}>💬</Text>
@@ -129,6 +135,7 @@ export default function ChatListScreen({ navigation }: any) {
           keyExtractor={(item) => item.partner._id}
           renderItem={renderConversation}
           contentContainerStyle={styles.list}
+          ListFooterComponent={<AdBanner isPremium={isPremium} marginVertical={8} />}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -138,6 +145,8 @@ export default function ChatListScreen({ navigation }: any) {
           }
         />
       )}
+
+      <AdBanner isPremium={isPremium} marginVertical={6} />
     </SafeAreaView>
   );
 }
@@ -181,16 +190,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   avatarContainer: { position: "relative", marginRight: 12 },
-  avatar: { width: 56, height: 56, borderRadius: 28 },
-  avatarPlaceholder: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  avatarText: { color: "#FFF", fontSize: 20, fontWeight: "700" },
   unreadBadge: {
     position: "absolute",
     top: -4,

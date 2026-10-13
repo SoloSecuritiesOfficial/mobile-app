@@ -1,7 +1,11 @@
 import api from "./api";
 
-export const sendMessage = async (receiverId: string, content: string) => {
-  const res = await api.post("/chat/send", { receiverId, content });
+export const sendMessage = async (
+  receiverId: string,
+  content: string,
+  replyToId?: string,
+) => {
+  const res = await api.post("/chat/send", { receiverId, content, replyToId });
   return res.data;
 };
 
@@ -25,4 +29,36 @@ export const markAsRead = async (userId: string) => {
 export const getUnreadCount = async () => {
   const res = await api.get("/chat/unread-count");
   return res.data;
+};
+
+export const deleteMessage = async (messageId: string) => {
+  const res = await api.delete(`/chat/messages/${messageId}`);
+  return res.data;
+};
+
+export const deleteConversation = async (userId: string) => {
+  const res = await api.delete(`/chat/conversation/${userId}`);
+  return res.data;
+};
+
+export const reactToMessage = async (messageId: string, emoji: string) => {
+  const res = await api.post(`/chat/messages/${messageId}/react`, { emoji });
+  return res.data;
+};
+
+export const setTyping = async (receiverId: string, isTyping: boolean) => {
+  try {
+    await api.post("/chat/typing", { receiverId, isTyping });
+  } catch {
+    // typing is fire-and-forget — never throw
+  }
+};
+
+export const getTypingStatus = async (userId: string): Promise<boolean> => {
+  try {
+    const res = await api.get(`/chat/typing/${userId}`);
+    return res.data?.isTyping ?? false;
+  } catch {
+    return false;
+  }
 };

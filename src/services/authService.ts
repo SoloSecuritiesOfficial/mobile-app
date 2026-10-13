@@ -1,407 +1,171 @@
 import api from "./api";
 
-
 import {
   saveToken,
   saveUser,
   getUser,
   getToken,
-  removeToken,
+  saveRefreshToken,
+  clearStorage,
 } from "../utils/storage";
 
+export const registerUser = async (data: {
+  username: string;
+  email: string;
+  password: string;
+}) => {
+  try {
+    const response = await api.post("/auth/register", data);
 
+    if (response.data.token) {
+      await saveToken(response.data.token);
+    }
 
+    if (response.data.user) {
+      await saveUser(response.data.user);
+    }
 
-export const registerUser = async(
-data:{
-  username:string;
-  email:string;
-  password:string;
-}
-)=>{
+    return response.data;
+  } catch (error: any) {
+    // Extract only the message field — never re-throw raw server response
+    // objects which may contain stack traces or internal field names.
+    const message: string =
+      error?.response?.data?.message ??
+      error?.response?.data?.error ??
+      error?.message ??
+      "Registration failed. Please try again.";
 
-
-try{
-
-
-const response =
-await api.post(
-"/auth/register",
-data
-);
-
-
-
-if(
-response.data.token
-){
-
-await saveToken(
-response.data.token
-);
-
-}
-
-
-
-if(
-response.data.user
-){
-
-await saveUser(
-response.data.user
-);
-
-}
-
-
-
-return response.data;
-
-
-
-}
-catch(error:any){
-
-
-console.log(
-"Register Error:",
-error.response?.data ||
-error.message
-);
-
-
-throw error;
-
-
-}
-
-
+    const sanitized = new Error(message);
+    (sanitized as any).isAppError = true;
+    throw sanitized;
+  }
 };
 
+export const loginUser = async (data: { email: string; password: string }) => {
+  try {
+    const response = await api.post("/auth/login", data);
 
+    if (response.data.token) {
+      await saveToken(response.data.token);
+    }
 
+    // Save the refresh token so api.ts can auto-refresh expired access tokens
+    if (response.data.refreshToken) {
+      await saveRefreshToken(response.data.refreshToken);
+    }
 
+    if (response.data.user) {
+      await saveUser(response.data.user);
+    }
 
+    // Register push token after successful login (fire-and-forget)
+    import("../utils/pushNotifications")
+      .then(({ registerForPushNotifications }) =>
+        registerForPushNotifications(),
+      )
+      .catch(() => {
+        /* non-fatal */
+      });
 
+    return response.data;
+  } catch (error: any) {
+    const message: string =
+      error?.response?.data?.message ??
+      error?.response?.data?.error ??
+      error?.message ??
+      "Login failed. Please try again.";
 
-export const loginUser = async(
-data:{
-email:string;
-password:string;
-}
-)=>{
-
-
-try{
-
-
-const response =
-await api.post(
-"/auth/login",
-data
-);
-
-
-
-if(
-response.data.token
-){
-
-await saveToken(
-response.data.token
-);
-
-}
-
-
-
-if(
-response.data.user
-){
-
-await saveUser(
-response.data.user
-);
-
-}
-
-
-
-// Register push token after successful login (fire-and-forget)
-import("../utils/pushNotifications")
-  .then(({ registerForPushNotifications }) => registerForPushNotifications())
-  .catch(() => {/* non-fatal */});
-
-return response.data;
-
-
-
-}
-catch(error:any){
-
-
-console.log(
-"Login Error:",
-error.response?.data ||
-error.message
-);
-
-
-throw error;
-
-
-}
-
-
+    const sanitized = new Error(message);
+    (sanitized as any).isAppError = true;
+    throw sanitized;
+  }
 };
 
+export const getProfile = async () => {
+  try {
+    const response = await api.get("/user/profile");
 
+    return response.data;
+  } catch (error: any) {
+    console.log("Get Profile Error:", error.response?.data || error.message);
 
-
-
-
-
-
-export const getProfile = async()=>{
-
-
-try{
-
-
-const response =
-await api.get(
-"/user/profile"
-);
-
-
-
-return response.data;
-
-
-
-}
-catch(error:any){
-
-
-console.log(
-"Get Profile Error:",
-error.response?.data ||
-error.message
-);
-
-
-throw error;
-
-
-}
-
-
+    throw error;
+  }
 };
 
+export const updateProfile = async (data: any) => {
+  try {
+    const response = await api.put("/user/profile", data);
 
+    // Accept both { user } and { data } shapes
+    const updated = response.data?.user ?? response.data?.data ?? null;
+    if (updated) {
+      await saveUser(updated);
+    }
 
-
-
-
-
-
-export const updateProfile = async(
-data:any
-)=>{
-
-
-try{
-
-
-const response =
-await api.put(
-"/user/profile",
-data
-);
-
-
-
-if(
-response.data.user
-){
-
-await saveUser(
-response.data.user
-);
-
-}
-
-
-
-return response.data;
-
-
-
-}
-catch(error:any){
-
-
-console.log(
-"Update Profile Error:",
-error.response?.data ||
-error.message
-);
-
-
-throw error;
-
-
-}
-
-
+    return response.data;
+  } catch (error: any) {
+    console.log("Update Profile Error:", error.response?.data || error.message);
+    throw error;
+  }
 };
 
+export const changePassword = async (data: {
+  oldPassword: string;
+  newPassword: string;
+}) => {
+  try {
+    const response = await api.put("/user/change-password", data);
 
+    return response.data;
+  } catch (error: any) {
+    console.log(
+      "Change Password Error:",
+      error.response?.data || error.message,
+    );
 
-
-
-
-
-
-export const changePassword = async(
-data:{
-oldPassword:string;
-newPassword:string;
-}
-)=>{
-
-
-try{
-
-
-const response =
-await api.put(
-"/user/change-password",
-data
-);
-
-
-
-return response.data;
-
-
-
-}
-catch(error:any){
-
-
-console.log(
-"Change Password Error:",
-error.response?.data ||
-error.message
-);
-
-
-throw error;
-
-
-}
-
-
+    throw error;
+  }
 };
 
+export const fetchCurrentUser = async () => {
+  try {
+    const response = await api.get("/user/profile");
 
+    // Profile endpoint returns { success, data: <user> } — not { success, user }
+    const user =
+      response.data?.data ??       // profile controller shape
+      response.data?.user ??       // legacy shape (some controllers still use .user)
+      null;
 
+    if (response.data.success && user) {
+      await saveUser(user);
+      return user;
+    }
 
-
-
-
-
-export const fetchCurrentUser = async()=>{
-
-
-try{
-
-
-const response =
-await api.get(
-"/user/profile"
-);
-
-
-
-if(
-response.data.success &&
-response.data.user
-){
-
-await saveUser(
-response.data.user
-);
-
-
-
-return response.data.user;
-
-
-}
-
-
-
-return null;
-
-
-
-}
-catch(error){
-
-
-console.log(
-"Fetch Current User Error:",
-error
-);
-
-
-return null;
-
-
-}
-
-
+    return null;
+  } catch (error) {
+    console.log("Fetch Current User Error:", error);
+    return null;
+  }
 };
 
-
-
-
-
-
-
-
-export const getCurrentUser = async()=>{
-
-
-return await getUser();
-
-
+export const getCurrentUser = async () => {
+  return await getUser();
 };
 
-
-
-
-
-
-
-
-export const logout = async()=>{
-
-
-await removeToken();
-
-
+export const logout = async () => {
+  // Unregister FCM push token BEFORE clearing storage so we can still
+  // read the token from SecureStore inside unregisterPushToken().
+  // Fire-and-forget — a failed unregister never blocks sign-out.
+  try {
+    const { unregisterPushToken } = await import("../utils/pushNotifications");
+    await unregisterPushToken();
+  } catch {
+    /* non-fatal */
+  }
+  await clearStorage();
 };
-
-
-
-
-
-
-
 
 export const dailyCheckIn = async () => {
   try {
@@ -413,29 +177,23 @@ export const dailyCheckIn = async () => {
   }
 };
 
-export const isLoggedIn = async()=>{
+export const isLoggedIn = async () => {
+  const token = await getToken();
 
-
-const token =
-await getToken();
-
-
-
-return !!token;
-
-
+  return !!token;
 };
-
 
 // ─────────────────────────────────────────────────────────────────
 // DELETE ACCOUNT — soft-delete via DELETE /user/account
 // ─────────────────────────────────────────────────────────────────
-export const deleteAccount = async (): Promise<{ success: boolean; message?: string }> => {
+export const deleteAccount = async (): Promise<{
+  success: boolean;
+  message?: string;
+}> => {
   try {
     const response = await api.delete("/user/account");
     if (response.data.success) {
-      // Wipe local credentials immediately
-      await removeToken();
+      await clearStorage();
     }
     return response.data;
   } catch (error: any) {
@@ -461,3 +219,8 @@ export const getSubscriptionStatus = async (): Promise<{
     return null;
   }
 };
+
+// Google sign-in is handled entirely inside GoogleSignInButton.tsx
+// using expo-auth-session (works in Expo Go + native builds).
+// No separate googleSignIn function needed here.
+export const googleSignIn = undefined;

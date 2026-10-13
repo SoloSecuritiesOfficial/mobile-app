@@ -14,7 +14,8 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import InputField from "../../components/InputField";
 import PrimaryButton from "../../components/PrimaryButton";
-import { RootStackParamList } from "../../navigation/AppNavigator";
+import { RootStackParamList } from "../../navigation/types";
+import api from "../../services/api";
 
 type Props = NativeStackScreenProps<
   RootStackParamList,
@@ -27,22 +28,38 @@ export default function ForgotPasswordScreen({
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleReset = () => {
-    if (!email.trim()) {
-      Alert.alert("Error", "Please enter your email.");
+  const handleReset = async () => {
+    const trimmed = email.trim().toLowerCase();
+    if (!trimmed) {
+      Alert.alert("Error", "Please enter your email address.");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmed)) {
+      Alert.alert("Error", "Please enter a valid email address.");
       return;
     }
 
     setLoading(true);
-
-    setTimeout(() => {
-      setLoading(false);
-
+    try {
+      // Route matches backend: POST /api/auth/request-password-reset
+      await api.post("/auth/request-password-reset", { email: trimmed });
       Alert.alert(
-        "Password Reset",
-        "Password reset functionality will be connected later."
+        "Email Sent",
+        "If an account exists for that email, a password reset link has been sent. Please check your inbox.",
+        [{ text: "Back to Login", onPress: () => navigation.navigate("Login") }],
       );
-    }, 1500);
+    } catch (err: any) {
+      // For security, show the same message regardless of whether the email exists
+      Alert.alert(
+        "Email Sent",
+        "If an account exists for that email, a password reset link has been sent. Please check your inbox.",
+        [{ text: "Back to Login", onPress: () => navigation.navigate("Login") }],
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -59,6 +76,8 @@ export default function ForgotPasswordScreen({
           <Text style={styles.title}>
             Forgot Password
           </Text>
+
+          {/* Banner ad removed — ads must not appear on password reset screens */}
 
           <Text style={styles.subtitle}>
             Enter your registered email address.
@@ -84,16 +103,9 @@ export default function ForgotPasswordScreen({
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              Remember your password?
-            </Text>
-
-            <TouchableOpacity
-              onPress={() => navigation.navigate("Login")}
-            >
-              <Text style={styles.loginText}>
-                Login
-              </Text>
+            <Text style={styles.footerText}>Remember your password?</Text>
+            <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+              <Text style={styles.loginText}>Login</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

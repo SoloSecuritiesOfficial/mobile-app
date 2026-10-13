@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { AppState, AppStateStatus } from "react-native";
 import Constants from "expo-constants";
+import * as SplashScreen from "expo-splash-screen";
 
 import AppNavigator from "./src/navigation/AppNavigator";
 import { ThemeProvider } from "./src/context/ThemeContext";
@@ -9,51 +10,86 @@ import {
   addNotificationListeners,
   registerForPushNotifications,
   clearBadge,
+  ensureAndroidChannelEarly,
 } from "./src/utils/pushNotifications";
 import { isLoggedIn } from "./src/services/authService";
+import { routeNotification } from "./src/navigation/notificationRouter";
+import { preloadInterstitialAd } from "./src/components/InterstitialAd";
+import { initAppOpenAd } from "./src/components/AppOpenAd";
 
-// ─────────────────────────────────────────────────────────────────
-// NOTE: Do NOT call configureForegroundNotifications() at module
-// level — Expo Go SDK 53 crashes immediately when any
-// expo-notifications handler is set outside a component.
-// It is called inside useEffect below after the guard runs.
-// ─────────────────────────────────────────────────────────────────
+// Keep the native splash screen visible until we explicitly hide it.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function App() {
   const appState = useRef(AppState.currentState);
 
   useEffect(() => {
-    // Only set up push infrastructure in real builds (not Expo Go)
-    const inExpoGo = Constants.appOwnership === "expo";
+    const IS_EXPO_GO = Constants.appOwnership === "expo";
 
-    if (!inExpoGo) {
-      // Safe to call — this crashes in Expo Go SDK 53
+    if (!IS_EXPO_GO) {
+      ensureAndroidChannelEarly();
+    }
+
+    SplashScreen.hideAsync().catch(() => {});
+
+    if (!IS_EXPO_GO) {
       configureForegroundNotifications();
     }
 
-    // Register token if already logged in
-    const initPush = async () => {
+    const init = async () => {
+      // ── Step 1: Initialize Google Mobile Ads SDK ──────────────────────────
+      if (!IS_EXPO_GO) {
+        try {
+          const { MobileAds } = await import("react-native-google-mobile-ads");
+          await MobileAds().initialize();
+        } catch (err) {
+          console.warn("[Ads] SDK initialization failed:", err);
+        }
+      }
+
+      // ── Step 2: Preload overlay ads AFTER SDK init ────────────────────────
+      try { preloadInterstitialAd(); } catch { /* non-fatal */ }
+      try { initAppOpenAd(false); }    catch { /* non-fatal */ }
+
+      // ── Step 3: Push notifications ────────────────────────────────────────
       const loggedIn = await isLoggedIn();
-      if (loggedIn) {
-        registerForPushNotifications(); // no-op in Expo Go
+      if (!IS_EXPO_GO && loggedIn) {
+        registerForPushNotifications().catch((err) =>
+          console.warn("[Push] Re-registration failed:", err?.message),
+        );
+      }
+
+      // ── Step 4: Cold-start notification tap ───────────────────────────────
+      if (!IS_EXPO_GO) {
+        try {
+          const N = require("expo-notifications");
+          const initialResponse = await N.getLastNotificationResponseAsync();
+          if (initialResponse) {
+            const data = initialResponse.notification?.request?.content
+              ?.data as Record<string, string> | undefined;
+            setTimeout(() => routeNotification(data), 500);
+          }
+        } catch {
+          /* expo-notifications not available in this build */
+        }
       }
     };
-    initPush();
 
-    // Notification listeners — no-op in Expo Go (guard is inside addNotificationListeners)
+    init();
+
     const cleanup = addNotificationListeners({
       onForeground: (notification: any) => {
-        console.log("[Push] Foreground:", (notification as any)?.request?.content?.title);
+        console.log("[Push] Foreground:", notification?.request?.content?.title);
       },
       onTap: (response: any) => {
         clearBadge();
-        const data = (response as any)?.notification?.request?.content?.data as Record<string, string> | undefined;
-        const url  = data?.actionUrl ?? "";
-        console.log("[Push] Tapped:", url);
+        const data = response?.notification?.request?.content?.data as
+          | Record<string, string>
+          | undefined;
+        routeNotification(data);
       },
     });
 
-    // Clear badge when app comes to foreground
     const appStateSub = AppState.addEventListener(
       "change",
       (nextState: AppStateStatus) => {
@@ -64,7 +100,7 @@ export default function App() {
           clearBadge();
         }
         appState.current = nextState;
-      }
+      },
     );
 
     return () => {

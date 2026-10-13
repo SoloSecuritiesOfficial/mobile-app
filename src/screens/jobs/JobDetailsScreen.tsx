@@ -5,11 +5,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../navigation/AppNavigator";
+import { RootStackParamList } from "../../navigation/types";
 import { getJobById, trackApply } from "../../services/jobsService";
+import { getCurrentUser } from "../../services/authService";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
+import AdBanner from "../../components/AdBanner";
 
 type Props = NativeStackScreenProps<RootStackParamList, "JobDetails">;
 
@@ -45,15 +47,20 @@ function BulletList({ items }: { items: string[] }) {
 
 export default function JobDetailsScreen({ route, navigation }: Props) {
   const { id } = route.params;
-  const [job,     setJob]     = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [applying,setApplying]= useState(false);
+  const [job,       setJob]       = useState<any>(null);
+  const [loading,   setLoading]   = useState(true);
+  const [applying,  setApplying]  = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
 
   useEffect(() => {
     getJobById(id)
       .then(res => setJob(res?.data ?? null))
       .catch(() => setJob(null))
       .finally(() => setLoading(false));
+
+    getCurrentUser()
+      .then(user => setIsPremium(!!(user as any)?.isPremium))
+      .catch(() => {});
   }, [id]);
 
   const handleApply = async () => {
@@ -115,6 +122,7 @@ export default function JobDetailsScreen({ route, navigation }: Props) {
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+        <AdBanner isPremium={isPremium} marginVertical={8} />
         {/* Hero card */}
         <View style={s.heroCard}>
           <View style={s.heroInitial}>
@@ -147,6 +155,8 @@ export default function JobDetailsScreen({ route, navigation }: Props) {
         <Section title="📋 About the Role">
           <Text style={s.body}>{job.description}</Text>
         </Section>
+
+        <AdBanner isPremium={isPremium} marginVertical={8} />
 
         {/* Requirements */}
         {job.requirements?.length > 0 && (
@@ -190,6 +200,8 @@ export default function JobDetailsScreen({ route, navigation }: Props) {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      <AdBanner isPremium={isPremium} marginVertical={4} />
 
       {/* Apply button — fixed at bottom */}
       <View style={s.applyBar}>

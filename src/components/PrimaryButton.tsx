@@ -23,10 +23,7 @@ export default function PrimaryButton({
   return (
     <TouchableOpacity
       activeOpacity={0.85}
-      style={[
-        styles.button,
-        (disabled || loading) && styles.disabledButton,
-      ]}
+      style={[styles.button, (disabled || loading) && styles.disabledButton]}
       onPress={onPress}
       disabled={disabled || loading}
     >

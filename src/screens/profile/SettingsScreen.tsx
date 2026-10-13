@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -7,39 +7,84 @@ import {
   Switch,
   TouchableOpacity,
   Alert,
+  Linking,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
 import { useTheme } from "../../context/ThemeContext";
+import AdBanner from "../../components/AdBanner";
+import { showInterstitialAd } from "../../components/InterstitialAd";
+import { getCurrentUser } from "../../services/authService";
+
+const SETTINGS_KEY = "solosec_app_settings";
+
+async function loadSettings(): Promise<{ notifications: boolean; biometrics: boolean; autoScan: boolean }> {
+  try {
+    const raw = await AsyncStorage.getItem(SETTINGS_KEY);
+    if (!raw) return { notifications: true, biometrics: false, autoScan: true };
+    return JSON.parse(raw);
+  } catch {
+    return { notifications: true, biometrics: false, autoScan: true };
+  }
+}
+
+async function saveSettings(settings: { notifications: boolean; biometrics: boolean; autoScan: boolean }) {
+  try {
+    await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  } catch { /* non-fatal */ }
+}
 
 export default function SettingsScreen() {
   const { isDarkMode, toggleTheme, colors } = useTheme();
   const [notifications, setNotifications] = useState(true);
   const [biometrics, setBiometrics] = useState(false);
   const [autoScan, setAutoScan] = useState(true);
+  const [isPremium, setIsPremium] = useState(false);
+
+  useEffect(() => {
+    getCurrentUser()
+      .then(user => setIsPremium(!!(user as any)?.isPremium))
+      .catch(() => {});
+    loadSettings().then(s => {
+      setNotifications(s.notifications);
+      setBiometrics(s.biometrics);
+      setAutoScan(s.autoScan);
+    });
+  }, []);
+
+  const updateSetting = (key: "notifications" | "biometrics" | "autoScan", value: boolean) => {
+    const next = { notifications, biometrics, autoScan, [key]: value };
+    if (key === "notifications") setNotifications(value);
+    if (key === "biometrics")    setBiometrics(value);
+    if (key === "autoScan")      setAutoScan(value);
+    saveSettings(next);
+  };
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.content}>
       <Text style={[styles.headerTitle, { color: colors.text }]}>App Settings ⚙️</Text>
       <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Customize security & notifications</Text>
 
+      <AdBanner isPremium={isPremium} marginVertical={10} />
+
       <View style={[styles.section, { backgroundColor: colors.surface }]}>
         <Text style={styles.sectionHeader}>Security Preferences</Text>
 
         <View style={[styles.row, { borderBottomColor: colors.border }]}>
           <Text style={[styles.rowLabel, { color: colors.text }]}>Push Notifications (CVEs & Alert)</Text>
-          <Switch value={notifications} onValueChange={setNotifications} />
+          <Switch value={notifications} onValueChange={v => updateSetting("notifications", v)} />
         </View>
 
         <View style={[styles.row, { borderBottomColor: colors.border }]}>
           <Text style={[styles.rowLabel, { color: colors.text }]}>Biometric App Lock (Fingerprint/FaceID)</Text>
-          <Switch value={biometrics} onValueChange={setBiometrics} />
+          <Switch value={biometrics} onValueChange={v => updateSetting("biometrics", v)} />
         </View>
 
         <View style={[styles.row, { borderBottomColor: colors.border }]}>
           <Text style={[styles.rowLabel, { color: colors.text }]}>Automatic Background Domain Audit</Text>
-          <Switch value={autoScan} onValueChange={setAutoScan} />
+          <Switch value={autoScan} onValueChange={v => updateSetting("autoScan", v)} />
         </View>
       </View>
 
@@ -70,14 +115,21 @@ export default function SettingsScreen() {
             "SoloSecurities collects minimal data required to operate:\n\n" +
             "• Email & username for account creation\n" +
             "• Learning progress & quiz scores\n" +
-            "• Device FCM token for push notifications\n\n" +
+            "• Device FCM token for push notifications\n" +
+            "• AdMob advertising ID for personalized ads (optional)\n\n" +
+            "Data sharing:\n" +
+            "• Firebase (Google) — push notification tokens, crash analytics\n" +
+            "• AdMob (Google) — advertising ID, ad interactions, estimated revenue\n" +
+            "• Render — API request logs (IP, user agent) for security\n" +
+            "• MongoDB Atlas — encrypted database storage\n\n" +
             "We DO NOT:\n" +
-            "• Sell your data to third parties\n" +
-            "• Store passwords in plain text\n" +
+            "• Sell your personal data to third parties\n" +
+            "• Store passwords in plain text (bcrypt hashed)\n" +
             "• Access device contacts, camera, or location\n\n" +
             "All data is encrypted in transit via HTTPS/TLS.\n" +
-            "JWT tokens are stored securely on device.\n\n" +
-            "You can delete your account at any time from Profile > Account Actions."
+            "JWT tokens are stored securely in platform SecureStore.\n\n" +
+            "You can delete your account at any time from Profile > Account Actions.\n\n" +
+            "Full policy: https://solosecurities.app/privacy"
           )}
         >
           <Text style={styles.actionText}>🔐 Privacy Policy</Text>
@@ -107,12 +159,19 @@ export default function SettingsScreen() {
             "Data collected:\n" +
             "• Account info (email, username) — required\n" +
             "• App activity (progress, scores) — required\n" +
-            "• Device token (push notifications) — optional\n\n" +
+            "• Device token (push notifications) — optional\n" +
+            "• Advertising ID (AdMob) — optional, for personalized ads\n\n" +
+            "Data shared with:\n" +
+            "• Google Firebase — push tokens, analytics\n" +
+            "• Google AdMob — ad ID, ad interactions, revenue estimates\n" +
+            "• Render (hosting) — request logs (IP, user agent)\n" +
+            "• MongoDB Atlas — encrypted database\n\n" +
             "Data NOT collected:\n" +
             "• Location, contacts, camera, microphone\n" +
             "• Financial information\n" +
             "• Browsing history\n\n" +
-            "Data is encrypted and never shared with advertisers."
+            "Data is encrypted in transit and at rest.\n" +
+            "You can opt out of personalized ads in device settings."
           )}
         >
           <Text style={styles.actionText}>🛡️ Data Safety (Play Store)</Text>
@@ -120,16 +179,31 @@ export default function SettingsScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
+          style={styles.actionRow}
+          onPress={() => Linking.openURL("https://solosecurities.app/privacy")}
+        >
+          <Text style={styles.actionText}>🌐 View Full Privacy Policy Online</Text>
+          <Text style={styles.valueText}>↗</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={[styles.actionRow, { borderBottomWidth: 0 }]}
-          onPress={() => Alert.alert(
-            "📧 Contact Support",
-            "For support or data deletion requests:\n\nsupport@solosecurities.com\n\nAccount deletion can be done from Profile → Account Actions."
-          )}
+          onPress={async () => {
+            await showInterstitialAd(isPremium);
+            Alert.alert(
+              "📧 Contact Support",
+              "For support or data deletion requests:\n\nsupport@solosecurities.com\n\nAccount deletion can be done from Profile → Account Actions."
+            );
+          }}
         >
           <Text style={styles.actionText}>📧 Contact & Support</Text>
           <Text style={styles.valueText}>↗</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Bottom banner */}
+      <AdBanner isPremium={isPremium} marginVertical={12} />
+      <AdBanner isPremium={isPremium} marginVertical={8} />
     </ScrollView>
   );
 }

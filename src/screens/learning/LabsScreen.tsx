@@ -1,8 +1,4 @@
-import React, {
-  useEffect,
-  useState,
-  useCallback,
-} from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 
 import {
@@ -13,6 +9,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  ViewStyle,
 } from "react-native";
 
 
@@ -26,6 +23,10 @@ import {
   completeLab,
   getLabProgress,
 } from "../../services/lab.service";
+import { getCurrentUser } from "../../services/authService";
+import AdBanner from "../../components/AdBanner";
+import { showInterstitialAd } from "../../components/InterstitialAd";
+import RewardedAdGate from "../../components/RewardedAdGate";
 
 
 
@@ -63,14 +64,19 @@ export default function LabsScreen(){
   const [selectedLab,setSelectedLab] = useState<Lab | null>(null);
   const [loading,setLoading] = useState(true);
   const [completing,setCompleting] = useState(false);
-
-
+  const [isPremium, setIsPremium] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadLabs = useCallback(async () => {
     try {
       setLoading(true);
-      const labsResponse = await getLabs();
-      const progressResponse = await getLabProgress();
+      setError(null);
+      const [labsResponse, progressResponse, user] = await Promise.all([
+        getLabs(),
+        getLabProgress(),
+        getCurrentUser(),
+      ]);
+      setIsPremium(!!(user as any)?.isPremium);
 
       const progressData = progressResponse.data ?? progressResponse;
       const completedIds = Array.isArray(progressData?.completedLabIds)
@@ -87,8 +93,8 @@ export default function LabsScreen(){
 
       setLabs(updatedLabs);
       setProgress(progressData);
-    } catch (error) {
-      console.log("Labs Fetch Error:", error);
+    } catch (error: any) {
+      setError(error?.message ?? "Failed to load labs. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -97,6 +103,13 @@ export default function LabsScreen(){
   useFocusEffect(
     useCallback(() => {
       loadLabs();
+      
+      // ✅ AUTO-REFRESH: Poll for new labs every 10 seconds
+      const pollInterval = setInterval(() => {
+        loadLabs();
+      }, 10000);
+      
+      return () => clearInterval(pollInterval);
     }, [loadLabs])
   );
 
@@ -171,6 +184,26 @@ color={Colors.primary}
 
 );
 
+}
+
+if (error) {
+  return (
+    <View style={styles.loader}>
+      <Text style={{ fontSize: 44, marginBottom: 12 }}>⚠️</Text>
+      <Text style={{ fontWeight: "700", fontSize: 18, color: Colors.text, marginBottom: 8, textAlign: "center" }}>
+        Failed to Load Labs
+      </Text>
+      <Text style={{ color: Colors.textSecondary, textAlign: "center", marginBottom: 20, paddingHorizontal: 32 }}>
+        {error}
+      </Text>
+      <TouchableOpacity
+        style={{ backgroundColor: Colors.primary, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 12 }}
+        onPress={() => loadLabs()}
+      >
+        <Text style={{ color: "#FFF", fontWeight: "700", fontSize: 15 }}>Try Again</Text>
+      </TouchableOpacity>
+    </View>
+  );
 }
 
 
@@ -273,6 +306,8 @@ days
   </View>
 )}
 
+<AdBanner isPremium={isPremium} marginVertical={10} />
+
 {selectedLab ? (
 <View style={styles.labCard}>
 <TouchableOpacity
@@ -338,17 +373,46 @@ Steps
 </View>
 ))}
 
-<TouchableOpacity
-style={[styles.completeBtn, selectedLab.completed && { backgroundColor: Colors.scoreExcellent }]}
-onPress={handleCompleteLab}
-disabled={completing || selectedLab.completed}
->
-<Text style={styles.completeText}>
-{completing ? "Completing..." : selectedLab.completed ? "✓ Lab Completed (+XP Earned)" : "Complete Lab + XP"}
-</Text>
-</TouchableOpacity>
+<RewardedAdGate
+  isPremium={false}
+  label={selectedLab.completed ? "✓ Lab Completed (+XP Earned)" : "Complete Lab + XP"}
+  icon={selectedLab.completed ? "✓" : "🧪"}
+  onReward={handleCompleteLab}
+  disabled={completing || selectedLab.completed}
+  style={(
+    selectedLab.completed
+      ? [styles.completeBtn, { backgroundColor: Colors.scoreExcellent }]
+      : styles.completeBtn
+  ) as ViewStyle}
+  textStyle={styles.completeText}
+/>
+<AdBanner isPremium={isPremium} marginVertical={8} />
 </View>
 ) : (
+  <>
+    {labs.filter(lab => {
+      if (activeTab === "completed") return lab.completed;
+      if (activeTab === "available") return !lab.completed;
+      return true;
+    }).length === 0 ? (
+      <View style={{ alignItems: "center", paddingTop: 60, paddingHorizontal: 24 }}>
+        <Text style={{ fontSize: 48, marginBottom: 12 }}>🎯</Text>
+        <Text style={{ fontWeight: "700", fontSize: 18, color: Colors.text, marginBottom: 8, textAlign: "center" }}>
+          {activeTab === "completed"
+            ? "No Completed Labs Yet"
+            : activeTab === "available"
+            ? "All Labs Completed! 🎉"
+            : "No Labs Available"}
+        </Text>
+        <Text style={{ color: Colors.textSecondary, textAlign: "center", lineHeight: 20 }}>
+          {activeTab === "completed"
+            ? "Open a lab, follow the steps, and tap Complete Lab to track progress."
+            : activeTab === "available"
+            ? "Great work! You have completed all available labs."
+            : "Labs are being added. Pull down to refresh."}
+        </Text>
+      </View>
+    ) : (
   labs
     .filter(lab => {
       if (activeTab === "completed") return lab.completed;
@@ -359,7 +423,10 @@ disabled={completing || selectedLab.completed}
       <TouchableOpacity
         key={lab._id}
         style={styles.card}
-        onPress={() => setSelectedLab(lab)}
+        onPress={async () => {
+          await showInterstitialAd(isPremium);
+          setSelectedLab(lab);
+        }}
       >
         <View style={styles.cardHeader}>
           <Text style={styles.category}>
@@ -395,7 +462,10 @@ disabled={completing || selectedLab.completed}
         </Text>
       </TouchableOpacity>
     ))
+    )}
+  </>
 )}
+<AdBanner isPremium={isPremium} marginVertical={10} />
 </ScrollView>
 
 

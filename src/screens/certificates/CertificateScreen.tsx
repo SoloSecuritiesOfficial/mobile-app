@@ -5,11 +5,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../navigation/AppNavigator";
+import { RootStackParamList } from "../../navigation/types";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
 import { getCertificates } from "../../services/certificateService";
+import { getCurrentUser } from "../../services/authService";
+import AdBanner from "../../components/AdBanner";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Certificates">;
 
@@ -50,13 +52,20 @@ export default function CertificateScreen({ navigation }: Props) {
   const [refreshing, setRefreshing]   = useState(false);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [showGuide, setShowGuide]     = useState(false);
+  const [isPremium, setIsPremium]     = useState(false);
+  const [error, setError]             = useState<string | null>(null);
 
   const loadCertificates = useCallback(async () => {
     try {
-      const res = await getCertificates();
+      setError(null);
+      const [res, user] = await Promise.all([
+        getCertificates(),
+        getCurrentUser(),
+      ]);
+      setIsPremium(!!(user as any)?.isPremium);
       setCertificates(res.data || res || []);
-    } catch (err) {
-      console.log("Certificates Error:", err);
+    } catch (err: any) {
+      setError(err?.message ?? "Failed to load certificates. Please try again.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -73,6 +82,26 @@ export default function CertificateScreen({ navigation }: Props) {
     );
   }
 
+  if (error) {
+    return (
+      <SafeAreaView style={styles.center}>
+        <Text style={{ fontSize: 44, marginBottom: 12 }}>⚠️</Text>
+        <Text style={{ fontWeight: "700", fontSize: 18, color: Colors.text, marginBottom: 8, textAlign: "center" }}>
+          Failed to Load Certificates
+        </Text>
+        <Text style={{ color: Colors.textSecondary, textAlign: "center", marginBottom: 20, paddingHorizontal: 32 }}>
+          {error}
+        </Text>
+        <TouchableOpacity
+          style={{ backgroundColor: Colors.primary, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 12 }}
+          onPress={() => { setLoading(true); loadCertificates(); }}
+        >
+          <Text style={{ color: "#FFF", fontWeight: "700", fontSize: 15 }}>Try Again</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -83,6 +112,7 @@ export default function CertificateScreen({ navigation }: Props) {
         }
       >
         {/* ── Header ── */}
+        <AdBanner isPremium={isPremium} marginVertical={8} />
         <Text style={styles.pageTitle}>📜 My Certificates</Text>
         <Text style={styles.pageSub}>Certificates are automatically awarded when you reach milestone levels</Text>
 
@@ -101,6 +131,8 @@ export default function CertificateScreen({ navigation }: Props) {
             <Text style={styles.statLabel}>Verified</Text>
           </View>
         </View>
+
+        <AdBanner isPremium={isPremium} marginVertical={10} />
 
         {/* ── How to earn toggle ── */}
         <TouchableOpacity style={styles.guideToggle} onPress={() => setShowGuide(s => !s)}>
@@ -211,6 +243,8 @@ export default function CertificateScreen({ navigation }: Props) {
             );
           })
         )}
+
+        <AdBanner isPremium={isPremium} marginVertical={10} />
       </ScrollView>
     </SafeAreaView>
   );

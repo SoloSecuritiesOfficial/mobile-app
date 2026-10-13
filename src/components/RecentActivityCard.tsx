@@ -1,15 +1,10 @@
 import React from "react";
 
-import {
-  View,
-  Text,
-  StyleSheet,
-} from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 
 import Colors from "../theme/colors";
 import Spacing from "../theme/spacing";
 import Typography from "../theme/typography";
-
 
 interface ActivityItem {
   _id?: string;
@@ -66,21 +61,30 @@ export default function RecentActivityCard({
         <View style={{ marginTop: Spacing.sm }}>
           {activities.slice(0, 4).map((item, idx) => (
             <View key={item._id || idx.toString()} style={styles.activityItem}>
-              <Text style={styles.activityIcon}>{getActivityIcon(item.type)}</Text>
+              <Text style={styles.activityIcon}>
+                {getActivityIcon(item.type)}
+              </Text>
               <View style={{ flex: 1 }}>
                 <Text style={styles.activityTitle}>{item.title}</Text>
-                {item.description ? <Text style={styles.activityDesc}>{item.description}</Text> : null}
+                {item.description ? (
+                  <Text style={styles.activityDesc}>{item.description}</Text>
+                ) : null}
               </View>
-              {item.points ? <Text style={styles.pointsBadge}>+{item.points} XP</Text> : null}
+              {item.points ? (
+                <Text style={styles.pointsBadge}>+{item.points} XP</Text>
+              ) : null}
             </View>
           ))}
         </View>
       ) : (
         <Text style={styles.description}>
           Security Score : {securityScore}%{"\n\n"}
-          Reports Submitted : {reports}{"\n\n"}
-          Certificates Earned : {certificateCount}{"\n\n"}
-          Learning Progress : {learningCompleted} / {learningTotal}{"\n\n"}
+          Reports Submitted : {reports}
+          {"\n\n"}
+          Certificates Earned : {certificateCount}
+          {"\n\n"}
+          Learning Progress : {learningCompleted} / {learningTotal}
+          {"\n\n"}
           Labs Completed : {labCompleted} / {labTotal}
         </Text>
       )}
@@ -88,32 +92,17 @@ export default function RecentActivityCard({
   );
 }
 
-
-
-
 const styles = StyleSheet.create({
-
-
   container: {
+    backgroundColor: Colors.surface,
 
-    backgroundColor:
-      Colors.surface,
+    borderRadius: Spacing.radiusLarge,
 
+    padding: Spacing.cardPadding,
 
-    borderRadius:
-      Spacing.radiusLarge,
-
-
-    padding:
-      Spacing.cardPadding,
-
-
-    marginBottom:
-      Spacing.xxl,
-
+    marginBottom: Spacing.xxl,
 
     elevation: 2,
-
 
     shadowColor: "#000",
 
@@ -121,29 +110,18 @@ const styles = StyleSheet.create({
 
     shadowRadius: 5,
 
-
     shadowOffset: {
-
       width: 0,
 
       height: 2,
-
     },
-
   },
-
-
 
   title: {
-
     ...Typography.labelLarge,
 
-    color:
-      Colors.text,
-
+    color: Colors.text,
   },
-
-
 
   description: {
     ...Typography.bodySmall,

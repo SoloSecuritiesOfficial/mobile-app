@@ -1,9 +1,5 @@
 import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-} from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 
 interface ActivityCardProps {
   icon: string;
@@ -22,30 +18,17 @@ export default function ActivityCard({
 }: ActivityCardProps) {
   return (
     <View style={styles.card}>
-      <View
-        style={[
-          styles.iconContainer,
-          { backgroundColor: color },
-        ]}
-      >
-        <Text style={styles.icon}>
-          {icon}
-        </Text>
+      <View style={[styles.iconContainer, { backgroundColor: color }]}>
+        <Text style={styles.icon}>{icon}</Text>
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.title}>
-          {title}
-        </Text>
+        <Text style={styles.title}>{title}</Text>
 
-        <Text style={styles.subtitle}>
-          {subtitle}
-        </Text>
+        <Text style={styles.subtitle}>{subtitle}</Text>
       </View>
 
-      <Text style={styles.time}>
-        {time}
-      </Text>
+      <Text style={styles.time}>{time}</Text>
     </View>
   );
 }

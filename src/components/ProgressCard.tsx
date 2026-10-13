@@ -1,9 +1,5 @@
 import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-} from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 
 import Colors from "../theme/colors";
 import Spacing from "../theme/spacing";
@@ -22,23 +18,22 @@ export default function ProgressCard({
   labCompleted = 0,
   labTotal = 0,
 }: Props) {
+  const learningPct =
+    learningTotal > 0
+      ? Math.min(Math.round((learningCompleted / learningTotal) * 100), 100)
+      : 0;
 
-  const learningPct = learningTotal > 0
-    ? Math.min(Math.round((learningCompleted / learningTotal) * 100), 100)
-    : 0;
+  const labPct =
+    labTotal > 0
+      ? Math.min(Math.round((labCompleted / labTotal) * 100), 100)
+      : 0;
 
-  const labPct = labTotal > 0
-    ? Math.min(Math.round((labCompleted / labTotal) * 100), 100)
-    : 0;
-
-  const labRemaining  = Math.max(labTotal - labCompleted, 0);
+  const labRemaining = Math.max(labTotal - labCompleted, 0);
   const learnRemaining = Math.max(learningTotal - learningCompleted, 0);
 
   return (
     <>
-      <Text style={styles.sectionTitle}>
-        Progress
-      </Text>
+      <Text style={styles.sectionTitle}>Progress</Text>
 
       <View style={styles.container}>
         {/* Learning */}
@@ -51,7 +46,9 @@ export default function ProgressCard({
           <View style={styles.progressTrack}>
             <View style={[styles.progress, { width: `${learningPct}%` }]} />
           </View>
-          <Text style={styles.pctText}>{learningPct}% • {learnRemaining} left</Text>
+          <Text style={styles.pctText}>
+            {learningPct}% • {learnRemaining} left
+          </Text>
         </View>
 
         {/* Labs */}
@@ -64,7 +61,9 @@ export default function ProgressCard({
           <View style={styles.progressTrack}>
             <View style={[styles.progress, { width: `${labPct}%` }]} />
           </View>
-          <Text style={styles.pctText}>{labPct}% • {labRemaining} left</Text>
+          <Text style={styles.pctText}>
+            {labPct}% • {labRemaining} left
+          </Text>
         </View>
       </View>
     </>

@@ -18,8 +18,10 @@ import { useFocusEffect } from "@react-navigation/native";
 
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
+import AdBanner from "../../components/AdBanner";
+import { showInterstitialAd } from "../../components/InterstitialAd";
 import Typography from "../../theme/typography";
-import { BASE_URL } from "../../config/api";
+import { resolveAvatar } from "../../utils/avatar";
 
 import {
   fetchCurrentUser, getCurrentUser,
@@ -46,11 +48,7 @@ const TIER_CONFIG: Record<Tier, TierConfig> = {
   admin: { label: "Administrator",     icon: "🛡️", bg: "#E8EAF6", fg: "#1A237E" },
 };
 
-function resolveAvatar(profileImage?: string): string | null {
-  if (!profileImage) return null;
-  if (profileImage.startsWith("http")) return profileImage;
-  return `${BASE_URL}${profileImage}`;
-}
+// resolveAvatar imported from ../../utils/avatar
 
 function TierBadge({ tier, expiresAt }: { tier: Tier; expiresAt?: string | null }) {
   const cfg = TIER_CONFIG[tier];
@@ -271,6 +269,10 @@ export default function ProfileSettingsScreen({ navigation }: any) {
 
   const avatarUri = resolveAvatar(profile?.profileImage);
   const initials  = (form.firstName || form.username || "U").charAt(0).toUpperCase();
+  const [imageError, setImageError] = React.useState(false);
+
+  // Reset error when profile image changes (e.g. after upload)
+  React.useEffect(() => { setImageError(false); }, [profile?.profileImage]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -306,8 +308,12 @@ export default function ProfileSettingsScreen({ navigation }: any) {
               <View style={styles.avatarWrap}>
                 {uploading ? (
                   <ActivityIndicator color="#FFF" size="large" />
-                ) : avatarUri ? (
-                  <Image source={{ uri: avatarUri }} style={styles.avatarImg} />
+                ) : avatarUri && !imageError ? (
+                  <Image
+                    source={{ uri: avatarUri }}
+                    style={styles.avatarImg}
+                    onError={() => setImageError(true)}
+                  />
                 ) : (
                   <Text style={styles.avatarInitials}>{initials}</Text>
                 )}
@@ -323,6 +329,7 @@ export default function ProfileSettingsScreen({ navigation }: any) {
           </View>
 
           {/* ── Basic info ── */}
+          <AdBanner isPremium={tier === "paid" || tier === "admin"} marginVertical={10} />
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Basic Info</Text>
             <Field label="Username" value={form.username} onChangeText={setField("username")} placeholder="your_username" autoCapitalize="none" />
@@ -346,6 +353,9 @@ export default function ProfileSettingsScreen({ navigation }: any) {
             <Field label="Website" value={form.website} onChangeText={setField("website")} placeholder="https://yourwebsite.com" keyboardType="url" autoCapitalize="none" />
           </View>
 
+          {/* Second banner between sections and save button */}
+          <AdBanner isPremium={tier === "paid" || tier === "admin"} marginVertical={8} />
+
           {/* ── Save button ── */}
           <TouchableOpacity
             style={[styles.saveBtn, saving && { opacity: 0.6 }]}
@@ -357,6 +367,8 @@ export default function ProfileSettingsScreen({ navigation }: any) {
               ? <ActivityIndicator color="#FFF" />
               : <Text style={styles.saveBtnText}>Save Changes</Text>}
           </TouchableOpacity>
+
+          <AdBanner isPremium={tier === "paid" || tier === "admin"} marginVertical={8} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

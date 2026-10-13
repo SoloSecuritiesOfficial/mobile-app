@@ -6,12 +6,19 @@ import {
   Text,
   View,
   TouchableOpacity,
+  ViewStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
-import { RootStackParamList } from "../../navigation/AppNavigator";
-import { getLearningModuleById, completeLearningModule } from "../../services/securityService";
+import { RootStackParamList } from "../../navigation/types";
+import {
+  getLearningModuleById, completeLearningModule,
+} from "../../services/securityService";
+import { getCurrentUser } from "../../services/authService";
+import AdBanner from "../../components/AdBanner";
+import RewardedAdGate from "../../components/RewardedAdGate";
+import { showInterstitialAd } from "../../components/InterstitialAd";
 
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
@@ -43,8 +50,8 @@ export default function LearningDetailsScreen({
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(false);
   const [completed, setCompleted] = useState(false);
-  const [module, setModule] =
-    useState<LearningModule | null>(null);
+  const [isPremium, setIsPremium] = useState(false);
+  const [module, setModule] = useState<LearningModule | null>(null);
 
   useEffect(() => {
     loadModule();
@@ -53,9 +60,11 @@ export default function LearningDetailsScreen({
   const loadModule = async () => {
     try {
       setLoading(true);
-
-      const res = await getLearningModuleById(id);
-
+      const [res, user] = await Promise.all([
+        getLearningModuleById(id),
+        getCurrentUser(),
+      ]);
+      setIsPremium(!!(user as any)?.isPremium);
       if (res.success) {
         setModule(res.data);
       } else {
@@ -107,7 +116,10 @@ export default function LearningDetailsScreen({
         showsVerticalScrollIndicator={false}
       >
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={async () => {
+            await showInterstitialAd(isPremium);
+            navigation.goBack();
+          }}
         >
           <Text style={styles.back}>
             ← Back
@@ -152,13 +164,13 @@ export default function LearningDetailsScreen({
           </Text>
         </View>
 
-        <TouchableOpacity
-          style={[
-            styles.completeBtn,
-            completed && styles.completeBtnDone,
-          ]}
-          disabled={completing || completed}
-          onPress={async () => {
+        <AdBanner isPremium={isPremium} marginVertical={12} />
+
+        <RewardedAdGate
+          isPremium={false}
+          label={completed ? "✓ Lesson Completed (+10 XP)" : "Mark as Completed ✓"}
+          icon={completed ? "✓" : "📚"}
+          onReward={async () => {
             try {
               setCompleting(true);
               const targetId = module._id || module.id || id;
@@ -170,15 +182,16 @@ export default function LearningDetailsScreen({
               setCompleting(false);
             }
           }}
-        >
-          {completing ? (
-            <ActivityIndicator color="#FFF" />
-          ) : (
-            <Text style={styles.completeBtnText}>
-              {completed ? "✓ Lesson Completed (+10 XP)" : "Mark as Completed ✓"}
-            </Text>
-          )}
-        </TouchableOpacity>
+          disabled={completing || completed}
+          style={(
+            completed ? [styles.completeBtn, styles.completeBtnDone] : styles.completeBtn
+          ) as ViewStyle}
+          textStyle={styles.completeBtnText}
+        />
+
+        {/* Bottom banner after completion button */}
+        <AdBanner isPremium={isPremium} marginVertical={12} />
+        <AdBanner isPremium={isPremium} marginVertical={8} />
       </ScrollView>
     </SafeAreaView>
   );

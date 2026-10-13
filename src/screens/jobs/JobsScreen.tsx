@@ -6,11 +6,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../navigation/AppNavigator";
+import { RootStackParamList } from "../../navigation/types";
 import { getJobs } from "../../services/jobsService";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
+import AdBanner from "../../components/AdBanner";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Jobs">;
 
@@ -332,6 +333,7 @@ export default function JobsScreen({ navigation }: Props) {
   const [page,       setPage]       = useState(1);
   const [hasMore,    setHasMore]    = useState(true);
   const [loadingMore,setLoadingMore]= useState(false);
+  const [error,      setError]      = useState<string | null>(null);
 
   const [search,         setSearch]         = useState("");
   const [locationType,   setLocationType]   = useState<string>("");
@@ -344,7 +346,7 @@ export default function JobsScreen({ navigation }: Props) {
   const activeFilterCount = [locationType, experienceLevel, jobType].filter(Boolean).length;
 
   const load = useCallback(async (reset = true) => {
-    if (reset) { setLoading(true); setPage(1); }
+    if (reset) { setLoading(true); setPage(1); setError(null); }
     try {
       const p = reset ? 1 : page + 1;
       const res = await getJobs({
@@ -364,8 +366,8 @@ export default function JobsScreen({ navigation }: Props) {
       }
       setTotal(res?.total ?? 0);
       setHasMore(data.length === LIMIT);
-    } catch (e) {
-      console.log("Jobs load error:", e);
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to load jobs. Please try again.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -373,7 +375,16 @@ export default function JobsScreen({ navigation }: Props) {
     }
   }, [search, locationType, experienceLevel, jobType, page]);
 
-  useFocusEffect(useCallback(() => { load(true); }, [search, locationType, experienceLevel, jobType]));
+  useFocusEffect(useCallback(() => { 
+    load(true); 
+    
+    // ✅ AUTO-REFRESH: Poll for new jobs every 10 seconds
+    const pollInterval = setInterval(() => {
+      load(true);
+    }, 10000);
+    
+    return () => clearInterval(pollInterval);
+  }, [search, locationType, experienceLevel, jobType]));
 
   const handleLoadMore = () => {
     if (!hasMore || loadingMore) return;
@@ -401,6 +412,7 @@ export default function JobsScreen({ navigation }: Props) {
       </View>
 
       {/* Search & Filter Bar */}
+      <AdBanner marginVertical={4} />
       <View style={styles.searchContainer}>
         <View style={styles.searchBox}>
           <Text style={styles.searchIcon}>🔍</Text>
@@ -487,6 +499,22 @@ export default function JobsScreen({ navigation }: Props) {
           <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loaderText}>Finding jobs…</Text>
         </View>
+      ) : error ? (
+        <View style={styles.loader}>
+          <Text style={{ fontSize: 44, marginBottom: 12 }}>⚠️</Text>
+          <Text style={{ fontWeight: "700", fontSize: 18, color: Colors.text, marginBottom: 8, textAlign: "center" }}>
+            Failed to Load Jobs
+          </Text>
+          <Text style={{ color: Colors.textSecondary, textAlign: "center", marginBottom: 20, paddingHorizontal: 32 }}>
+            {error}
+          </Text>
+          <TouchableOpacity
+            style={{ backgroundColor: Colors.primary, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 12 }}
+            onPress={() => load(true)}
+          >
+            <Text style={{ color: "#FFF", fontWeight: "700", fontSize: 15 }}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <FlatList
           data={jobs}
@@ -498,6 +526,7 @@ export default function JobsScreen({ navigation }: Props) {
             />
           )}
           contentContainerStyle={styles.list}
+          ListHeaderComponent={<AdBanner marginVertical={4} />}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -511,8 +540,11 @@ export default function JobsScreen({ navigation }: Props) {
             loadingMore
               ? <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: 16 }} />
               : !hasMore && jobs.length > 0
-              ? <Text style={styles.endText}>You've seen all {total} jobs ✓</Text>
-              : null
+              ? <>
+                  <Text style={styles.endText}>You've seen all {total} jobs ✓</Text>
+                  <AdBanner marginVertical={8} />
+                </>
+              : <AdBanner marginVertical={8} />
           }
           ListEmptyComponent={
             <View style={styles.emptyCard}>

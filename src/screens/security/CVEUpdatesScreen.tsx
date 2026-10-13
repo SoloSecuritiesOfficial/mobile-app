@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   StyleSheet,
   Text,
@@ -10,36 +10,47 @@ import {
   RefreshControl,
   Linking,
   Share,
+  Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { getCVEUpdates } from "../../services/securityService";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
+import AdBanner from "../../components/AdBanner";
+import { showInterstitialAd } from "../../components/InterstitialAd";
+import RewardedAdGate from "../../components/RewardedAdGate";
 
 export default function CVEUpdatesScreen() {
   const [cves, setCves] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isPremium, setIsPremium] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchCVEs();
-  }, []);
-
-  const fetchCVEs = async () => {
+  const fetchCVEs = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
+      setError(null);
       const res = await getCVEUpdates();
       if (res.success && res.data) {
         setCves(res.data);
       }
-    } catch (err) {
-      console.log("Error fetching CVEs:", err);
+    } catch (err: any) {
+      setError(err?.message ?? "Failed to load CVE advisories. Please try again.");
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchCVEs();
+    import("../../services/authService").then(m =>
+      m.getCurrentUser().then(u => setIsPremium(!!(u as any)?.isPremium)).catch(() => {})
+    );
+  }, [fetchCVEs]);
 
   const handleShareCVE = async (item: any) => {
     const cveCode = item.cveId || item.id;
@@ -75,7 +86,7 @@ export default function CVEUpdatesScreen() {
 
   const renderCVEItem = ({ item }: { item: any }) => {
     const sevColor = getSeverityColor(item.severity || "High");
-    const cveCode = item.cveId || item.id;
+    const cveCode = item.cveId || item.id || "Unknown CVE";
     return (
       <View style={styles.card}>
         <View style={styles.cardHeader}>
@@ -87,14 +98,14 @@ export default function CVEUpdatesScreen() {
               </View>
             )}
             <View style={[styles.badge, { backgroundColor: sevColor }]}>
-              <Text style={styles.badgeText}>{item.severity} ({item.score || 7.5})</Text>
+              <Text style={styles.badgeText}>{item.severity || "Unknown"} ({item.score || 7.5})</Text>
             </View>
           </View>
         </View>
 
-        <Text style={styles.title}>{item.title}</Text>
-        <Text style={styles.date}>Published: {item.published}</Text>
-        <Text style={styles.description}>{item.description}</Text>
+        <Text style={styles.title}>{item.title || "No title"}</Text>
+        <Text style={styles.date}>Published: {item.published || "Unknown date"}</Text>
+        <Text style={styles.description}>{item.description || "No description available"}</Text>
 
         {item.remediation && (
           <View style={styles.remediationBox}>
@@ -113,7 +124,12 @@ export default function CVEUpdatesScreen() {
 
           <TouchableOpacity
             style={styles.linkButton}
-            onPress={() => Linking.openURL(`https://nvd.nist.gov/vuln/detail/${cveCode}`)}
+            onPress={async () => {
+              await showInterstitialAd(isPremium);
+              if (cveCode !== "Unknown CVE") {
+                Linking.openURL(`https://nvd.nist.gov/vuln/detail/${cveCode}`);
+              }
+            }}
           >
             <Text style={styles.linkButtonText}>NIST NVD ↗</Text>
           </TouchableOpacity>
@@ -123,7 +139,8 @@ export default function CVEUpdatesScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
       <View style={styles.headerRow}>
         <View>
           <Text style={styles.headerTitle}>CVE Vulnerability Feed 📢</Text>
@@ -139,38 +156,68 @@ export default function CVEUpdatesScreen() {
         onChangeText={setSearchQuery}
       />
 
+      <AdBanner marginVertical={6} />
+
       {loading ? (
         <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
+      ) : error ? (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorIcon}>⚠️</Text>
+          <Text style={styles.errorTitle}>Failed to Load CVEs</Text>
+          <Text style={styles.errorMessage}>{error}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => fetchCVEs()}>
+            <Text style={styles.retryText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <FlatList
           data={filteredCVEs}
           keyExtractor={(item, idx) => item.id || item.cveId || idx.toString()}
           renderItem={renderCVEItem}
           contentContainerStyle={styles.listContent}
+          ListHeaderComponent={<AdBanner marginVertical={4} />}
+          ListFooterComponent={
+            <>
+              <AdBanner marginVertical={8} />
+              <RewardedAdGate
+                isPremium={isPremium}
+                label="🎁 Watch Ad — Support CVE Research"
+                onReward={() => Alert.alert("🎁 Thanks!", "Reward earned — keep tracking vulnerabilities.")}
+                style={{ marginVertical: 12, marginHorizontal: 4 }}
+              />
+            </>
+          }
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => {
-                setRefreshing(true);
-                fetchCVEs();
-              }}
+              onRefresh={() => { setRefreshing(true); fetchCVEs(true); }}
               tintColor={Colors.primary}
             />
           }
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No CVE advisories found.</Text>
+            <View style={styles.emptyBox}>
+              <Text style={styles.emptyIcon}>🔐</Text>
+              <Text style={styles.emptyTitle}>No CVE Advisories Found</Text>
+              <Text style={styles.emptyText}>
+                {searchQuery
+                  ? "No results match your search. Try a different keyword."
+                  : "No vulnerability advisories available yet. Check back soon."}
+              </Text>
+            </View>
           }
         />
       )}
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea:  { flex: 1, backgroundColor: Colors.background },
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-    paddingTop: 50,
+    paddingTop: 16,
     paddingHorizontal: Spacing.screen,
   },
   headerRow: {
@@ -293,9 +340,14 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 13,
   },
-  emptyText: {
-    textAlign: "center",
-    color: Colors.textMuted,
-    marginTop: 30,
-  },
+  emptyBox:    { alignItems: "center", paddingTop: 60, paddingHorizontal: 24 },
+  emptyIcon:   { fontSize: 52, marginBottom: 12 },
+  emptyTitle:  { fontSize: 18, fontWeight: "700", color: Colors.text, marginBottom: 8, textAlign: "center" },
+  emptyText:   { fontSize: 14, color: Colors.textSecondary, textAlign: "center", lineHeight: 20 },
+  errorBox:    { alignItems: "center", paddingTop: 60, paddingHorizontal: 24 },
+  errorIcon:   { fontSize: 48, marginBottom: 12 },
+  errorTitle:  { fontSize: 18, fontWeight: "700", color: Colors.text, marginBottom: 8, textAlign: "center" },
+  errorMessage:{ fontSize: 14, color: Colors.textSecondary, textAlign: "center", lineHeight: 20, marginBottom: 20 },
+  retryBtn:    { backgroundColor: Colors.primary, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 12 },
+  retryText:   { color: "#FFF", fontWeight: "700", fontSize: 15 },
 });

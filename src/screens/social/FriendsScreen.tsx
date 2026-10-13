@@ -1,16 +1,20 @@
 import React, { useState, useCallback, useEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert, RefreshControl, Image,
+  TextInput, ActivityIndicator, Alert, RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../navigation/AppNavigator";
+import { RootStackParamList } from "../../navigation/types";
 import api from "../../services/api";
 import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
+import UserAvatar from "../../components/UserAvatar";
+import { getCurrentUser } from "../../services/authService";
+import AdBanner from "../../components/AdBanner";
+import { formatDate } from "../../utils/dateUtils";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Friends">;
 type Tab = "friends" | "requests" | "search" | "activity";
@@ -37,6 +41,7 @@ export default function FriendsScreen({ navigation }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searching, setSearching] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
 
   const [friends, setFriends] = useState<FriendUser[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
@@ -45,14 +50,16 @@ export default function FriendsScreen({ navigation }: Props) {
 
   const loadData = useCallback(async () => {
     try {
-      const [friendsRes, requestsRes, activityRes] = await Promise.all([
+      const [friendsRes, requestsRes, activityRes, user] = await Promise.all([
         api.get("/friends/list"),
         api.get("/friends/requests"),
         api.get("/friends/activity"),
+        getCurrentUser(),
       ]);
       setFriends(friendsRes.data?.data ?? []);
       setRequests(requestsRes.data?.data ?? []);
       setActivity(activityRes.data?.data ?? []);
+      setIsPremium(!!(user as any)?.isPremium);
     } catch (err) {
       console.log("Friends load error:", err);
     } finally {
@@ -61,7 +68,16 @@ export default function FriendsScreen({ navigation }: Props) {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
+  useFocusEffect(useCallback(() => { 
+    loadData(); 
+    
+    // ✅ AUTO-REFRESH: Poll for new friend requests/activity every 5 seconds
+    const pollInterval = setInterval(() => {
+      loadData();
+    }, 5000);
+    
+    return () => clearInterval(pollInterval);
+  }, [loadData]));
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -124,13 +140,12 @@ export default function FriendsScreen({ navigation }: Props) {
     ]);
   };
 
-  const Avatar = ({ user }: { user: { username?: string; profileImage?: string } }) => {
-    const initials = (user.username || "?").substring(0, 2).toUpperCase();
-    return (
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{initials}</Text>
-      </View>
-    );
+  const goToProfile = (user: FriendUser) => {
+    navigation.navigate("FriendProfile", {
+      userId: user._id,
+      username: user.username,
+      profileImage: user.profileImage,
+    });
   };
 
   if (loading) {
@@ -171,28 +186,31 @@ export default function FriendsScreen({ navigation }: Props) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} colors={[Colors.primary]} />}
         showsVerticalScrollIndicator={false}
       >
+        <AdBanner isPremium={isPremium} marginVertical={8} />
+        <AdBanner isPremium={isPremium} marginVertical={4} />
         {/* FRIENDS LIST */}
         {tab === "friends" && (
           friends.length === 0
             ? <View style={styles.emptyBox}><Text style={styles.emptyIcon}>👥</Text><Text style={styles.emptyTitle}>No Friends Yet</Text><Text style={styles.emptyText}>Search for users and send friend requests to connect.</Text></View>
             : friends.map((f) => (
-              <TouchableOpacity 
-                key={f._id} 
+              <TouchableOpacity
+                key={f._id}
                 style={styles.card}
-                onPress={() => navigation.navigate("Chat", {
-                  userId: f._id,
-                  username: f.username,
-                  profileImage: f.profileImage,
-                })}
+                onPress={() => goToProfile(f)}
                 activeOpacity={0.7}
               >
-                <Avatar user={f} />
+                <UserAvatar
+                  username={f.username}
+                  profileImage={f.profileImage}
+                  size={44}
+                  onPress={() => goToProfile(f)}
+                />
                 <View style={styles.cardInfo}>
                   <Text style={styles.cardName}>{f.username}</Text>
                   <Text style={styles.cardSub}>Level {f.level ?? 1} • {f.xp ?? 0} XP</Text>
                 </View>
                 <View style={styles.actionBtns}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.chatBtn}
                     onPress={(e) => {
                       e.stopPropagation();
@@ -205,8 +223,8 @@ export default function FriendsScreen({ navigation }: Props) {
                   >
                     <Text style={styles.chatBtnText}>💬 Chat</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.removeBtn} 
+                  <TouchableOpacity
+                    style={styles.removeBtn}
                     onPress={(e) => {
                       e.stopPropagation();
                       handleRemoveFriend(f._id);
@@ -225,7 +243,11 @@ export default function FriendsScreen({ navigation }: Props) {
             ? <View style={styles.emptyBox}><Text style={styles.emptyIcon}>📬</Text><Text style={styles.emptyTitle}>No Pending Requests</Text><Text style={styles.emptyText}>When someone sends you a friend request, it will appear here.</Text></View>
             : requests.map((r) => (
               <View key={r._id} style={styles.card}>
-                <Avatar user={r.user1} />
+                <UserAvatar
+                  username={r.user1?.username}
+                  profileImage={r.user1?.profileImage}
+                  size={44}
+                />
                 <View style={styles.cardInfo}>
                   <Text style={styles.cardName}>{r.user1?.username}</Text>
                   <Text style={styles.cardSub}>Wants to connect</Text>
@@ -261,7 +283,11 @@ export default function FriendsScreen({ navigation }: Props) {
             </View>
             {searchResults.map((u) => (
               <View key={u._id} style={styles.card}>
-                <Avatar user={u} />
+                <UserAvatar
+                  username={u.username}
+                  profileImage={u.profileImage}
+                  size={44}
+                />
                 <View style={styles.cardInfo}>
                   <Text style={styles.cardName}>{u.username}</Text>
                   <Text style={styles.cardSub}>Level {u.level ?? 1} • {u.rank ?? "Novice"}</Text>
@@ -286,16 +312,21 @@ export default function FriendsScreen({ navigation }: Props) {
             ? <View style={styles.emptyBox}><Text style={styles.emptyIcon}>📰</Text><Text style={styles.emptyTitle}>No Friend Activity</Text><Text style={styles.emptyText}>Add friends to see their security learning activity here.</Text></View>
             : activity.map((a, i) => (
               <View key={i} style={styles.activityCard}>
-                <Avatar user={a.userId ?? {}} />
+                <UserAvatar
+                  username={a.userId?.username}
+                  profileImage={a.userId?.profileImage}
+                  size={44}
+                />
                 <View style={styles.activityInfo}>
                   <Text style={styles.activityName}>{a.userId?.username ?? "User"}</Text>
                   <Text style={styles.activityTitle}>{a.title}</Text>
-                  <Text style={styles.activityTime}>{new Date(a.createdAt).toLocaleDateString()}</Text>
+                  <Text style={styles.activityTime}>{formatDate(a.createdAt)}</Text>
                 </View>
                 <Text style={styles.activityPoints}>+{a.points ?? 0} XP</Text>
               </View>
             ))
         )}
+        <AdBanner isPremium={isPremium} marginVertical={10} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -313,9 +344,7 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 11, fontWeight: "600", color: Colors.textSecondary },
   tabTextActive: { color: "#FFF", fontWeight: "700" },
   content: { paddingHorizontal: Spacing.screen, paddingBottom: 100 },
-  card: { backgroundColor: Colors.surface, borderRadius: Spacing.radiusLarge, padding: 14, flexDirection: "row", alignItems: "center", marginBottom: Spacing.sm, borderWidth: 1, borderColor: Colors.border },
-  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.primary, justifyContent: "center", alignItems: "center", marginRight: 12 },
-  avatarText: { color: "#FFF", fontWeight: "700", fontSize: 16 },
+  card: { backgroundColor: Colors.surface, borderRadius: Spacing.radiusLarge, padding: 14, flexDirection: "row", alignItems: "center", marginBottom: Spacing.sm, borderWidth: 1, borderColor: Colors.border, gap: 12 },
   cardInfo: { flex: 1 },
   cardName: { ...Typography.bodyMedium, color: Colors.text, fontWeight: "700" },
   cardSub: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
@@ -339,8 +368,8 @@ const styles = StyleSheet.create({
   alreadyFriendText: { color: "#22C55E", fontWeight: "700", fontSize: 12 },
   pendingBadge: { backgroundColor: "#FEF3C7", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
   pendingText: { color: "#D97706", fontWeight: "700", fontSize: 12 },
-  activityCard: { backgroundColor: Colors.surface, borderRadius: Spacing.radiusLarge, padding: 14, flexDirection: "row", alignItems: "center", marginBottom: Spacing.sm, borderWidth: 1, borderColor: Colors.border },
-  activityInfo: { flex: 1, marginLeft: 12 },
+  activityCard: { backgroundColor: Colors.surface, borderRadius: Spacing.radiusLarge, padding: 14, flexDirection: "row", alignItems: "center", marginBottom: Spacing.sm, borderWidth: 1, borderColor: Colors.border, gap: 12 },
+  activityInfo: { flex: 1 },
   activityName: { fontWeight: "700", color: Colors.text, fontSize: 13 },
   activityTitle: { color: Colors.textSecondary, fontSize: 12, marginTop: 2 },
   activityTime: { color: Colors.textMuted, fontSize: 11, marginTop: 2 },

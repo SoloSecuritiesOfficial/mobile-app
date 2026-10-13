@@ -8,8 +8,10 @@ import { useFocusEffect } from "@react-navigation/native";
 import api from "../../services/api";
 import { getCurrentUser } from "../../services/authService";
 import Colors from "../../theme/colors";
+import AdBanner from "../../components/AdBanner";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
+import UserAvatar from "../../components/UserAvatar";
 
 type Tab = "xp" | "level" | "streak" | "quiz";
 
@@ -42,17 +44,21 @@ export default function LeaderboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<LeaderboardEntry[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isPremium, setIsPremium] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
+      setError(null);
       const [res, user] = await Promise.all([
         api.get(`/gamification/leaderboard?type=${tab}&limit=50`),
         getCurrentUser(),
       ]);
       setData(res.data?.data ?? []);
       setCurrentUserId(user?._id ?? null);
-    } catch (err) {
-      console.log("Leaderboard error:", err);
+      setIsPremium(!!(user as any)?.isPremium);
+    } catch (err: any) {
+      setError(err?.message ?? "Failed to load leaderboard.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -76,6 +82,26 @@ export default function LeaderboardScreen() {
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color={Colors.primary} />
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.center}>
+        <Text style={{ fontSize: 44, marginBottom: 12 }}>⚠️</Text>
+        <Text style={{ fontWeight: "700", fontSize: 18, color: Colors.text, marginBottom: 8 }}>
+          Failed to Load Leaderboard
+        </Text>
+        <Text style={{ color: Colors.textSecondary, textAlign: "center", marginBottom: 20, paddingHorizontal: 32 }}>
+          {error}
+        </Text>
+        <TouchableOpacity
+          style={{ backgroundColor: Colors.primary, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 12 }}
+          onPress={() => { setLoading(true); load(); }}
+        >
+          <Text style={{ color: "#FFF", fontWeight: "700", fontSize: 15 }}>Try Again</Text>
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }
@@ -114,15 +140,14 @@ export default function LeaderboardScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} colors={[Colors.primary]} />}
         showsVerticalScrollIndicator={false}
       >
+        <AdBanner isPremium={isPremium} marginVertical={8} />
         {/* Top 3 Podium */}
         {data.length >= 3 && (
           <View style={styles.podium}>
             {/* 2nd place */}
             <View style={styles.podiumItem}>
               <Text style={styles.podiumMedal}>{MEDALS[1]}</Text>
-              <View style={[styles.podiumAvatar, { backgroundColor: "#9CA3AF" }]}>
-                <Text style={styles.podiumAvatarText}>{(data[1]?.username ?? "?").substring(0, 2).toUpperCase()}</Text>
-              </View>
+              <UserAvatar username={data[1]?.username} profileImage={data[1]?.profileImage} size={52} />
               <Text style={styles.podiumName} numberOfLines={1}>{data[1]?.username}</Text>
               <Text style={styles.podiumMetric}>{getMetric(data[1])}</Text>
             </View>
@@ -130,9 +155,7 @@ export default function LeaderboardScreen() {
             {/* 1st place */}
             <View style={[styles.podiumItem, styles.podiumFirst]}>
               <Text style={[styles.podiumMedal, { fontSize: 32 }]}>{MEDALS[0]}</Text>
-              <View style={[styles.podiumAvatar, { backgroundColor: Colors.primary, width: 64, height: 64, borderRadius: 32 }]}>
-                <Text style={[styles.podiumAvatarText, { fontSize: 22 }]}>{(data[0]?.username ?? "?").substring(0, 2).toUpperCase()}</Text>
-              </View>
+              <UserAvatar username={data[0]?.username} profileImage={data[0]?.profileImage} size={64} />
               <Text style={[styles.podiumName, { fontWeight: "800" }]} numberOfLines={1}>{data[0]?.username}</Text>
               <Text style={styles.podiumMetric}>{getMetric(data[0])}</Text>
             </View>
@@ -140,14 +163,14 @@ export default function LeaderboardScreen() {
             {/* 3rd place */}
             <View style={styles.podiumItem}>
               <Text style={styles.podiumMedal}>{MEDALS[2]}</Text>
-              <View style={[styles.podiumAvatar, { backgroundColor: "#CD7F32" }]}>
-                <Text style={styles.podiumAvatarText}>{(data[2]?.username ?? "?").substring(0, 2).toUpperCase()}</Text>
-              </View>
+              <UserAvatar username={data[2]?.username} profileImage={data[2]?.profileImage} size={52} />
               <Text style={styles.podiumName} numberOfLines={1}>{data[2]?.username}</Text>
               <Text style={styles.podiumMetric}>{getMetric(data[2])}</Text>
             </View>
           </View>
         )}
+
+        <AdBanner isPremium={isPremium} marginVertical={10} />
 
         {/* Full List */}
         {data.slice(3).map((entry, idx) => {
@@ -156,11 +179,11 @@ export default function LeaderboardScreen() {
           return (
             <View key={entry._id} style={[styles.card, isMe && styles.cardMe]}>
               <Text style={styles.rankNum}>#{rank}</Text>
-              <View style={styles.entryAvatar}>
-                <Text style={styles.entryAvatarText}>{(entry.username ?? "?").substring(0, 2).toUpperCase()}</Text>
+              <View style={{ marginRight: 12 }}>
+                <UserAvatar username={entry.username} profileImage={entry.profileImage} size={40} />
               </View>
               <View style={styles.entryInfo}>
-                <Text style={styles.entryName}>{entry.username} {isMe ? "(You)" : ""}</Text>
+                <Text style={styles.entryName}>{entry.username}{isMe ? " (You)" : ""}</Text>
                 <Text style={styles.entryLevel}>Level {entry.level ?? 1}</Text>
               </View>
               <Text style={styles.entryMetric}>{getMetric(entry)}</Text>
@@ -175,6 +198,7 @@ export default function LeaderboardScreen() {
             <Text style={styles.emptyText}>Be the first to appear on the leaderboard!</Text>
           </View>
         )}
+        <AdBanner isPremium={isPremium} marginVertical={10} />
       </ScrollView>
     </SafeAreaView>
   );

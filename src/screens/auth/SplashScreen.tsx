@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   Animated,
+  Dimensions,
   Image,
   StyleSheet,
   Text,
@@ -9,124 +10,93 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
-import LoadingBar from "../../components/LoadingBar";
-import { RootStackParamList } from "../../navigation/AppNavigator";
+import { RootStackParamList } from "../../navigation/types";
 import { isLoggedIn } from "../../services/authService";
 
-type Props = NativeStackScreenProps<
-  RootStackParamList,
-  "Splash"
->;
+type Props = NativeStackScreenProps<RootStackParamList, "Splash">;
 
-const messages = [
-  "Secure • Learn • Protect",
-  "Cybersecurity Starts Here",
-  "Protecting Your Digital World",
-];
+const SCREEN_WIDTH = Dimensions.get("window").width;
 
-export default function SplashScreen({
-  navigation,
-}: Props) {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+export default function SplashScreen({ navigation }: Props) {
+  const fadeAnim    = useRef(new Animated.Value(0)).current;
+  const barAnim     = useRef(new Animated.Value(0)).current;
+  const didNavigate = useRef(false);
 
-  const navigationDone = useRef(false);
-
-  const [text, setText] = useState("");
+  // Safe navigate — only once, never crashes
+  const goNext = (loggedIn: boolean) => {
+    if (didNavigate.current) return;
+    didNavigate.current = true;
+    navigation.replace(loggedIn ? "Dashboard" : "Login");
+  };
 
   useEffect(() => {
+    // Fade in the splash content
     Animated.timing(fadeAnim, {
       toValue: 1,
-      duration: 1200,
+      duration: 500,
       useNativeDriver: true,
     }).start();
 
-    let charIndex = 0;
-    let deleting = false;
-    let currentMessage = 0;
+    // Animate the progress bar over ~1.5 s
+    Animated.timing(barAnim, {
+      toValue: 1,
+      duration: 1500,
+      useNativeDriver: false,
+    }).start();
 
-    const typingInterval = setInterval(() => {
-      const fullText = messages[currentMessage];
+    // Hard timeout — if anything hangs, navigate after 3 s no matter what
+    const hardTimeout = setTimeout(() => goNext(false), 3000);
 
-      if (!deleting) {
-        charIndex++;
-
-        setText(fullText.substring(0, charIndex));
-
-        if (charIndex >= fullText.length) {
-          deleting = true;
-        }
-      } else {
-        charIndex--;
-
-        setText(fullText.substring(0, charIndex));
-
-        if (charIndex <= 0) {
-          deleting = false;
-          currentMessage =
-            (currentMessage + 1) % messages.length;
-        }
+    // Check auth token — resolves quickly from SecureStore
+    const checkAuth = async () => {
+      try {
+        const loggedIn = await isLoggedIn();
+        clearTimeout(hardTimeout);
+        // Small delay so the bar visually finishes
+        setTimeout(() => goNext(loggedIn), 300);
+      } catch {
+        clearTimeout(hardTimeout);
+        setTimeout(() => goNext(false), 300);
       }
-    }, 90);
+    };
+
+    // Small initial delay so the splash renders before async work starts
+    const startTimer = setTimeout(checkAuth, 400);
 
     return () => {
-      clearInterval(typingInterval);
+      clearTimeout(hardTimeout);
+      clearTimeout(startTimer);
     };
   }, []);
 
-  const handleLoadingComplete = async () => {
-    if (navigationDone.current) return;
-
-    navigationDone.current = true;
-
-    try {
-      const loggedIn = await isLoggedIn();
-
-      if (loggedIn) {
-        navigation.replace("Dashboard");
-      } else {
-        navigation.replace("Login");
-      }
-    } catch (error) {
-      navigation.replace("Login");
-    }
-  };
+  const barWidth = barAnim.interpolate({
+    inputRange:  [0, 1],
+    outputRange: ["0%", "100%"],
+    extrapolate: "clamp",
+  });
 
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
 
-      <Animated.View
-        style={[
-          styles.content,
-          {
-            opacity: fadeAnim,
-          },
-        ]}
-      >
+      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+        {/* Logo */}
         <Image
           source={require("../../../assets/images/logo.png")}
           style={styles.logo}
           resizeMode="contain"
         />
 
-        <Text style={styles.tagline}>
-          {text}
-          <Text style={styles.cursor}>|</Text>
-        </Text>
-
-        <LoadingBar
-          onComplete={handleLoadingComplete}
-        />
+        {/* Loading bar */}
+        <View style={styles.barTrack}>
+          <Animated.View style={[styles.barFill, { width: barWidth }]} />
+        </View>
       </Animated.View>
 
+      {/* Footer */}
       <View style={styles.footer}>
-        <Text style={styles.powered}>
-          Powered by SoloSecurities
-        </Text>
-
-        <Text style={styles.version}>
-          Version 1.0.0
-        </Text>
+        <Text style={styles.powered}>Powered by SoloSecurities</Text>
+        <Text style={styles.version}>Version 1.0.0</Text>
       </View>
     </View>
   );
@@ -139,48 +109,40 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   content: {
     width: "100%",
-    justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: 40,
   },
-
   logo: {
-    width: 400,
-    height: 500,
-    marginBottom: 24,
+    width:        SCREEN_WIDTH * 0.55,
+    height:       SCREEN_WIDTH * 0.55,
+    marginBottom: 40,
   },
-
-  tagline: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#111111",
-    textAlign: "center",
-    minHeight: 32,
-    marginBottom: 30,
+  barTrack: {
+    width:           "100%",
+    height:          6,
+    backgroundColor: "#E6E6E6",
+    borderRadius:    100,
+    overflow:        "hidden",
   },
-
-  cursor: {
-    color: "#C62828",
-    fontWeight: "bold",
+  barFill: {
+    height:          "100%",
+    backgroundColor: "#C62828",
+    borderRadius:    100,
   },
-
   footer: {
-    position: "absolute",
-    bottom: 30,
+    position:   "absolute",
+    bottom:     30,
     alignItems: "center",
   },
-
   powered: {
-    fontSize: 14,
-    color: "#666666",
+    fontSize:     14,
+    color:        "#666666",
     marginBottom: 4,
   },
-
   version: {
     fontSize: 12,
-    color: "#999999",
+    color:    "#999999",
   },
 });

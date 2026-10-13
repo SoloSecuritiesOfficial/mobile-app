@@ -1,9 +1,5 @@
 import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-} from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 
 import Colors from "../theme/colors";
 import Spacing from "../theme/spacing";
@@ -18,34 +14,26 @@ export default function LearningProgressCard({
   completed = 0,
   total = 0,
 }: Props) {
-  const percentage = total > 0
-    ? Math.min(Math.round((completed / total) * 100), 100)
-    : 0;
+  const percentage =
+    total > 0 ? Math.min(Math.round((completed / total) * 100), 100) : 0;
 
   const remaining = Math.max(total - completed, 0);
 
   return (
     <>
-      <Text style={styles.sectionTitle}>
-        Learning Progress
-      </Text>
+      <Text style={styles.sectionTitle}>Learning Progress</Text>
 
       <View style={styles.card}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.title}>
-              Completed Modules
-            </Text>
+            <Text style={styles.title}>Completed Modules</Text>
 
             <Text style={styles.subtitle}>
-              Continue learning to improve your
-              cyber security skills.
+              Continue learning to improve your cyber security skills.
             </Text>
           </View>
 
-          <Text style={styles.icon}>
-            📚
-          </Text>
+          <Text style={styles.icon}>📚</Text>
         </View>
 
         <Text style={styles.value}>
@@ -64,12 +52,8 @@ export default function LearningProgressCard({
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            {percentage}% Completed
-          </Text>
-          <Text style={styles.footerText}>
-            {remaining} Remaining
-          </Text>
+          <Text style={styles.footerText}>{percentage}% Completed</Text>
+          <Text style={styles.footerText}>{remaining} Remaining</Text>
         </View>
       </View>
     </>

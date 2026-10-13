@@ -1,10 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import {
-  Animated,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Animated, StyleSheet, Text, View } from "react-native";
 
 type LoadingBarProps = {
   onComplete?: () => void;
@@ -19,9 +14,7 @@ const loadingMessages = [
   "System Ready ✓",
 ];
 
-export default function LoadingBar({
-  onComplete,
-}: LoadingBarProps) {
+export default function LoadingBar({ onComplete }: LoadingBarProps) {
   const progress = useRef(new Animated.Value(0)).current;
 
   const [messageIndex, setMessageIndex] = useState(0);
@@ -45,7 +38,6 @@ export default function LoadingBar({
       });
     }, 800);
 
-
     const finishTimer = setTimeout(() => {
       if (!completed.current) {
         completed.current = true;
@@ -54,27 +46,20 @@ export default function LoadingBar({
       }
     }, 5200);
 
-
     return () => {
       clearInterval(messageTimer);
       clearTimeout(finishTimer);
     };
   }, []);
 
-
   const width = progress.interpolate({
     inputRange: [0, 1],
     outputRange: ["0%", "100%"],
   });
 
-
   return (
     <View style={styles.container}>
-
-      <Text style={styles.loadingText}>
-        {loadingMessages[messageIndex]}
-      </Text>
-
+      <Text style={styles.loadingText}>{loadingMessages[messageIndex]}</Text>
 
       <View style={styles.track}>
         <Animated.View
@@ -86,20 +71,16 @@ export default function LoadingBar({
           ]}
         />
       </View>
-
     </View>
   );
 }
 
-
 const styles = StyleSheet.create({
-
   container: {
     width: "85%",
     marginTop: 35,
     alignItems: "center",
   },
-
 
   loadingText: {
     marginBottom: 12,
@@ -109,7 +90,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-
   track: {
     width: "100%",
     height: 8,
@@ -118,11 +98,9 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
 
-
   progress: {
     height: "100%",
     backgroundColor: "#C62828",
     borderRadius: 100,
   },
-
 });

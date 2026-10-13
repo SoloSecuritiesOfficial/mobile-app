@@ -9,17 +9,26 @@ import {
   Alert,
   ActivityIndicator,
   FlatList,
+  SafeAreaView,
 } from "react-native";
 import { startSecurityScan, getScanHistory } from "../../services/securityService";
+import { getCurrentUser } from "../../services/authService";
+import AdBanner from "../../components/AdBanner";
+import { showInterstitialAd } from "../../components/InterstitialAd";
+import RewardedAdGate from "../../components/RewardedAdGate";
 import Colors from "../../theme/colors";
-import Spacing from "../../theme/spacing";
-import Typography from "../../theme/typography";
+import { useResponsive, useStyles } from "../../hooks";
+import { formatDate, formatTime } from "../../utils/dateUtils";
 
 export default function SecurityScanScreen() {
+  const styles = useStyles(styleFactory);
+
   const [target, setTarget] = useState("");
   const [scanning, setScanning] = useState(false);
   const [currentScan, setCurrentScan] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
+  const [isPremium, setIsPremium] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadHistory();
@@ -27,12 +36,18 @@ export default function SecurityScanScreen() {
 
   const loadHistory = async () => {
     try {
-      const res = await getScanHistory();
+      setError(null);
+      const [res, user] = await Promise.all([
+        getScanHistory(),
+        getCurrentUser(),
+      ]);
       if (res.success && res.data) {
         setHistory(res.data);
       }
+      setIsPremium(!!(user as any)?.isPremium);
     } catch (err) {
       console.log("Error loading scan history:", err);
+      setError(err instanceof Error ? err.message : "Failed to load scan history");
     }
   };
 
@@ -45,24 +60,44 @@ export default function SecurityScanScreen() {
     try {
       setScanning(true);
       setCurrentScan(null);
+      setError(null);
+      // Show interstitial before scan results appear
+      await showInterstitialAd(isPremium);
       const res = await startSecurityScan(target);
       if (res.success && res.data) {
         setCurrentScan(res.data);
         loadHistory();
       } else {
-        Alert.alert("Scan Error", res.message || "Failed to complete security scan.");
+        setError(res.message || "Failed to complete security scan.");
       }
     } catch (err: any) {
-      Alert.alert("Error", err.message || "Network error running security scan");
+      setError(err.message || "Network error running security scan");
     } finally {
       setScanning(false);
     }
   };
 
+  if (error && !currentScan && history.length === 0) {
+    return (
+      <SafeAreaView style={styles.errorContainer}>
+        <View style={styles.errorCard}>
+          <Text style={styles.errorIcon}>⚠️</Text>
+          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorMessage}>{error}</Text>
+          <TouchableOpacity style={styles.errorButton} onPress={loadHistory}>
+            <Text style={styles.errorButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.headerTitle}>Security Scan 🛡️</Text>
       <Text style={styles.headerSubtitle}>Analyze target domain HTTPS SSL certificate & security headers</Text>
+
+      <AdBanner isPremium={isPremium} marginVertical={8} />
 
       <View style={styles.inputContainer}>
         <TextInput
@@ -139,7 +174,8 @@ export default function SecurityScanScreen() {
       )}
 
       {/* History */}
-      <Text style={[styles.headerTitle, { fontSize: 20, marginTop: Spacing.xl }]}>Scan History</Text>
+      <AdBanner isPremium={isPremium} marginVertical={8} />
+      <Text style={styles.historyTitle}>Scan History</Text>
       {history.length === 0 ? (
         <Text style={styles.emptyText}>No previous scans logged yet.</Text>
       ) : (
@@ -150,37 +186,46 @@ export default function SecurityScanScreen() {
               <Text style={styles.historyScore}>{item.score}%</Text>
             </View>
             <Text style={styles.historyDate}>
-              {new Date(item.createdAt).toLocaleDateString()} at {new Date(item.createdAt).toLocaleTimeString()}
+              {formatDate(item.createdAt)} at {formatTime(item.createdAt)}
             </Text>
           </View>
         ))
       )}
+      <AdBanner isPremium={isPremium} marginVertical={12} />
+
+      {/* Rewarded ad — watch to unlock extra scan credits */}
+      <RewardedAdGate
+        isPremium={isPremium}
+        label="🎁 Watch Ad — Unlock Extra Scan"
+        onReward={() => Alert.alert("🎁 Reward Earned", "Extra scan credit unlocked!")}
+        style={{ marginBottom: 16 }}
+      />
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
+const styleFactory = (spacing: any, typography: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
   },
   content: {
     paddingTop: 50,
-    paddingHorizontal: Spacing.screen,
-    paddingBottom: Spacing.xxl,
+    paddingHorizontal: spacing.screen,
+    paddingBottom: spacing.xxl,
   },
   headerTitle: {
-    ...Typography.h1,
+    ...typography.h1,
     color: Colors.text,
   },
   headerSubtitle: {
-    ...Typography.bodySmall,
+    ...typography.bodySmall,
     color: Colors.textSecondary,
-    marginBottom: Spacing.lg,
+    marginBottom: spacing.lg,
   },
   inputContainer: {
     flexDirection: "row",
-    marginBottom: Spacing.lg,
+    marginBottom: spacing.lg,
   },
   input: {
     flex: 1,
@@ -188,7 +233,7 @@ const styles = StyleSheet.create({
     color: Colors.text,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: Spacing.radiusLarge,
+    borderRadius: spacing.radiusLarge,
     fontSize: 14,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -199,25 +244,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: Spacing.radiusLarge,
+    borderRadius: spacing.radiusLarge,
   },
   scanButtonText: {
-    color: Colors.textWhite,
+    color: "#FFFFFF",
     fontWeight: "700",
     fontSize: 14,
   },
   resultCard: {
     backgroundColor: Colors.surface,
-    borderRadius: Spacing.radiusLarge,
-    padding: Spacing.cardPadding,
-    marginBottom: Spacing.lg,
+    borderRadius: spacing.radiusLarge,
+    padding: spacing.cardPadding,
+    marginBottom: spacing.lg,
     borderWidth: 1,
     borderColor: Colors.border,
   },
   resultHeader: {
-    ...Typography.h3,
+    ...typography.h3,
     color: Colors.text,
-    marginBottom: Spacing.sm,
+    marginBottom: spacing.sm,
   },
   scoreRow: {
     flexDirection: "row",
@@ -226,7 +271,7 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   scoreLabel: {
-    ...Typography.bodyMedium,
+    ...typography.bodyMedium,
     color: Colors.textSecondary,
   },
   scoreValue: {
@@ -236,23 +281,23 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: Colors.border,
-    marginVertical: Spacing.md,
+    marginVertical: spacing.md,
   },
   sectionTitle: {
-    ...Typography.labelLarge,
+    ...typography.labelLarge,
     color: Colors.text,
     marginBottom: 6,
   },
   detailText: {
-    ...Typography.bodySmall,
+    ...typography.bodySmall,
     color: Colors.textSecondary,
     marginVertical: 2,
   },
   vulnBox: {
-    marginTop: Spacing.md,
+    marginTop: spacing.md,
     backgroundColor: "#311B1B",
     padding: 12,
-    borderRadius: Spacing.radiusMedium,
+    borderRadius: spacing.radiusMedium,
   },
   vulnHeader: {
     color: "#EF4444",
@@ -268,7 +313,7 @@ const styles = StyleSheet.create({
   historyCard: {
     backgroundColor: Colors.surface,
     padding: 14,
-    borderRadius: Spacing.radiusMedium,
+    borderRadius: spacing.radiusMedium,
     marginTop: 8,
   },
   historyHeader: {
@@ -277,7 +322,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   historyTarget: {
-    ...Typography.labelLarge,
+    ...typography.labelLarge,
     color: Colors.text,
   },
   historyScore: {
@@ -285,7 +330,7 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   historyDate: {
-    ...Typography.bodySmall,
+    ...typography.bodySmall,
     color: Colors.textMuted,
     marginTop: 2,
   },
@@ -293,4 +338,17 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     marginTop: 8,
   },
+  historyTitle: {
+    ...typography.h1,
+    fontSize: 20,
+    marginTop: spacing.xl,
+  },
+  // error state
+  errorContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: spacing.screen },
+  errorCard: { backgroundColor: Colors.surface, borderRadius: spacing.radiusLarge, padding: spacing.xl, alignItems: "center", borderWidth: 1, borderColor: Colors.border },
+  errorIcon: { fontSize: spacing.iconXL, marginBottom: spacing.md },
+  errorTitle: { ...typography.h3, color: Colors.text, marginBottom: spacing.sm, textAlign: "center" },
+  errorMessage: { ...typography.bodyMedium, color: Colors.textSecondary, textAlign: "center", marginBottom: spacing.lg },
+  errorButton: { backgroundColor: Colors.primary, paddingHorizontal: spacing.xl, paddingVertical: spacing.md, borderRadius: spacing.radiusMedium },
+  errorButtonText: { color: "#FFF", ...typography.button },
 });

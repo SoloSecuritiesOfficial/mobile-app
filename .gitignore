@@ -6,16 +6,14 @@ node_modules/
 dist/
 web-build/
 
-# Native
-android/
-ios/
-
 # Logs
 *.log
 
 # Environment
 .env
 .env.*
+.env.local
+.env.production
 
 # macOS
 .DS_Store
@@ -29,3 +27,15 @@ Thumbs.db
 # Temporary
 *.tmp
 *.temp
+
+# ── Release keystore — contains signing private key, must never be committed ─
+# Keep debug.keystore (it has well-known credentials, needed for dev builds)
+*.jks
+android/app/release.keystore
+android/app/upload.keystore
+
+# NOTE: google-services.json is intentionally tracked in Git.
+# It contains only public Firebase project config (app IDs, API keys for
+# client-side SDKs) — no server-side secrets. EAS Build needs it to compile
+# the Android app. The real secrets (Firebase Admin private key) live only
+# in the backend .env and are never committed to this repo.

@@ -66,14 +66,22 @@ export function configureForegroundNotifications(): void {
 
 // ─────────────────────────────────────────────────────────────────
 // Create Android notification channel (Android 8+ requirement)
+//
+// TWO variants:
+//   ensureAndroidChannelEarly() — synchronous fire-and-forget, safe
+//     to call at module level before React mounts. Used in App.tsx
+//     so the channel exists even when the app was killed.
+//   ensureAndroidChannel()      — async, awaited inside
+//     registerForPushNotifications().
 // ─────────────────────────────────────────────────────────────────
-async function ensureAndroidChannel(): Promise<void> {
+
+/** Fire-and-forget version — call at module level in App.tsx */
+export function ensureAndroidChannelEarly(): void {
   if (Platform.OS !== "android") return;
   const N = getNotifications();
   if (!N) return;
 
-  await N.setNotificationChannelAsync("default", {
-    name:             "SoloSecurities",
+  const channelConfig = {
     importance:       N.AndroidImportance.MAX,
     vibrationPattern: [0, 250, 250, 250],
     lightColor:       "#C62828",
@@ -81,12 +89,53 @@ async function ensureAndroidChannel(): Promise<void> {
     enableLights:     true,
     enableVibrate:    true,
     showBadge:        true,
-  });
+  };
+
+  // Create both channels — not awaited, runs before React mounts
+  Promise.all([
+    N.setNotificationChannelAsync("default", {
+      name: "SoloSecurities",
+      ...channelConfig,
+    }),
+    N.setNotificationChannelAsync("chat", {
+      name: "Chat Messages",
+      ...channelConfig,
+    }),
+  ]).catch(() => { /* silently ignore in Expo Go / emulators */ });
+}
+
+async function ensureAndroidChannel(): Promise<void> {
+  if (Platform.OS !== "android") return;
+  const N = getNotifications();
+  if (!N) return;
+
+  const channelConfig = {
+    importance:       N.AndroidImportance.MAX,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor:       "#C62828",
+    sound:            "default",
+    enableLights:     true,
+    enableVibrate:    true,
+    showBadge:        true,
+  };
+
+  await Promise.all([
+    N.setNotificationChannelAsync("default", {
+      name: "SoloSecurities",
+      ...channelConfig,
+    }),
+    N.setNotificationChannelAsync("chat", {
+      name: "Chat Messages",
+      ...channelConfig,
+    }),
+  ]);
 }
 
 // ─────────────────────────────────────────────────────────────────
 // Register for push notifications
-// Returns FCM device token string, or null if unavailable
+// Safe to call on EVERY app open — backend upserts the token so
+// calling it multiple times is idempotent and harmless.
+// Returns FCM device token string, or null if unavailable.
 // ─────────────────────────────────────────────────────────────────
 export async function registerForPushNotifications(): Promise<string | null> {
   const N = getNotifications();
@@ -101,6 +150,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
   }
 
   try {
+    // Ensure channel exists (belt-and-suspenders alongside App.tsx call)
     await ensureAndroidChannel();
 
     // Request OS permission
@@ -119,13 +169,21 @@ export async function registerForPushNotifications(): Promise<string | null> {
       return null;
     }
 
-    // Get native FCM device token
+    // Get the native FCM device token.
+    // getDevicePushTokenAsync() returns the raw FCM token (not an Expo
+    // push token) — this is what Firebase Admin SDK expects.
     const tokenData = await N.getDevicePushTokenAsync();
     const fcmToken  = tokenData.data as string;
 
+    if (!fcmToken) {
+      console.warn("[Push] Got empty FCM token.");
+      return null;
+    }
+
     console.log("[Push] FCM token:", fcmToken.substring(0, 20) + "...");
 
-    // Register with backend
+    // Always register/refresh with backend — the server upserts so
+    // repeat calls only update lastUsed and keep the token active.
     await api.post("/push/register", {
       token:    fcmToken,
       platform: Platform.OS,
@@ -136,7 +194,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
       },
     });
 
-    console.log("[Push] Token registered ✅");
+    console.log("[Push] Token registered/refreshed ✅");
     return fcmToken;
 
   } catch (err: any) {
