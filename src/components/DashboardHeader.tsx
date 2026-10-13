@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types";
-import { BASE_URL } from "../config/api";
+import { resolveAvatar } from "../utils/avatar";
 import Colors from "../theme/colors";
 import Spacing from "../theme/spacing";
 import Typography from "../theme/typography";
@@ -33,12 +33,7 @@ interface Props {
   rewardBalance?: number;
 }
 
-function resolveAvatar(profileImage?: string): string | null {
-  if (!profileImage) return null;
-  if (profileImage.startsWith("data:image/")) return profileImage;
-  if (profileImage.startsWith("http://") || profileImage.startsWith("https://")) return profileImage;
-  return `${BASE_URL}${profileImage}`;
-}
+// resolveAvatar imported from ../utils/avatar
 
 function SubscriptionBadge({ user }: { user: User | null }) {
   if (!user) return null;

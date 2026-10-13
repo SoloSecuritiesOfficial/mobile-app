@@ -21,7 +21,7 @@ import Spacing from "../../theme/spacing";
 import AdBanner from "../../components/AdBanner";
 import { showInterstitialAd } from "../../components/InterstitialAd";
 import Typography from "../../theme/typography";
-import { BASE_URL } from "../../config/api";
+import { resolveAvatar } from "../../utils/avatar";
 
 import {
   fetchCurrentUser, getCurrentUser,
@@ -48,15 +48,7 @@ const TIER_CONFIG: Record<Tier, TierConfig> = {
   admin: { label: "Administrator",     icon: "🛡️", bg: "#E8EAF6", fg: "#1A237E" },
 };
 
-function resolveAvatar(profileImage?: string): string | null {
-  if (!profileImage) return null;
-  // data: URL (base64) — use directly
-  if (profileImage.startsWith("data:")) return profileImage;
-  // absolute http(s) URL — use directly
-  if (profileImage.startsWith("http")) return profileImage;
-  // relative path — prepend backend base URL
-  return `${BASE_URL}${profileImage}`;
-}
+// resolveAvatar imported from ../../utils/avatar
 
 function TierBadge({ tier, expiresAt }: { tier: Tier; expiresAt?: string | null }) {
   const cfg = TIER_CONFIG[tier];

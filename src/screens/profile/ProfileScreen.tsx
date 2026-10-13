@@ -8,7 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import Colors from "../../theme/colors";
 import { useResponsive, useStyles } from "../../hooks";
-import { BASE_URL } from "../../config/api";
+import { resolveAvatar } from "../../utils/avatar";
 
 import {
   fetchCurrentUser, getCurrentUser,
@@ -52,13 +52,8 @@ function TierBadge({ tier }: { tier: Tier }) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Helper — resolve avatar URL (prepend BASE_URL for relative paths)
+// Helper — resolve avatar URL → imported from utils/avatar
 // ─────────────────────────────────────────────────────────────────
-function resolveAvatar(img?: string): string | null {
-  if (!img) return null;
-  if (img.startsWith("http")) return img;
-  return `${BASE_URL}${img}`;
-}
 
 const styleFactory = (spacing: any, typography: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },

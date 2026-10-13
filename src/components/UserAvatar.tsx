@@ -1,41 +1,27 @@
 import React, { useState } from "react";
 import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
-import { BASE_URL } from "../config/api";
+import { resolveAvatar } from "../utils/avatar";
 import Colors from "../theme/colors";
 
 interface Props {
-  username?: string;
+  username?    : string;
   profileImage?: string;
-  size?: number;
-  onPress?: () => void;
+  size?        : number;
+  onPress?     : () => void;
 }
 
 /**
- * Shared avatar component used across Friends, Chat, Leaderboard, etc.
- * - Loads the profile image (relative or absolute URL)
- * - Falls back to coloured initials circle on error or no image
+ * Shared avatar component — Friends, Chat, Leaderboard, FriendProfile, etc.
+ * Resolves all image URL formats via the shared resolveAvatar utility.
+ * Falls back to a coloured initials circle when the image is missing or fails.
  */
 export default function UserAvatar({ username, profileImage, size = 44, onPress }: Props) {
   const [imgError, setImgError] = useState(false);
 
+  const uri = !imgError ? resolveAvatar(profileImage) : null;
+
   const initials = (username || "?").substring(0, 2).toUpperCase();
-
-  let uri: string | null = null;
-  if (profileImage && !imgError) {
-    // data: URL (base64 stored in DB) — use directly
-    // http(s): URL (Google OAuth, CDN) — use directly
-    // anything else (relative path) — prepend backend base URL
-    uri =
-      profileImage.startsWith("data:") || profileImage.startsWith("http")
-        ? profileImage
-        : `${BASE_URL}${profileImage}`;
-  }
-
-  const circle = {
-    width: size,
-    height: size,
-    borderRadius: size / 2,
-  };
+  const circle   = { width: size, height: size, borderRadius: size / 2 };
 
   const content = uri ? (
     <Image
