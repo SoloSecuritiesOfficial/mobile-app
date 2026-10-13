@@ -24,56 +24,42 @@ export default function App() {
   const appState = useRef(AppState.currentState);
 
   useEffect(() => {
-    // Compute IS_EXPO_GO here where Constants is guaranteed to be ready
     const IS_EXPO_GO = Constants.appOwnership === "expo";
 
-    // Create Android notification channel early (after Constants is ready)
     if (!IS_EXPO_GO) {
       ensureAndroidChannelEarly();
     }
 
-    // Hide splash screen
     SplashScreen.hideAsync().catch(() => {});
 
-    // Configure foreground notification display (not needed in Expo Go)
     if (!IS_EXPO_GO) {
       configureForegroundNotifications();
     }
 
     const init = async () => {
-      // ── Step 1: Initialize the Google Mobile Ads SDK ─────────────────────
-      // app.json has googleMobileAdsAutoInit:false, so the SDK will NOT
-      // self-initialize. We MUST call initialize() before making any ad
-      // request (BannerAd load, RewardedInterstitialAd, AppOpenAd, etc.).
-      // Skipping this causes native crashes when ad components mount.
+      // ── Step 1: Initialize Google Mobile Ads SDK ──────────────────────────
       if (!IS_EXPO_GO) {
         try {
-          const { MobileAds } = await import(
-            "react-native-google-mobile-ads"
-          );
+          const { MobileAds } = await import("react-native-google-mobile-ads");
           await MobileAds().initialize();
         } catch (err) {
-          // Log but never crash — ads simply won't serve if init fails
           console.warn("[Ads] SDK initialization failed:", err);
         }
       }
 
-      // ── Step 2: Preload overlay ads AFTER SDK is initialized ─────────────
-      // Fire-and-forget — never block the UI thread for ads
+      // ── Step 2: Preload overlay ads AFTER SDK init ────────────────────────
       try { preloadInterstitialAd(); } catch { /* non-fatal */ }
-      try { initAppOpenAd(false); } catch { /* non-fatal */ }
+      try { initAppOpenAd(false); }    catch { /* non-fatal */ }
 
-      // ── Step 3: Push notification setup ──────────────────────────────────
+      // ── Step 3: Push notifications ────────────────────────────────────────
       const loggedIn = await isLoggedIn();
-
       if (!IS_EXPO_GO && loggedIn) {
-        // Re-register FCM token on every app open (idempotent upsert)
         registerForPushNotifications().catch((err) =>
           console.warn("[Push] Re-registration failed:", err?.message),
         );
       }
 
-      // ── Step 4: Handle cold-start notification tap ────────────────────────
+      // ── Step 4: Cold-start notification tap ───────────────────────────────
       if (!IS_EXPO_GO) {
         try {
           const N = require("expo-notifications");
@@ -91,13 +77,9 @@ export default function App() {
 
     init();
 
-    // ── Foreground / tap notification listeners ───────────────────────────
     const cleanup = addNotificationListeners({
       onForeground: (notification: any) => {
-        console.log(
-          "[Push] Foreground:",
-          notification?.request?.content?.title,
-        );
+        console.log("[Push] Foreground:", notification?.request?.content?.title);
       },
       onTap: (response: any) => {
         clearBadge();
@@ -108,7 +90,6 @@ export default function App() {
       },
     });
 
-    // ── Clear badge when app returns to foreground ────────────────────────
     const appStateSub = AppState.addEventListener(
       "change",
       (nextState: AppStateStatus) => {
