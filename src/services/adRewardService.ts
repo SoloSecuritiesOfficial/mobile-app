@@ -667,18 +667,19 @@ export async function requestWithdrawal(
  *   formatMicros(1000000, "USD") → "$1.00"
  */
 export function formatMicros(microValue: number, currencyCode: string): string {
+  // NOTE: Intl.NumberFormat with style:"currency" is NOT supported in Hermes
+  // (React Native's JS engine). Using manual formatting instead.
   const value = microValue / 1_000_000;
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style                : "currency",
-      currency             : currencyCode.toUpperCase(),
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 6,
-    }).format(value);
-  } catch {
-    // Intl throws for unknown/unsupported currency codes.
-    return `${currencyCode.toUpperCase()} ${value.toFixed(6)}`;
-  }
+  const symbol = currencyCode.toUpperCase() === "USD" ? "$"
+               : currencyCode.toUpperCase() === "INR" ? "₹"
+               : currencyCode.toUpperCase() === "EUR" ? "€"
+               : currencyCode.toUpperCase() === "GBP" ? "£"
+               : `${currencyCode.toUpperCase()} `;
+  // Show 2 decimal places for values >= 0.01, otherwise 6 significant digits
+  const formatted = value >= 0.01
+    ? value.toFixed(2)
+    : value.toFixed(6).replace(/\.?0+$/, "");
+  return `${symbol}${formatted}`;
 }
 
 /**
