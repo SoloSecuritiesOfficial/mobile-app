@@ -18,6 +18,7 @@ import { showInterstitialAd } from "../../components/InterstitialAd";
 import RewardedAdGate from "../../components/RewardedAdGate";
 import Colors from "../../theme/colors";
 import { useResponsive, useStyles } from "../../hooks";
+import { formatDate, formatTime } from "../../utils/dateUtils";
 
 export default function SecurityScanScreen() {
   const styles = useStyles(styleFactory);
@@ -185,7 +186,7 @@ export default function SecurityScanScreen() {
               <Text style={styles.historyScore}>{item.score}%</Text>
             </View>
             <Text style={styles.historyDate}>
-              {new Date(item.createdAt).toLocaleDateString()} at {new Date(item.createdAt).toLocaleTimeString()}
+              {formatDate(item.createdAt)} at {formatTime(item.createdAt)}
             </Text>
           </View>
         ))

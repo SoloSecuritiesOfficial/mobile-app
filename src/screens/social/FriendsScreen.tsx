@@ -14,6 +14,7 @@ import Typography from "../../theme/typography";
 import UserAvatar from "../../components/UserAvatar";
 import { getCurrentUser } from "../../services/authService";
 import AdBanner from "../../components/AdBanner";
+import { formatDate } from "../../utils/dateUtils";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Friends">;
 type Tab = "friends" | "requests" | "search" | "activity";
@@ -319,7 +320,7 @@ export default function FriendsScreen({ navigation }: Props) {
                 <View style={styles.activityInfo}>
                   <Text style={styles.activityName}>{a.userId?.username ?? "User"}</Text>
                   <Text style={styles.activityTitle}>{a.title}</Text>
-                  <Text style={styles.activityTime}>{new Date(a.createdAt).toLocaleDateString()}</Text>
+                  <Text style={styles.activityTime}>{formatDate(a.createdAt)}</Text>
                 </View>
                 <Text style={styles.activityPoints}>+{a.points ?? 0} XP</Text>
               </View>

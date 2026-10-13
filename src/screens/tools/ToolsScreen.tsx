@@ -14,6 +14,7 @@ import Colors from "../../theme/colors";
 import Spacing from "../../theme/spacing";
 import Typography from "../../theme/typography";
 import AdBanner from "../../components/AdBanner";
+import { formatUnixTimestamp } from "../../utils/dateUtils";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -617,7 +618,7 @@ function JwtTool() {
           {exp !== undefined && (
             <View style={[s.infoRow, { marginBottom: 8 }]}>
               <Text style={[s.infoKey, { color: expired ? "#EF4444" : "#10B981", fontWeight: "800" }]}>
-                {expired ? "⛔ EXPIRED" : "✅ VALID"} {exp !== undefined ? `— exp: ${new Date(exp * 1000).toLocaleString()}` : ""}
+                {expired ? "⛔ EXPIRED" : "✅ VALID"} {exp !== undefined ? `— exp: ${formatUnixTimestamp(exp)}` : ""}
               </Text>
             </View>
           )}

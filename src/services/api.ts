@@ -1,5 +1,4 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
-
 import { API_URL } from "../config/api";
 import {
   getToken,
@@ -8,6 +7,7 @@ import {
   saveRefreshToken,
   clearStorage,
 } from "../utils/storage";
+import { logError, createAppError, isNetworkErrorCheck, retryWithBackoff } from "../utils/errorHandling";
 
 // ─────────────────────────────────────────────────────────────────
 // Axios instance
@@ -17,6 +17,12 @@ const api = axios.create({
   timeout: 15000,
   headers: { "Content-Type": "application/json" },
 });
+
+// ─────────────────────────────────────────────────────────────────
+// Retry configuration
+// ─────────────────────────────────────────────────────────────────
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 1000;
 
 // ─────────────────────────────────────────────────────────────────
 // Token refresh state
@@ -57,17 +63,7 @@ api.interceptors.request.use(
 );
 
 // ─────────────────────────────────────────────────────────────────
-// RESPONSE interceptor — auto-refresh on 401
-//
-// Flow:
-//   1. Request fails with 401 (TokenExpiredError)
-//   2. Interceptor calls POST /auth/refresh with the stored
-//      refresh token
-//   3. Backend returns a new { token, refreshToken }
-//   4. New tokens saved to SecureStore
-//   5. Original failed request retried with new access token
-//   6. If refresh itself fails (refresh token also expired) →
-//      clear all storage and navigate user to Login
+// RESPONSE interceptor — auto-refresh on 401 and retry on network errors
 // ─────────────────────────────────────────────────────────────────
 api.interceptors.response.use(
   (response) => response,
@@ -75,9 +71,33 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
+      _retryCount?: number;
     };
 
     const status = error.response?.status;
+    const isNetworkError = isNetworkErrorCheck(error);
+
+    // ── Handle Network Errors with Retry Logic ──────────────────────
+    if (isNetworkError && originalRequest && !originalRequest._retry) {
+      const retryCount = originalRequest._retryCount ?? 0;
+      
+      if (retryCount < MAX_RETRIES) {
+        originalRequest._retry = true;
+        originalRequest._retryCount = retryCount + 1;
+        
+        const delay = RETRY_DELAY_MS * Math.pow(2, retryCount);
+        logError(error, { 
+          function: "apiRetry", 
+          attempt: retryCount + 1, 
+          maxRetries: MAX_RETRIES,
+          delayMs: delay,
+          url: originalRequest.url 
+        }, "warn");
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return api(originalRequest);
+      }
+    }
 
     // ── Only handle 401 (Unauthorized / token expired) ────────────
     // Skip refresh if:
@@ -103,7 +123,7 @@ api.interceptors.response.use(
       } else if (error.request) {
         console.log("NETWORK ERROR:", error.message);
       }
-      return Promise.reject(error);
+      return Promise.reject(createAppError(error));
     }
 
     // ── 401 on a protected endpoint — try to refresh ──────────────
@@ -165,7 +185,8 @@ api.interceptors.response.use(
         // navigation not ready
       }
 
-      return Promise.reject(refreshError);
+      return Promise.reject(createAppError(refreshError));
+
     } finally {
       isRefreshing = false;
     }
@@ -173,26 +194,33 @@ api.interceptors.response.use(
 );
 
 // ─────────────────────────────────────────────────────────────────
-// Convenience helpers
+// Convenience helpers with retry logic
 // ─────────────────────────────────────────────────────────────────
+const withRetry = async <T>(fn: () => Promise<T>, context: string): Promise<T> => {
+  return retryWithBackoff(fn, {
+    maxRetries: 2,
+    baseDelayMs: 500,
+    shouldRetry: (error) => isNetworkErrorCheck(createAppError(error)),
+    onRetry: (err, attempt) => {
+      logError(err, { function: context, retryAttempt: attempt }, "warn");
+    },
+  });
+};
+
 export const apiGet = async (endpoint: string) => {
-  const response = await api.get(endpoint);
-  return response.data;
+  return withRetry(() => api.get(endpoint).then(r => r.data), `apiGet:${endpoint}`);
 };
 
 export const apiPost = async (endpoint: string, data?: any) => {
-  const response = await api.post(endpoint, data);
-  return response.data;
+  return withRetry(() => api.post(endpoint, data).then(r => r.data), `apiPost:${endpoint}`);
 };
 
 export const apiPut = async (endpoint: string, data?: any) => {
-  const response = await api.put(endpoint, data);
-  return response.data;
+  return withRetry(() => api.put(endpoint, data).then(r => r.data), `apiPut:${endpoint}`);
 };
 
 export const apiDelete = async (endpoint: string) => {
-  const response = await api.delete(endpoint);
-  return response.data;
+  return withRetry(() => api.delete(endpoint).then(r => r.data), `apiDelete:${endpoint}`);
 };
 
 export default api;

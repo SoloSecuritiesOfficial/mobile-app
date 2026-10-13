@@ -37,6 +37,7 @@ import {
   sendMessage,
   setTyping,
 } from "../../services/chatService";
+import { formatTime, getRelativeDateLabel } from "../../utils/dateUtils";
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -65,23 +66,6 @@ interface Message {
 
 // ─── emoji picker options ─────────────────────────────────────────────────────
 const QUICK_REACTIONS = ["❤️", "😂", "😮", "😢", "😡", "👍"];
-
-// ─── helper ───────────────────────────────────────────────────────────────────
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  const today     = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  if (d.toDateString() === today.toDateString())     return "Today";
-  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-}
 
 // ─── ReactionBar ──────────────────────────────────────────────────────────────
 function ReactionBar({
@@ -659,14 +643,14 @@ export default function ChatScreen({ route, navigation }: any) {
     ({ item, index }: { item: Message; index: number }) => {
       const isMe    = item.sender._id === currentUserId;
       const prev    = messages[index - 1];
-      const showSep = !prev || formatDate(item.createdAt) !== formatDate(prev.createdAt);
+      const showSep = !prev || getRelativeDateLabel(item.createdAt) !== getRelativeDateLabel(prev.createdAt);
       return (
         <MessageBubble
           msg={item}
           isMe={isMe}
           currentUserId={currentUserId}
           showDateSeparator={showSep}
-          dateLabel={formatDate(item.createdAt)}
+          dateLabel={getRelativeDateLabel(item.createdAt)}
           onLongPress={openMenu}
           onReact={handleReact}
         />

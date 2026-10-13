@@ -1,4 +1,5 @@
 import api from "./api";
+import { logError, createAppError } from "../utils/errorHandling";
 
 
 /* -------------------------------------------------------------------------- */
@@ -25,17 +26,12 @@ export const getSecurityDashboard = async () => {
 
   } catch (error) {
 
-    console.error(
-      "Dashboard Error:",
-      error
-    );
-
-    throw error;
+    logError(error, { function: "getSecurityDashboard", endpoint: "/security/dashboard" });
+    throw createAppError(error, { function: "getSecurityDashboard", endpoint: "/security/dashboard" });
 
   }
 
 };
-
 
 
 /* -------------------------------------------------------------------------- */
@@ -52,17 +48,12 @@ export const getCVEUpdates = async () => {
 
   } catch (error) {
 
-    console.error(
-      "CVE Fetch Error:",
-      error
-    );
-
-    throw error;
+    logError(error, { function: "getCVEUpdates", endpoint: "/security/cves" });
+    throw createAppError(error, { function: "getCVEUpdates", endpoint: "/security/cves" });
 
   }
 
 };
-
 
 
 /* -------------------------------------------------------------------------- */
@@ -79,17 +70,12 @@ export const getLearningModules = async () => {
 
   } catch(error){
 
-    console.error(
-      "Learning Modules Error:",
-      error
-    );
-
-    throw error;
+    logError(error, { function: "getLearningModules", endpoint: "/security/learning" });
+    throw createAppError(error, { function: "getLearningModules", endpoint: "/security/learning" });
 
   }
 
 };
-
 
 
 export const getLearningModuleById = async (
@@ -104,17 +90,12 @@ export const getLearningModuleById = async (
 
   } catch(error){
 
-    console.error(
-      "Learning Details Error:",
-      error
-    );
-
-    throw error;
+    logError(error, { function: "getLearningModuleById", endpoint: `/security/learning/${id}`, id });
+    throw createAppError(error, { function: "getLearningModuleById", endpoint: `/security/learning/${id}`, id });
 
   }
 
 };
-
 
 
 export const completeLearningModule = async (
@@ -130,17 +111,12 @@ export const completeLearningModule = async (
 
   } catch(error){
 
-    console.error(
-      "Complete Learning Error:",
-      error
-    );
-
-    throw error;
+    logError(error, { function: "completeLearningModule", endpoint: `/security/learning/${id}/complete`, id });
+    throw createAppError(error, { function: "completeLearningModule", endpoint: `/security/learning/${id}/complete`, id });
 
   }
 
 };
-
 
 
 export const getLearningProgress = async () => {
@@ -153,17 +129,12 @@ export const getLearningProgress = async () => {
 
   } catch(error){
 
-    console.error(
-      "Learning Progress Error:",
-      error
-    );
-
-    throw error;
+    logError(error, { function: "getLearningProgress", endpoint: "/security/learning/progress" });
+    throw createAppError(error, { function: "getLearningProgress", endpoint: "/security/learning/progress" });
 
   }
 
 };
-
 
 
 /* -------------------------------------------------------------------------- */
@@ -180,17 +151,12 @@ export const getLabs = async () => {
 
   } catch(error){
 
-    console.error(
-      "Labs Error:",
-      error
-    );
-
-    throw error;
+    logError(error, { function: "getLabs", endpoint: "/security/labs" });
+    throw createAppError(error, { function: "getLabs", endpoint: "/security/labs" });
 
   }
 
 };
-
 
 
 export const getLabById = async (
@@ -205,17 +171,12 @@ export const getLabById = async (
 
   } catch(error){
 
-    console.error(
-      "Lab Details Error:",
-      error
-    );
-
-    throw error;
+    logError(error, { function: "getLabById", endpoint: `/security/labs/${id}`, id });
+    throw createAppError(error, { function: "getLabById", endpoint: `/security/labs/${id}`, id });
 
   }
 
 };
-
 
 
 export const completeLab = async (
@@ -231,17 +192,12 @@ export const completeLab = async (
 
   } catch(error){
 
-    console.error(
-      "Complete Lab Error:",
-      error
-    );
-
-    throw error;
+    logError(error, { function: "completeLab", endpoint: `/security/labs/${id}/complete`, id });
+    throw createAppError(error, { function: "completeLab", endpoint: `/security/labs/${id}/complete`, id });
 
   }
 
 };
-
 
 
 export const getLabProgress = async () => {
@@ -254,17 +210,12 @@ export const getLabProgress = async () => {
 
   } catch(error){
 
-    console.error(
-      "Lab Progress Error:",
-      error
-    );
-
-    throw error;
+    logError(error, { function: "getLabProgress", endpoint: "/security/labs/progress" });
+    throw createAppError(error, { function: "getLabProgress", endpoint: "/security/labs/progress" });
 
   }
 
 };
-
 
 
 /* -------------------------------------------------------------------------- */
@@ -281,17 +232,12 @@ export const getBugReports = async () => {
 
   } catch(error){
 
-    console.error(
-      "Bug Reports Error:",
-      error
-    );
-
-    throw error;
+    logError(error, { function: "getBugReports", endpoint: "/security/bugs" });
+    throw createAppError(error, { function: "getBugReports", endpoint: "/security/bugs" });
 
   }
 
 };
-
 
 
 export const getBugReportById = async (
@@ -306,17 +252,12 @@ export const getBugReportById = async (
 
   } catch(error){
 
-    console.error(
-      "Bug Details Error:",
-      error
-    );
-
-    throw error;
+    logError(error, { function: "getBugReportById", endpoint: `/security/bugs/${id}`, id });
+    throw createAppError(error, { function: "getBugReportById", endpoint: `/security/bugs/${id}`, id });
 
   }
 
 };
-
 
 
 export const submitBugReport = async (
@@ -338,12 +279,8 @@ export const submitBugReport = async (
 
   } catch(error){
 
-    console.error(
-      "Submit Bug Error:",
-      error
-    );
-
-    throw error;
+    logError(error, { function: "submitBugReport", endpoint: "/security/bugs/report" });
+    throw createAppError(error, { function: "submitBugReport", endpoint: "/security/bugs/report" });
 
   }
 
@@ -354,11 +291,10 @@ export const acknowledgeBugReport = async (id: string) => {
     const apiPatch = (url: string) => api.patch(url).then(r => r.data);
     return await apiPatch(`/security/bugs/${id}/acknowledge`);
   } catch (error) {
-    console.error("Acknowledge Bug Error:", error);
-    throw error;
+    logError(error, { function: "acknowledgeBugReport", endpoint: `/security/bugs/${id}/acknowledge`, id });
+    throw createAppError(error, { function: "acknowledgeBugReport", endpoint: `/security/bugs/${id}/acknowledge`, id });
   }
 };
-
 
 
 /* -------------------------------------------------------------------------- */
@@ -380,17 +316,12 @@ export const startSecurityScan = async (
 
   } catch(error){
 
-    console.error(
-      "Security Scan Error:",
-      error
-    );
-
-    throw error;
+    logError(error, { function: "startSecurityScan", endpoint: "/security/scan", target });
+    throw createAppError(error, { function: "startSecurityScan", endpoint: "/security/scan", target });
 
   }
 
 };
-
 
 
 export const getScanHistory = async () => {
@@ -403,17 +334,12 @@ export const getScanHistory = async () => {
 
   } catch(error){
 
-    console.error(
-      "Scan History Error:",
-      error
-    );
-
-    throw error;
+    logError(error, { function: "getScanHistory", endpoint: "/security/scans" });
+    throw createAppError(error, { function: "getScanHistory", endpoint: "/security/scans" });
 
   }
 
 };
-
 
 
 /* -------------------------------------------------------------------------- */
@@ -430,17 +356,12 @@ export const getCertificates = async () => {
 
   } catch(error){
 
-    console.error(
-      "Certificates Error:",
-      error
-    );
-
-    throw error;
+    logError(error, { function: "getCertificates", endpoint: "/security/certificates" });
+    throw createAppError(error, { function: "getCertificates", endpoint: "/security/certificates" });
 
   }
 
 };
-
 
 
 export const getCertificateById = async (
@@ -455,17 +376,12 @@ export const getCertificateById = async (
 
   } catch(error){
 
-    console.error(
-      "Certificate Details Error:",
-      error
-    );
-
-    throw error;
+    logError(error, { function: "getCertificateById", endpoint: `/security/certificates/${id}`, id });
+    throw createAppError(error, { function: "getCertificateById", endpoint: `/security/certificates/${id}`, id });
 
   }
 
 };
-
 
 
 export const verifyCertificate = async (
@@ -480,17 +396,12 @@ export const verifyCertificate = async (
 
   } catch(error){
 
-    console.error(
-      "Certificate Verify Error:",
-      error
-    );
-
-    throw error;
+    logError(error, { function: "verifyCertificate", endpoint: `/security/certificates/verify/${certificateId}`, certificateId });
+    throw createAppError(error, { function: "verifyCertificate", endpoint: `/security/certificates/verify/${certificateId}`, certificateId });
 
   }
 
 };
-
 
 
 export const issueCertificate = async (
@@ -511,17 +422,12 @@ export const issueCertificate = async (
 
   } catch(error){
 
-    console.error(
-      "Issue Certificate Error:",
-      error
-    );
-
-    throw error;
+    logError(error, { function: "issueCertificate", endpoint: "/security/certificates/issue" });
+    throw createAppError(error, { function: "issueCertificate", endpoint: "/security/certificates/issue" });
 
   }
 
 };
-
 
 
 /* -------------------------------------------------------------------------- */
@@ -530,58 +436,66 @@ export const issueCertificate = async (
 
 export const getNotifications = async () => {
 
-  return await apiGet(
-    "/notifications"
-  );
+  try {
+    return await apiGet("/notifications");
+  } catch (error) {
+    logError(error, { function: "getNotifications", endpoint: "/notifications" });
+    throw createAppError(error, { function: "getNotifications", endpoint: "/notifications" });
+  }
 
 };
-
 
 
 export const getUnreadNotifications = async () => {
 
-  return await apiGet(
-    "/notifications/unread"
-  );
+  try {
+    return await apiGet("/notifications/unread");
+  } catch (error) {
+    logError(error, { function: "getUnreadNotifications", endpoint: "/notifications/unread" });
+    throw createAppError(error, { function: "getUnreadNotifications", endpoint: "/notifications/unread" });
+  }
 
 };
-
 
 
 export const markNotificationRead = async (
   id:string
 ) => {
 
-  return await apiPut(
-    `/notifications/${id}/read`,
-    {}
-  );
+  try {
+    return await apiPut(`/notifications/${id}/read`, {});
+  } catch (error) {
+    logError(error, { function: "markNotificationRead", endpoint: `/notifications/${id}/read`, id });
+    throw createAppError(error, { function: "markNotificationRead", endpoint: `/notifications/${id}/read`, id });
+  }
 
 };
-
 
 
 export const markAllNotificationsRead = async () => {
 
-  return await apiPut(
-    "/notifications/read-all",
-    {}
-  );
+  try {
+    return await apiPut("/notifications/read-all", {});
+  } catch (error) {
+    logError(error, { function: "markAllNotificationsRead", endpoint: "/notifications/read-all" });
+    throw createAppError(error, { function: "markAllNotificationsRead", endpoint: "/notifications/read-all" });
+  }
 
 };
-
 
 
 export const deleteNotification = async (
   id:string
 ) => {
 
-  return await apiDelete(
-    `/notifications/${id}`
-  );
+  try {
+    return await apiDelete(`/notifications/${id}`);
+  } catch (error) {
+    logError(error, { function: "deleteNotification", endpoint: `/notifications/${id}`, id });
+    throw createAppError(error, { function: "deleteNotification", endpoint: `/notifications/${id}`, id });
+  }
 
 };
-
 
 
 /* -------------------------------------------------------------------------- */
@@ -590,12 +504,14 @@ export const deleteNotification = async (
 
 export const getProfile = async () => {
 
-  return await apiGet(
-    "/user/profile"
-  );
+  try {
+    return await apiGet("/user/profile");
+  } catch (error) {
+    logError(error, { function: "getProfile", endpoint: "/user/profile" });
+    throw createAppError(error, { function: "getProfile", endpoint: "/user/profile" });
+  }
 
 };
-
 
 
 export const updateProfile = async (
@@ -610,9 +526,11 @@ export const updateProfile = async (
   }
 ) => {
 
-  return await apiPut(
-    "/user/profile",
-    data
-  );
+  try {
+    return await apiPut("/user/profile", data);
+  } catch (error) {
+    logError(error, { function: "updateProfile", endpoint: "/user/profile" });
+    throw createAppError(error, { function: "updateProfile", endpoint: "/user/profile" });
+  }
 
 };
