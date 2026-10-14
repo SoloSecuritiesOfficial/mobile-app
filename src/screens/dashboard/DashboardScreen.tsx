@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   ScrollView,
   ActivityIndicator,
@@ -38,6 +38,7 @@ import {
   checkAndTriggerDeviceNotifications,
 } from "../../services/notificationService";
 import { getWalletSummary } from "../../services/adRewardService";
+import { useStartupData }  from "../../context/StartupContext";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Dashboard">;
 
@@ -436,43 +437,81 @@ export default function DashboardScreen({ navigation }: Props) {
   const pr = useStyles(prStyleFactory);
   const pd = useStyles(pdStyleFactory);
 
-  const [loading,           setLoading]           = useState(true);
+  // Consume data preloaded during the splash startup phase.
+  // On the first mount after login this avoids a redundant full fetch —
+  // the user sees content immediately instead of a spinner.
+  const { startupData, clearStartupData } = useStartupData();
+  const consumedStartup = useRef(false);
+
+  const initialUser  = startupData?.user          ?? null;
+  const initialDash  = startupData?.dashboard      ?? {};
+  const initialCerts = startupData?.certificateCount ?? 0;
+  const initialNotif = startupData?.notificationCount ?? 0;
+
+  const [loading,           setLoading]           = useState(!startupData);
   const [refreshing,        setRefreshing]         = useState(false);
-  const [user,              setUser]               = useState<any>(null);
-  const [dashboard,         setDashboard]          = useState<DashboardData>({});
-  const [certificateCount,  setCertificateCount]   = useState(0);
-  const [notificationCount, setNotificationCount]  = useState(0);
+  const [user,              setUser]               = useState<any>(initialUser);
+  const [dashboard,         setDashboard]          = useState<DashboardData>(initialDash);
+  const [certificateCount,  setCertificateCount]   = useState(initialCerts);
+  const [notificationCount, setNotificationCount]  = useState(initialNotif);
   const [progressModal,     setProgressModal]      = useState<ProgressDetailConfig | null>(null);
   const [rewardBalance,     setRewardBalance]      = useState(0);
   const [error,             setError]              = useState<string | null>(null);
 
   // ── data loading ────────────────────────────────────────────────────────────
-  const loadDashboard = useCallback(async () => {
+  const loadDashboard = useCallback(async (skipLoadingState = false) => {
     try {
       setError(null);
-      const latestUser   = await fetchCurrentUser();
-      const fallbackUser = await getCurrentUser();
-      setUser(latestUser ?? fallbackUser);
+      if (!skipLoadingState) setLoading(true);
 
-      const dashRes = await getSecurityDashboard();
-      // Backend returns { success, data: { ... } }
-      setDashboard(dashRes.data ?? dashRes ?? {});
+      // Run all independent fetches IN PARALLEL with Promise.allSettled.
+      // Previously these were sequential awaits — this reduces latency by ~5×
+      // on a typical connection (e.g. 5 × 200ms → ~200ms instead of ~1000ms).
+      const [
+        userResult,
+        dashResult,
+        certResult,
+        notifResult,
+      ] = await Promise.allSettled([
+        fetchCurrentUser(),
+        getSecurityDashboard(),
+        getCertificates(),
+        getUnreadNotificationCount(),
+      ]);
 
-      const certs = await getCertificates();
-      setCertificateCount(certs.data?.length ?? certs.length ?? 0);
+      if (userResult.status === "fulfilled") {
+        setUser(userResult.value ?? await getCurrentUser());
+      } else {
+        // Fall back to the SecureStore cached value
+        const cached = await getCurrentUser();
+        if (cached) setUser(cached);
+      }
 
-      const notif = await getUnreadNotificationCount();
-      setNotificationCount(notif.data?.count ?? notif.count ?? 0);
+      if (dashResult.status === "fulfilled") {
+        const d = dashResult.value;
+        setDashboard(d?.data ?? d ?? {});
+      }
 
-      await checkAndTriggerDeviceNotifications();
+      if (certResult.status === "fulfilled") {
+        const c = certResult.value;
+        setCertificateCount(c?.data?.length ?? c?.length ?? 0);
+      }
 
-      // Fetch wallet balance from backend (fire-and-forget, never blocks main load)
+      if (notifResult.status === "fulfilled") {
+        const n = notifResult.value;
+        setNotificationCount(n?.data?.count ?? n?.count ?? 0);
+      }
+
+      // Device notification check — non-blocking side-effect
+      checkAndTriggerDeviceNotifications().catch(() => {});
+
+      // Wallet balance — fire-and-forget, never blocks the main load
       getWalletSummary().then(wallet => {
         if (!wallet.unavailable) {
           setRewardBalance(wallet.availableMicroValue);
         }
-        // If unavailable, leave rewardBalance at whatever it was — do not reset to 0
       }).catch(() => {});
+
     } catch (err) {
       console.log("Dashboard Error:", err);
       setError(err instanceof Error ? err.message : "Failed to load dashboard");
@@ -484,10 +523,22 @@ export default function DashboardScreen({ navigation }: Props) {
 
   useFocusEffect(
     useCallback(() => {
-      loadDashboard();
-      const poll = setInterval(loadDashboard, 30_000); // poll every 30 s (was 10 s — too aggressive)
+      if (startupData && !consumedStartup.current) {
+        // First mount after startup: data is already loaded.
+        // Clear the startup cache so subsequent focuses do a fresh fetch,
+        // and so the data is not held in memory longer than needed.
+        consumedStartup.current = true;
+        clearStartupData();
+        setLoading(false);
+        // Background-refresh without showing a spinner
+        loadDashboard(true);
+      } else {
+        loadDashboard();
+      }
+
+      const poll = setInterval(() => loadDashboard(true), 30_000);
       return () => clearInterval(poll);
-    }, [loadDashboard]),
+    }, [loadDashboard, startupData, clearStartupData]),
   );
 
   // ── loading state ────────────────────────────────────────────────────────────

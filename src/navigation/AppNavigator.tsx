@@ -17,7 +17,6 @@
  */
 
 import React from "react";
-import { ActivityIndicator, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { navigationRef } from "./navigationRef";
@@ -172,19 +171,32 @@ function AppNavigatorInner() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Root navigator — chooses which stack to render based on auth state
+// Root navigator — always shows Splash first for all users.
+//
+// Previously, authenticated users skipped the SplashScreen entirely
+// (AuthContext resolved → AppStack mounted immediately with a spinner).
+// Now ALL users see the branded SplashScreen with real progress tracking.
+//
+// Flow:
+//   1. isAuthLoading=true  → show Splash in AuthNavigator (startup coordinator runs)
+//   2. Startup completes   → signIn() called (if authed) or Login shown
+//   3. isAuthenticated=true → AppNavigatorInner mounts with preloaded data
 // ─────────────────────────────────────────────────────────────────────────────
 export default function AppNavigator() {
   const { isAuthenticated, isAuthLoading } = useAuth();
 
-  // Show a blank loading screen while the initial token check runs.
-  // This prevents any stack from mounting before auth state is known.
+  // While AuthContext is doing its initial SecureStore read, keep the
+  // NavigationContainer unmounted (avoids a flash of an empty navigator).
+  // The AuthStack with Splash mounts immediately after — the startup
+  // coordinator takes over from there.
+  //
+  // We intentionally do NOT show the ActivityIndicator spinner here anymore.
+  // The native splash screen is still visible (preventAutoHideAsync was called
+  // in App.tsx), so the user sees the native splash until the custom
+  // SplashScreen.tsx renders and the startup coordinator hides the native one.
   if (isAuthLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FFFFFF" }}>
-        <ActivityIndicator size="large" color="#C62828" />
-      </View>
-    );
+    // Return null — native splash is still covering the screen
+    return null;
   }
 
   return (

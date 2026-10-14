@@ -4,8 +4,9 @@ import Constants from "expo-constants";
 import * as SplashScreen from "expo-splash-screen";
 
 import AppNavigator from "./src/navigation/AppNavigator";
-import { ThemeProvider } from "./src/context/ThemeContext";
-import { AuthProvider } from "./src/context/AuthContext";
+import { ThemeProvider }   from "./src/context/ThemeContext";
+import { AuthProvider }    from "./src/context/AuthContext";
+import { StartupProvider } from "./src/context/StartupContext";
 import {
   configureForegroundNotifications,
   addNotificationListeners,
@@ -13,12 +14,15 @@ import {
   clearBadge,
   ensureAndroidChannelEarly,
 } from "./src/utils/pushNotifications";
-import { isLoggedIn } from "./src/services/authService";
-import { routeNotification } from "./src/navigation/notificationRouter";
+import { isLoggedIn }          from "./src/services/authService";
+import { routeNotification }   from "./src/navigation/notificationRouter";
 import { preloadInterstitialAd } from "./src/components/InterstitialAd";
-import { initAppOpenAd } from "./src/components/AppOpenAd";
+import { initAppOpenAd }         from "./src/components/AppOpenAd";
 
-// Keep the native splash screen visible until we explicitly hide it.
+// Keep the native splash screen visible until useStartup() hides it.
+// Previously App.tsx called hideAsync() immediately in useEffect, which
+// caused a white-screen gap. The startup coordinator now owns this call
+// and hides the native splash only once the custom SplashScreen is ready.
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function App() {
@@ -27,32 +31,29 @@ export default function App() {
   useEffect(() => {
     const IS_EXPO_GO = Constants.appOwnership === "expo";
 
+    // Set up the Android notification channel as early as possible.
     if (!IS_EXPO_GO) {
       ensureAndroidChannelEarly();
     }
 
-    SplashScreen.hideAsync().catch(() => {});
+    // NOTE: SplashScreen.hideAsync() is intentionally NOT called here.
+    // It is called by useStartup() in SplashScreen.tsx once the startup
+    // coordinator reaches phase D (~90% progress). This eliminates the
+    // white-screen gap between the native splash and the custom splash.
 
     if (!IS_EXPO_GO) {
       configureForegroundNotifications();
     }
 
     const init = async () => {
-      // ── Step 1: Initialize Google Mobile Ads SDK ──────────────────────────
-      if (!IS_EXPO_GO) {
-        try {
-          const { MobileAds } = await import("react-native-google-mobile-ads");
-          await MobileAds().initialize();
-        } catch (err) {
-          console.warn("[Ads] SDK initialization failed:", err);
-        }
-      }
-
-      // ── Step 2: Preload overlay ads AFTER SDK init ────────────────────────
+      // Ads SDK init is now handled inside useStartup() (phase A, task "ads").
+      // We still preload overlay ad slots here as a secondary step so they
+      // are ready when the user navigates into the app.
       try { preloadInterstitialAd(); } catch { /* non-fatal */ }
       try { initAppOpenAd(false); }    catch { /* non-fatal */ }
 
-      // ── Step 3: Push notifications ────────────────────────────────────────
+      // Push notification re-registration (idempotent — safe to call on
+      // every cold start for logged-in users).
       const loggedIn = await isLoggedIn();
       if (!IS_EXPO_GO && loggedIn) {
         registerForPushNotifications().catch((err) =>
@@ -60,7 +61,7 @@ export default function App() {
         );
       }
 
-      // ── Step 4: Cold-start notification tap ───────────────────────────────
+      // Handle cold-start notification tap.
       if (!IS_EXPO_GO) {
         try {
           const N = require("expo-notifications");
@@ -112,9 +113,11 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <ThemeProvider>
-        <AppNavigator />
-      </ThemeProvider>
+      <StartupProvider>
+        <ThemeProvider>
+          <AppNavigator />
+        </ThemeProvider>
+      </StartupProvider>
     </AuthProvider>
   );
 }
