@@ -33,11 +33,13 @@ import {
   View,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
 import { useAuth }         from "../../context/AuthContext";
 import { useStartupData }  from "../../context/StartupContext";
 import { useStartup }      from "../../hooks/useStartup";
 import type { StartupData } from "../../hooks/useStartup";
+import { RootStackParamList } from "../../navigation/types";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
@@ -83,10 +85,12 @@ const bar = StyleSheet.create({
   },
 });
 
+type Props = NativeStackScreenProps<RootStackParamList, "Splash">;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Screen
 // ─────────────────────────────────────────────────────────────────────────────
-export default function SplashScreen() {
+export default function SplashScreen({ navigation }: Props) {
   const { signIn }          = useAuth();
   const { setStartupData }  = useStartupData();
 
@@ -104,14 +108,12 @@ export default function SplashScreen() {
     if (data.isAuthenticated) {
       // Swap to the authenticated stack. AppNavigator handles the transition.
       signIn();
+    } else {
+      // Navigate to Login — the user is not authenticated.
+      // Using replace() so the back button does not return to Splash.
+      navigation.replace("Login");
     }
-    // If not authenticated, AuthNavigator naturally advances to Login
-    // because Splash has no "next" route to push and remains at the
-    // bottom of the AuthStack — Login is the next screen available.
-    // (The AuthNavigator has Login as a sibling; screens navigating to
-    // Login from here should use navigation.navigate("Login") if needed,
-    // but the existing LoginScreen link handles this organically.)
-  }, [signIn, setStartupData]);
+  }, [signIn, setStartupData, navigation]);
 
   // Startup coordinator — runs tasks and reports progress.
   const { progress, currentLabel, hasFatalError, fatalMessage, retry } =

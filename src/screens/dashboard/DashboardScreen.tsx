@@ -558,7 +558,7 @@ export default function DashboardScreen({ navigation }: Props) {
           <Text style={styles.errorIcon}>⚠️</Text>
           <Text style={styles.errorTitle}>Something went wrong</Text>
           <Text style={styles.errorMessage}>{error}</Text>
-          <TouchableOpacity style={styles.errorButton} onPress={loadDashboard}>
+          <TouchableOpacity style={styles.errorButton} onPress={() => loadDashboard()}>
             <Text style={styles.errorButtonText}>Try Again</Text>
           </TouchableOpacity>
         </View>

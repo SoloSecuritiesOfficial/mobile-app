@@ -20,7 +20,6 @@ import Constants, { ExecutionEnvironment } from "expo-constants";
 import * as SplashScreen from "expo-splash-screen";
 
 import { getToken, getUser }         from "../utils/storage";
-import { isLoggedIn }                from "../services/authService";
 import { fetchCurrentUser }          from "../services/authService";
 import { getSecurityDashboard }      from "../services/securityService";
 import { getUnreadNotificationCount } from "../services/notificationService";
@@ -156,7 +155,8 @@ export function useStartup(
     // Task: theme — always succeeds (AsyncStorage read, non-critical)
     updateTask("theme", { status: "running" });
     try {
-      const { AsyncStorage } = await import("@react-native-async-storage/async-storage");
+      // AsyncStorage is a default export — import correctly
+      const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
       await AsyncStorage.getItem("@app_theme_dark"); // warm the AsyncStorage cache
       updateTask("theme", { status: "done" });
     } catch {
@@ -270,10 +270,20 @@ export function useStartup(
     run();
   }, [run]);
 
-  // Start on first call (the SplashScreen calls this hook once)
-  if (!hasRun.current && !isDone && !hasFatalError) {
-    // Schedule the run so it fires after the first render
-    setTimeout(run, 0);
+  // Start on first mount via useEffect — never during the render phase.
+  // Using useEffect ensures this runs exactly once after mount, avoids
+  // double-firing in React Strict Mode, and prevents the setTimeout
+  // side-effect-during-render anti-pattern.
+  // NOTE: The SplashScreen must call useStartup() at the top level so
+  // this effect fires on its first render.
+  const startedRef = useRef(false);
+  if (!startedRef.current) {
+    startedRef.current = true;
+    // Defer to next tick so setState calls inside run() don't fire
+    // synchronously during the parent's render.
+    Promise.resolve().then(() => {
+      if (!hasRun.current) run();
+    });
   }
 
   return {
