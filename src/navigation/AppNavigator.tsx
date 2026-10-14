@@ -171,33 +171,20 @@ function AppNavigatorInner() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Root navigator — always shows Splash first for all users.
+// Root navigator
 //
-// Previously, authenticated users skipped the SplashScreen entirely
-// (AuthContext resolved → AppStack mounted immediately with a spinner).
-// Now ALL users see the branded SplashScreen with real progress tracking.
+// IMPORTANT: NavigationContainer MUST always mount so SplashScreen can render
+// and call SplashScreen.hideAsync(). If we return null during isAuthLoading,
+// the native splash never disappears (deadlock).
 //
 // Flow:
-//   1. isAuthLoading=true  → show Splash in AuthNavigator (startup coordinator runs)
-//   2. Startup completes   → signIn() called (if authed) or Login shown
-//   3. isAuthenticated=true → AppNavigatorInner mounts with preloaded data
+//   1. isAuthLoading=true  → NavigationContainer mounts → AuthNavigator →
+//      SplashScreen mounts → useStartup runs → hideAsync() called
+//   2. useStartup completes → signIn() called (if authed) or Login shown
+//   3. isAuthenticated=true → AppNavigatorInner replaces AuthNavigator
 // ─────────────────────────────────────────────────────────────────────────────
 export default function AppNavigator() {
-  const { isAuthenticated, isAuthLoading } = useAuth();
-
-  // While AuthContext is doing its initial SecureStore read, keep the
-  // NavigationContainer unmounted (avoids a flash of an empty navigator).
-  // The AuthStack with Splash mounts immediately after — the startup
-  // coordinator takes over from there.
-  //
-  // We intentionally do NOT show the ActivityIndicator spinner here anymore.
-  // The native splash screen is still visible (preventAutoHideAsync was called
-  // in App.tsx), so the user sees the native splash until the custom
-  // SplashScreen.tsx renders and the startup coordinator hides the native one.
-  if (isAuthLoading) {
-    // Return null — native splash is still covering the screen
-    return null;
-  }
+  const { isAuthenticated } = useAuth();
 
   return (
     <NavigationContainer ref={navigationRef}>

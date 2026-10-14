@@ -36,10 +36,14 @@ export default function App() {
       ensureAndroidChannelEarly();
     }
 
-    // NOTE: SplashScreen.hideAsync() is intentionally NOT called here.
-    // It is called by useStartup() in SplashScreen.tsx once the startup
-    // coordinator reaches phase D (~90% progress). This eliminates the
-    // white-screen gap between the native splash and the custom splash.
+    // NOTE: SplashScreen.hideAsync() is intentionally NOT called here as the
+    // primary path — useStartup() owns it at phase D so the native splash
+    // transitions directly to the custom splash with no gap.
+    // This fallback fires after 8 seconds ONLY if useStartup never reaches
+    // phase D (e.g. the NavigationContainer failed to mount or the hook threw).
+    const hideTimeout = setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => {});
+    }, 8000);
 
     if (!IS_EXPO_GO) {
       configureForegroundNotifications();
@@ -106,6 +110,7 @@ export default function App() {
     );
 
     return () => {
+      clearTimeout(hideTimeout);
       cleanup();
       appStateSub.remove();
     };
