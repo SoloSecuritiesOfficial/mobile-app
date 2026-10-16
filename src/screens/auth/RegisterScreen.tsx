@@ -18,7 +18,6 @@ import GoogleSignInButton from "../../components/GoogleSignInButton";
 import { showInterstitialAd } from "../../components/InterstitialAd";
 import { RootStackParamList } from "../../navigation/types";
 import { registerUser } from "../../services/authService";
-import { hasPushBeenAsked } from "../../utils/storage";
 import { getEmailError } from "../../utils/emailValidator";
 import { useAuth } from "../../context/AuthContext";
 
@@ -35,11 +34,12 @@ export default function RegisterScreen({ navigation }: Props) {
     name: "", email: "", password: "", confirmPassword: "",
   });
 
-  // C3: signIn() triggers AuthContext to swap to AppStack — no explicit navigate needed.
+  // signIn() swaps AuthStack → AppStack. AppNavigatorInner has
+  // initialRouteName="NotificationPermission", so the user lands there
+  // automatically if push hasn't been asked, or navigates to Dashboard
+  // from within NotificationPermissionScreen after granting/skipping.
   const afterAuth = async () => {
-    const asked = await hasPushBeenAsked();
-    if (!asked) navigation.replace("NotificationPermission");
-    else signIn();
+    signIn();
   };
 
   const validate = () => {

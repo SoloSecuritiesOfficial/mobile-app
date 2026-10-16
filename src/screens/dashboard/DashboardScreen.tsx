@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   ScrollView,
   ActivityIndicator,
@@ -457,6 +457,21 @@ export default function DashboardScreen({ navigation }: Props) {
   const [progressModal,     setProgressModal]      = useState<ProgressDetailConfig | null>(null);
   const [rewardBalance,     setRewardBalance]      = useState(0);
   const [error,             setError]              = useState<string | null>(null);
+
+  // Show the notification permission screen once on first login.
+  // We do this here (after the stack swap) rather than in LoginScreen
+  // because NotificationPermission lives in AppStack, not AuthStack.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { hasPushBeenAsked } = await import("../../utils/storage");
+      const asked = await hasPushBeenAsked();
+      if (!asked && !cancelled) {
+        navigation.navigate("NotificationPermission");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []); // run once on mount
 
   // ── data loading ────────────────────────────────────────────────────────────
   const loadDashboard = useCallback(async (skipLoadingState = false) => {

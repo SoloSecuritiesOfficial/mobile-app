@@ -132,7 +132,7 @@ function AuthNavigator() {
 // Authenticated screens — visible only when authenticated
 function AppNavigatorInner() {
   return (
-    <AppStack.Navigator screenOptions={SCREEN_OPTIONS} initialRouteName="NotificationPermission">
+    <AppStack.Navigator screenOptions={SCREEN_OPTIONS} initialRouteName="Dashboard">
       <AppStack.Screen name="NotificationPermission" component={wb(NotificationPermissionScreen)} />
       <AppStack.Screen name="Dashboard"              component={wb(DashboardScreen)} />
       <AppStack.Screen name="Learning"               component={wb(LearningScreen)} />
