@@ -184,7 +184,8 @@ export function useStartup(
     // ── Phase B: Session validation ───────────────────────────────────────────
     // Fetch the user profile once. This both validates the JWT (the Axios
     // interceptor transparently refreshes an expired token) and provides
-    // the user object for Phase C — no duplicate /user/profile call later.
+    // the user object for the entire startup sequence.
+    // Phase C will NOT re-fetch the profile — it uses this result.
 
     update("session", { status: "running" });
     if (hasToken) {
@@ -211,6 +212,7 @@ export function useStartup(
     // ── Phase C: Backend data (authenticated only) ────────────────────────────
     // Run dashboard, certs, and notifications IN PARALLEL so total wait ≈
     // max(individual latency) rather than their sum.
+    // Profile was already fetched in Phase B — no duplicate call here.
     // Non-authenticated: skip all three immediately so bar reaches 90%.
 
     if (dataRef.current.isAuthenticated) {
