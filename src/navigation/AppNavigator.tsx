@@ -182,11 +182,16 @@ function AppNavigatorInner() {
 //   3. isAuthenticated=true → AppNavigatorInner replaces AuthNavigator
 // ─────────────────────────────────────────────────────────────────────────────
 export default function AppNavigator() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, startupDone } = useAuth();
 
   return (
     <NavigationContainer ref={navigationRef}>
-      {isAuthenticated ? <AppNavigatorInner /> : <AuthNavigator />}
+      {/* Always show AuthNavigator first so SplashScreen always runs.
+          Only swap to AppStack after SplashScreen calls markStartupDone(). */}
+      {(!startupDone || !isAuthenticated)
+        ? <AuthNavigator />
+        : <AppNavigatorInner />
+      }
     </NavigationContainer>
   );
 }

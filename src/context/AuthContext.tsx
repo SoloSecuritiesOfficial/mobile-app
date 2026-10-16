@@ -1,17 +1,17 @@
 /**
  * AuthContext — global authentication state
  *
- * Provides:
- *   isAuthenticated   boolean — true when a valid access token is stored
- *   isAuthLoading     boolean — true during the initial token check on startup
- *   signIn()          call after a successful login/register to update state
- *   signOut()         call on logout to clear state and tokens
- *   refreshAuthState() re-check storage (used after token refresh)
+ * Key addition: `startupDone` flag.
  *
- * C3: AppNavigator consumes this context to conditionally render either the
- * AuthStack (Login/Register/ForgotPassword) or the AppStack (all other
- * screens). This prevents any authenticated-only screen from being reachable
- * without a valid token — even via deep link or direct navigation.navigate().
+ * Problem: AuthContext resolves the token check (isAuthenticated=true)
+ * before SplashScreen ever mounts, so AppNavigator immediately renders
+ * AppNavigatorInner and the splash never shows.
+ *
+ * Solution: AppNavigator always shows AuthNavigator (which starts on
+ * Splash) until `startupDone = true`. SplashScreen calls `markStartupDone()`
+ * after its progress bar finishes. Only then does AppNavigator swap stacks.
+ *
+ * This guarantees the branded splash + progress bar runs on EVERY cold start.
  */
 
 import React, {
@@ -24,8 +24,6 @@ import React, {
 import { getToken, clearStorage } from "../utils/storage";
 import { logout as authServiceLogout } from "../services/authService";
 
-// Module-level handler so api.ts can force a sign-out when token refresh fails
-// without needing to import a React context (which can't be used outside components).
 let _forcedSignOutHandler: (() => void) | null = null;
 
 export function triggerForcedSignOut(): void {
@@ -35,26 +33,30 @@ export function triggerForcedSignOut(): void {
 }
 
 interface AuthContextType {
-  isAuthenticated: boolean;
-  isAuthLoading:   boolean;
-  signIn:          () => void;
-  signOut:         () => Promise<void>;
-  refreshAuthState:() => Promise<void>;
+  isAuthenticated:  boolean;
+  isAuthLoading:    boolean;
+  startupDone:      boolean;          // ← NEW: true once SplashScreen finishes
+  signIn:           () => void;
+  signOut:          () => Promise<void>;
+  markStartupDone:  () => void;       // ← NEW: called by SplashScreen on complete
+  refreshAuthState: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   isAuthenticated:  false,
   isAuthLoading:    true,
+  startupDone:      false,
   signIn:           () => {},
   signOut:          async () => {},
+  markStartupDone:  () => {},
   refreshAuthState: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthLoading,   setIsAuthLoading]   = useState(true);
+  const [startupDone,     setStartupDone]     = useState(false);
 
-  // Read storage on mount to restore session after an app restart.
   const refreshAuthState = useCallback(async () => {
     try {
       const token = await getToken();
@@ -70,13 +72,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshAuthState();
   }, [refreshAuthState]);
 
-  // Call signIn() immediately after saving tokens on login/register.
   const signIn = useCallback(() => {
     setIsAuthenticated(true);
   }, []);
 
-  // Call signOut() on logout. Revokes server session and clears storage.
   const signOut = useCallback(async () => {
+    setStartupDone(false);   // reset so next login sees splash again
     try {
       await authServiceLogout();
     } catch {
@@ -85,15 +86,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsAuthenticated(false);
   }, []);
 
-  // Register this instance so api.ts can force a sign-out when refresh fails.
+  // Called by SplashScreen once its progress bar reaches 100%.
+  // This is the ONLY trigger that swaps AppNavigator to AppStack.
+  const markStartupDone = useCallback(() => {
+    setStartupDone(true);
+  }, []);
+
   useEffect(() => {
-    _forcedSignOutHandler = () => setIsAuthenticated(false);
+    _forcedSignOutHandler = () => {
+      setIsAuthenticated(false);
+      setStartupDone(false);
+    };
     return () => { _forcedSignOutHandler = null; };
   }, []);
 
   return (
     <AuthContext.Provider
-      value={{ isAuthenticated, isAuthLoading, signIn, signOut, refreshAuthState }}
+      value={{
+        isAuthenticated,
+        isAuthLoading,
+        startupDone,
+        signIn,
+        signOut,
+        markStartupDone,
+        refreshAuthState,
+      }}
     >
       {children}
     </AuthContext.Provider>
