@@ -1,31 +1,20 @@
 /**
- * SplashScreen.tsx
+ * SplashScreen.tsx — SoloSecurities
  *
- * Branded startup screen with a REAL progress bar driven by useStartup().
+ * Cinematic startup experience:
+ *   • Logo scales + fades in from the centre
+ *   • Typewriter cycles through security taglines
+ *   • Progress bar advances only as real startup tasks finish
+ *   • "Powered by SoloSecurities" footer fades in last
  *
- * Runs for ALL users — authenticated and unauthenticated alike — so every
- * app launch has the same consistent branded experience.
- *
- * What it does:
- *   1. Calls useStartup() which runs the startup coordinator.
- *   2. Animates the progress bar in sync with actual task completion.
- *   3. Hides the native splash screen at phase D (90%) so there is
- *      no white-screen gap between the native and custom splash.
- *   4. On completion, calls signIn() (if authenticated) or lets the
- *      AuthNavigator naturally show Login (if not authenticated).
- *   5. On fatal error, shows an error state with a retry button.
- *
- * Visual elements (unchanged from original design):
- *   - SoloSecurities logo (assets/images/logo.png)
- *   - Red (#C62828) animated progress bar
- *   - Current task label above the bar
- *   - "Powered by SoloSecurities" + version footer
+ * Progress is driven by useStartup() — never a fake timer.
  */
 
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
+  Easing,
   Image,
   StyleSheet,
   Text,
@@ -35,37 +24,104 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 
-import { useAuth }         from "../../context/AuthContext";
-import { useStartupData }  from "../../context/StartupContext";
-import { useStartup }      from "../../hooks/useStartup";
+import { useAuth }        from "../../context/AuthContext";
+import { useStartupData } from "../../context/StartupContext";
+import { useStartup }     from "../../hooks/useStartup";
 import type { StartupData } from "../../hooks/useStartup";
 import { RootStackParamList } from "../../navigation/types";
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
+const { width: W, height: H } = Dimensions.get("window");
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Animated progress bar — updates smoothly when progress value changes
-// ─────────────────────────────────────────────────────────────────────────────
-function ProgressBar({ progress }: { progress: number }) {
-  const animWidth = useRef(new Animated.Value(0)).current;
+// ─── Taglines that cycle through while the app loads ─────────────────────────
+const TAGLINES = [
+  "Protecting Every Click",
+  "Learn Cybersecurity",
+  "Think Like a Hacker",
+  "Defend Like a Pro",
+  "Bug Bounty Platform",
+  "Secure • Learn • Protect",
+];
+
+const TYPE_SPEED   = 70;   // ms per character added
+const DELETE_SPEED = 35;   // ms per character removed
+const PAUSE_MS     = 1600; // pause at full word before deleting
+
+// ─── Typewriter hook ──────────────────────────────────────────────────────────
+function useTypewriter() {
+  const [displayed, setDisplayed] = useState("");
+  const [phrase,    setPhrase]    = useState(0);
+  const [deleting,  setDeleting]  = useState(false);
 
   useEffect(() => {
-    Animated.timing(animWidth, {
-      toValue:        progress,
-      duration:       350,          // smooth but not sluggish
-      useNativeDriver: false,       // width cannot use native driver
-    }).start();
-  }, [progress, animWidth]);
+    const full = TAGLINES[phrase];
 
-  const barWidth = animWidth.interpolate({
+    if (!deleting && displayed === full) {
+      const t = setTimeout(() => setDeleting(true), PAUSE_MS);
+      return () => clearTimeout(t);
+    }
+
+    if (deleting && displayed === "") {
+      setDeleting(false);
+      setPhrase(p => (p + 1) % TAGLINES.length);
+      return;
+    }
+
+    const t = setTimeout(() => {
+      setDisplayed(prev =>
+        deleting
+          ? prev.slice(0, -1)
+          : full.slice(0, prev.length + 1)
+      );
+    }, deleting ? DELETE_SPEED : TYPE_SPEED);
+
+    return () => clearTimeout(t);
+  }, [displayed, deleting, phrase]);
+
+  return displayed;
+}
+
+// ─── Animated progress bar ────────────────────────────────────────────────────
+function ProgressBar({ progress }: { progress: number }) {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(anim, {
+      toValue:         progress,
+      duration:        400,
+      easing:          Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [progress, anim]);
+
+  const width = anim.interpolate({
     inputRange:  [0, 100],
     outputRange: ["0%", "100%"],
     extrapolate: "clamp",
   });
 
+  // Shimmer pulse on the fill
+  const shimmer = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmer, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(shimmer, { toValue: 0, duration: 900, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [shimmer]);
+
+  const shimmerOpacity = shimmer.interpolate({
+    inputRange:  [0, 1],
+    outputRange: [0.7, 1],
+  });
+
   return (
     <View style={bar.track}>
-      <Animated.View style={[bar.fill, { width: barWidth }]} />
+      <Animated.View style={[bar.fill, { width }]}>
+        <Animated.View style={[bar.shine, { opacity: shimmerOpacity }]} />
+      </Animated.View>
     </View>
   );
 }
@@ -73,8 +129,8 @@ function ProgressBar({ progress }: { progress: number }) {
 const bar = StyleSheet.create({
   track: {
     width:           "100%",
-    height:          6,
-    backgroundColor: "#E6E6E6",
+    height:          5,
+    backgroundColor: "#EBEBEB",
     borderRadius:    100,
     overflow:        "hidden",
   },
@@ -82,188 +138,262 @@ const bar = StyleSheet.create({
     height:          "100%",
     backgroundColor: "#C62828",
     borderRadius:    100,
+    overflow:        "hidden",
+  },
+  shine: {
+    position:        "absolute",
+    right:           0,
+    top:             0,
+    bottom:          0,
+    width:           30,
+    backgroundColor: "rgba(255,255,255,0.35)",
+    borderRadius:    100,
   },
 });
 
+// ─── Screen ───────────────────────────────────────────────────────────────────
 type Props = NativeStackScreenProps<RootStackParamList, "Splash">;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Screen
-// ─────────────────────────────────────────────────────────────────────────────
 export default function SplashScreen({ navigation }: Props) {
-  const { signIn }          = useAuth();
-  const { setStartupData }  = useStartupData();
+  const { signIn }         = useAuth();
+  const { setStartupData } = useStartupData();
+  const completedRef       = useRef(false);
+  const text               = useTypewriter();
 
-  const fadeAnim            = useRef(new Animated.Value(0)).current;
-  const completedRef        = useRef(false);
+  // ── Enter animations ──────────────────────────────────────────────────────
+  const logoScale   = useRef(new Animated.Value(0.6)).current;
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const contentY    = useRef(new Animated.Value(24)).current;
+  const contentOp   = useRef(new Animated.Value(0)).current;
+  const footerOp    = useRef(new Animated.Value(0)).current;
 
-  // Called by useStartup when all tasks complete.
+  useEffect(() => {
+    // Logo springs in
+    Animated.parallel([
+      Animated.spring(logoScale, {
+        toValue:         1,
+        damping:         14,
+        stiffness:       120,
+        useNativeDriver: true,
+      }),
+      Animated.timing(logoOpacity, {
+        toValue:         1,
+        duration:        500,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      // Then tagline + bar slide up
+      Animated.parallel([
+        Animated.timing(contentOp, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.timing(contentY,  { toValue: 0, duration: 400, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      ]).start(() => {
+        // Footer fades in last
+        Animated.timing(footerOp, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+      });
+    });
+  }, [logoScale, logoOpacity, contentY, contentOp, footerOp]);
+
+  // ── Startup coordinator ───────────────────────────────────────────────────
   const handleComplete = useCallback((data: StartupData) => {
     if (completedRef.current) return;
     completedRef.current = true;
-
-    // Share preloaded data with Dashboard via context.
     setStartupData(data);
-
     if (data.isAuthenticated) {
-      // Swap to the authenticated stack. AppNavigator handles the transition.
       signIn();
     } else {
-      // Navigate to Login — the user is not authenticated.
-      // Using replace() so the back button does not return to Splash.
       navigation.replace("Login");
     }
   }, [signIn, setStartupData, navigation]);
 
-  // Startup coordinator — runs tasks and reports progress.
   const { progress, currentLabel, hasFatalError, fatalMessage, retry } =
     useStartup(handleComplete);
 
-  // Fade in the splash content on mount.
-  useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue:         1,
-      duration:        500,
-      useNativeDriver: true,
-    }).start();
-  }, [fadeAnim]);
-
-  // ── Error state ─────────────────────────────────────────────────────────
+  // ── Error state ───────────────────────────────────────────────────────────
   if (hasFatalError) {
     return (
-      <View style={styles.container}>
+      <View style={s.container}>
         <StatusBar style="dark" />
-        <Image
-          source={require("../../../assets/images/logo.png")}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <Text style={styles.errorTitle}>Startup Failed</Text>
-        <Text style={styles.errorMessage}>{fatalMessage}</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={retry}>
-          <Text style={styles.retryBtnText}>Try Again</Text>
+        <Image source={require("../../../assets/images/logo.png")} style={s.errorLogo} resizeMode="contain" />
+        <Text style={s.errorTitle}>Could not start app</Text>
+        <Text style={s.errorMsg}>{fatalMessage}</Text>
+        <TouchableOpacity style={s.retryBtn} onPress={retry} activeOpacity={0.8}>
+          <Text style={s.retryText}>Try Again</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  // ── Normal startup UI ────────────────────────────────────────────────────
+  // ── Main splash ───────────────────────────────────────────────────────────
   return (
-    <View style={styles.container}>
+    <View style={s.container}>
       <StatusBar style="dark" />
 
-      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
-        {/* Logo */}
+      {/* Logo */}
+      <Animated.View style={{
+        transform:  [{ scale: logoScale }],
+        opacity:    logoOpacity,
+        marginBottom: 28,
+      }}>
         <Image
           source={require("../../../assets/images/logo.png")}
-          style={styles.logo}
+          style={s.logo}
           resizeMode="contain"
         />
+      </Animated.View>
 
-        {/* Task label — reflects what's actually happening */}
-        <Text style={styles.taskLabel}>{currentLabel}</Text>
+      {/* Tagline + progress */}
+      <Animated.View style={[s.lower, {
+        opacity:   contentOp,
+        transform: [{ translateY: contentY }],
+      }]}>
+        {/* App name */}
+        <Text style={s.appName}>SoloSecurities</Text>
 
-        {/* Progress bar — driven by real task completion */}
-        <View style={styles.barWrap}>
+        {/* Typewriter tagline */}
+        <View style={s.taglineRow}>
+          <Text style={s.tagline} numberOfLines={1}>
+            {text}
+            <Text style={s.cursor}>|</Text>
+          </Text>
+        </View>
+
+        {/* Progress bar + label */}
+        <View style={s.barBlock}>
           <ProgressBar progress={progress} />
-          <Text style={styles.pct}>{Math.round(progress)}%</Text>
+          <View style={s.barMeta}>
+            <Text style={s.taskLabel} numberOfLines={1}>{currentLabel}</Text>
+            <Text style={s.pct}>{Math.round(progress)}%</Text>
+          </View>
         </View>
       </Animated.View>
 
       {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.powered}>Powered by SoloSecurities</Text>
-        <Text style={styles.version}>Version 1.0.0</Text>
-      </View>
+      <Animated.View style={[s.footer, { opacity: footerOp }]}>
+        <Text style={s.footerText}>Powered by SoloSecurities</Text>
+        <Text style={s.version}>v1.0.0</Text>
+      </Animated.View>
     </View>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Styles — matches original SoloSecurities visual identity
-// ─────────────────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const s = StyleSheet.create({
   container: {
     flex:            1,
     backgroundColor: "#FFFFFF",
+    alignItems:      "center",
     justifyContent:  "center",
-    alignItems:      "center",
+    paddingHorizontal: 36,
   },
 
-  content: {
-    width:           "100%",
-    alignItems:      "center",
-    paddingHorizontal: 40,
-  },
-
+  // Logo
   logo: {
-    width:        SCREEN_WIDTH * 0.55,
-    height:       SCREEN_WIDTH * 0.55,
-    marginBottom: 32,
+    width:  W * 0.52,
+    height: W * 0.52,
   },
 
-  taskLabel: {
-    fontSize:     13,
-    fontWeight:   "600",
-    color:        "#888888",
-    marginBottom: 10,
+  // Lower block
+  lower: {
+    width: "100%",
+    alignItems: "center",
+  },
+  appName: {
+    fontSize:      22,
+    fontWeight:    "800",
+    color:         "#111111",
+    letterSpacing: 0.4,
+    marginBottom:  6,
+  },
+
+  // Typewriter
+  taglineRow: {
+    height:        28,
+    justifyContent: "center",
+    marginBottom:  24,
+  },
+  tagline: {
+    fontSize:      15,
+    fontWeight:    "600",
+    color:         "#555555",
     letterSpacing: 0.2,
   },
-
-  barWrap: {
-    width:      "100%",
-    alignItems: "stretch",
-  },
-
-  pct: {
-    marginTop:  5,
-    fontSize:   11,
-    color:      "#BBBBBB",
-    alignSelf:  "flex-end",
-    fontWeight: "600",
-  },
-
-  // Error state
-  errorTitle: {
-    fontSize:     18,
-    fontWeight:   "700",
-    color:        "#111",
-    marginTop:    24,
-    marginBottom: 8,
-  },
-  errorMessage: {
-    fontSize:   13,
-    color:      "#666",
-    textAlign:  "center",
-    paddingHorizontal: 32,
-    marginBottom: 24,
-    lineHeight: 20,
-  },
-  retryBtn: {
-    backgroundColor:  "#C62828",
-    paddingHorizontal: 32,
-    paddingVertical:   12,
-    borderRadius:      10,
-  },
-  retryBtnText: {
-    color:      "#FFF",
+  cursor: {
+    color:      "#C62828",
     fontWeight: "700",
-    fontSize:   15,
+  },
+
+  // Progress
+  barBlock: {
+    width: "100%",
+  },
+  barMeta: {
+    flexDirection:  "row",
+    justifyContent: "space-between",
+    marginTop:      8,
+  },
+  taskLabel: {
+    fontSize:   12,
+    color:      "#999999",
+    fontWeight: "500",
+    flex:       1,
+  },
+  pct: {
+    fontSize:   12,
+    color:      "#CCCCCC",
+    fontWeight: "700",
+    marginLeft: 8,
   },
 
   // Footer
   footer: {
-    position:   "absolute",
-    bottom:     30,
+    position:  "absolute",
+    bottom:    32,
     alignItems: "center",
   },
-  powered: {
-    fontSize:     13,
-    color:        "#888888",
-    marginBottom: 3,
+  footerText: {
+    fontSize:  12,
+    color:     "#AAAAAA",
+    marginBottom: 2,
   },
   version: {
-    fontSize: 11,
-    color:    "#BBBBBB",
+    fontSize: 10,
+    color:    "#CCCCCC",
+  },
+
+  // Error state
+  errorLogo: {
+    width:        W * 0.4,
+    height:       W * 0.4,
+    marginBottom: 24,
+  },
+  errorTitle: {
+    fontSize:     18,
+    fontWeight:   "700",
+    color:        "#111",
+    marginBottom: 8,
+  },
+  errorMsg: {
+    fontSize:          13,
+    color:             "#777",
+    textAlign:         "center",
+    paddingHorizontal: 32,
+    lineHeight:        20,
+    marginBottom:      28,
+  },
+  retryBtn: {
+    backgroundColor:   "#C62828",
+    paddingHorizontal: 36,
+    paddingVertical:   13,
+    borderRadius:      12,
+    elevation:         3,
+    shadowColor:       "#C62828",
+    shadowOpacity:     0.3,
+    shadowRadius:      8,
+    shadowOffset:      { width: 0, height: 3 },
+  },
+  retryText: {
+    color:      "#FFF",
+    fontWeight: "700",
+    fontSize:   15,
   },
 });
