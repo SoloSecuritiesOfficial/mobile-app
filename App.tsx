@@ -10,11 +10,9 @@ import { StartupProvider } from "./src/context/StartupContext";
 import {
   configureForegroundNotifications,
   addNotificationListeners,
-  registerForPushNotifications,
   clearBadge,
   ensureAndroidChannelEarly,
 } from "./src/utils/pushNotifications";
-import { isLoggedIn }          from "./src/services/authService";
 import { routeNotification }   from "./src/navigation/notificationRouter";
 import { preloadInterstitialAd } from "./src/components/InterstitialAd";
 import { initAppOpenAd }         from "./src/components/AppOpenAd";
@@ -50,20 +48,14 @@ export default function App() {
     }
 
     const init = async () => {
-      // Ads SDK init is now handled inside useStartup() (phase A, task "ads").
-      // We still preload overlay ad slots here as a secondary step so they
-      // are ready when the user navigates into the app.
+      // Ads SDK init is handled inside useStartup() (phase A, task "ads").
+      // Preload overlay ad slots here so they are ready when the user navigates.
       try { preloadInterstitialAd(); } catch { /* non-fatal */ }
       try { initAppOpenAd(false); }    catch { /* non-fatal */ }
 
-      // Push notification re-registration (idempotent — safe to call on
-      // every cold start for logged-in users).
-      const loggedIn = await isLoggedIn();
-      if (!IS_EXPO_GO && loggedIn) {
-        registerForPushNotifications().catch((err) =>
-          console.warn("[Push] Re-registration failed:", err?.message),
-        );
-      }
+      // Push notification re-registration is handled inside DashboardScreen
+      // on first mount, where auth state is already known from useStartup.
+      // Doing it here would require a redundant SecureStore read.
 
       // Handle cold-start notification tap.
       if (!IS_EXPO_GO) {

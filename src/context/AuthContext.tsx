@@ -23,6 +23,7 @@ import React, {
 } from "react";
 import { getToken, clearStorage } from "../utils/storage";
 import { logout as authServiceLogout } from "../services/authService";
+import { triggerClearStartupData } from "./StartupContext";
 
 let _forcedSignOutHandler: (() => void) | null = null;
 
@@ -77,7 +78,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    setStartupDone(false);   // reset so next login sees splash again
+    setStartupDone(false);
+    triggerClearStartupData(); // wipe preloaded data so user A's data never leaks to user B
     try {
       await authServiceLogout();
     } catch {

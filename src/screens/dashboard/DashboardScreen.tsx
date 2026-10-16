@@ -460,16 +460,20 @@ export default function DashboardScreen({ navigation }: Props) {
 
   // Silently request push notification permission on first launch —
   // no permission page, no interruption to the user flow.
+  // Also re-registers the FCM token on every cold start (idempotent).
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const { hasPushBeenAsked, markPushAsked } = await import("../../utils/storage");
+        const { registerForPushNotifications } = await import("../../utils/pushNotifications");
         const asked = await hasPushBeenAsked();
         if (!asked && !cancelled) {
           await markPushAsked();
-          const { registerForPushNotifications } = await import("../../utils/pushNotifications");
-          registerForPushNotifications().catch(() => {}); // fire-and-forget
+        }
+        // Re-register FCM token on every cold start — idempotent, backend upserts.
+        if (!cancelled) {
+          registerForPushNotifications().catch(() => {});
         }
       } catch { /* non-fatal */ }
     })();
@@ -477,11 +481,11 @@ export default function DashboardScreen({ navigation }: Props) {
   }, []);
 
   // ── data loading ────────────────────────────────────────────────────────────
-  const loadDashboard = useCallback(async (skipLoadingState = false) => {
+  const loadDashboard = useCallback(async () => {
     try {
       setError(null);
-      // Never set loading=true — content is always visible immediately.
-      // The pull-to-refresh spinner (refreshing) is the only indicator.
+      // Content is always visible immediately from startup preloaded data.
+      // The pull-to-refresh spinner (refreshing) is the only loading indicator.
 
       // Run all independent fetches IN PARALLEL with Promise.allSettled.
       // Previously these were sequential awaits — this reduces latency by ~5×
@@ -549,12 +553,12 @@ export default function DashboardScreen({ navigation }: Props) {
         clearStartupData();
         setLoading(false);
         // Background-refresh without showing a spinner
-        loadDashboard(true);
+        loadDashboard();
       } else {
         loadDashboard();
       }
 
-      const poll = setInterval(() => loadDashboard(true), 30_000);
+      const poll = setInterval(() => loadDashboard(), 30_000);
       return () => clearInterval(poll);
     }, [loadDashboard, startupData, clearStartupData]),
   );

@@ -24,8 +24,16 @@
  *   - Only user A's data is ever set for user A's session.
  */
 
-import React, { createContext, useCallback, useContext, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { StartupData } from "../hooks/useStartup";
+
+// Module-level clear handler — lets AuthContext.signOut() wipe startup data
+// without importing StartupContext (which would be a circular dependency).
+let _clearStartupDataHandler: (() => void) | null = null;
+
+export function triggerClearStartupData(): void {
+  _clearStartupDataHandler?.();
+}
 
 interface StartupContextType {
   startupData:      StartupData | null;
@@ -46,11 +54,16 @@ export function StartupProvider({ children }: { children: React.ReactNode }) {
     setStartupDataState(data);
   }, []);
 
-  // Call on logout / account switch to prevent user A's data
-  // from bleeding into user B's session.
   const clearStartupData = useCallback(() => {
     setStartupDataState(null);
   }, []);
+
+  // Register handler so AuthContext can clear startup data on signOut
+  // without a circular import.
+  useEffect(() => {
+    _clearStartupDataHandler = clearStartupData;
+    return () => { _clearStartupDataHandler = null; };
+  }, [clearStartupData]);
 
   return (
     <StartupContext.Provider value={{ startupData, setStartupData, clearStartupData }}>
