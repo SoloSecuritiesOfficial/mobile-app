@@ -448,7 +448,7 @@ export default function DashboardScreen({ navigation }: Props) {
   const initialCerts = startupData?.certificateCount ?? 0;
   const initialNotif = startupData?.notificationCount ?? 0;
 
-  const [loading,           setLoading]           = useState(!startupData);
+  const [loading,           setLoading]           = useState(false); // never block — show content immediately
   const [refreshing,        setRefreshing]         = useState(false);
   const [user,              setUser]               = useState<any>(initialUser);
   const [dashboard,         setDashboard]          = useState<DashboardData>(initialDash);
@@ -458,26 +458,30 @@ export default function DashboardScreen({ navigation }: Props) {
   const [rewardBalance,     setRewardBalance]      = useState(0);
   const [error,             setError]              = useState<string | null>(null);
 
-  // Show the notification permission screen once on first login.
-  // We do this here (after the stack swap) rather than in LoginScreen
-  // because NotificationPermission lives in AppStack, not AuthStack.
+  // Silently request push notification permission on first launch —
+  // no permission page, no interruption to the user flow.
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { hasPushBeenAsked } = await import("../../utils/storage");
-      const asked = await hasPushBeenAsked();
-      if (!asked && !cancelled) {
-        navigation.navigate("NotificationPermission");
-      }
+      try {
+        const { hasPushBeenAsked, markPushAsked } = await import("../../utils/storage");
+        const asked = await hasPushBeenAsked();
+        if (!asked && !cancelled) {
+          await markPushAsked();
+          const { registerForPushNotifications } = await import("../../utils/pushNotifications");
+          registerForPushNotifications().catch(() => {}); // fire-and-forget
+        }
+      } catch { /* non-fatal */ }
     })();
     return () => { cancelled = true; };
-  }, []); // run once on mount
+  }, []);
 
   // ── data loading ────────────────────────────────────────────────────────────
   const loadDashboard = useCallback(async (skipLoadingState = false) => {
     try {
       setError(null);
-      if (!skipLoadingState) setLoading(true);
+      // Never set loading=true — content is always visible immediately.
+      // The pull-to-refresh spinner (refreshing) is the only indicator.
 
       // Run all independent fetches IN PARALLEL with Promise.allSettled.
       // Previously these were sequential awaits — this reduces latency by ~5×
@@ -531,7 +535,6 @@ export default function DashboardScreen({ navigation }: Props) {
       console.log("Dashboard Error:", err);
       setError(err instanceof Error ? err.message : "Failed to load dashboard");
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
   }, []);
@@ -556,16 +559,7 @@ export default function DashboardScreen({ navigation }: Props) {
     }, [loadDashboard, startupData, clearStartupData]),
   );
 
-  // ── loading state ────────────────────────────────────────────────────────────
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.loader}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-      </SafeAreaView>
-    );
-  }
-
-  // ── error state ────────────────────────────────────────────────────────────
+  // ── error state (only shown on manual refresh failure, not on startup) ────
   if (error) {
     return (
       <SafeAreaView style={styles.errorContainer}>

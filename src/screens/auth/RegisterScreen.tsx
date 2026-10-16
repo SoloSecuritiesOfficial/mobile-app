@@ -34,10 +34,8 @@ export default function RegisterScreen({ navigation }: Props) {
     name: "", email: "", password: "", confirmPassword: "",
   });
 
-  // signIn() swaps AuthStack → AppStack. AppNavigatorInner has
-  // initialRouteName="NotificationPermission", so the user lands there
-  // automatically if push hasn't been asked, or navigates to Dashboard
-  // from within NotificationPermissionScreen after granting/skipping.
+  // signIn() swaps AuthStack → AppStack. AppNavigatorInner starts at
+  // Dashboard. Push permission is requested silently in the background.
   const afterAuth = async () => {
     signIn();
   };

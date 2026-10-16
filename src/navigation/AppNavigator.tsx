@@ -33,7 +33,6 @@ import SplashScreen                from "../screens/auth/SplashScreen";
 import LoginScreen                 from "../screens/auth/LoginScreen";
 import RegisterScreen              from "../screens/auth/RegisterScreen";
 import ForgotPasswordScreen        from "../screens/auth/ForgotPasswordScreen";
-import NotificationPermissionScreen from "../screens/auth/NotificationPermissionScreen";
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
 import DashboardScreen             from "../screens/dashboard/DashboardScreen";
@@ -133,7 +132,6 @@ function AuthNavigator() {
 function AppNavigatorInner() {
   return (
     <AppStack.Navigator screenOptions={SCREEN_OPTIONS} initialRouteName="Dashboard">
-      <AppStack.Screen name="NotificationPermission" component={wb(NotificationPermissionScreen)} />
       <AppStack.Screen name="Dashboard"              component={wb(DashboardScreen)} />
       <AppStack.Screen name="Learning"               component={wb(LearningScreen)} />
       <AppStack.Screen name="LearningDetails"        component={wb(LearningDetailsScreen)} />

@@ -2,34 +2,50 @@
  * useStartup.ts — Startup coordinator
  *
  * Drives the splash-screen progress bar with REAL task completion.
- * Each task has an id, label, weight (0–100, weights must sum to 100),
- * and a status. Progress = sum of weights of completed tasks.
+ * Progress only advances when a task actually finishes — never from a timer.
  *
  * Phases:
- *   A  Local init   — token read, theme read, ads SDK, push channel   (0  → 35%)
- *   B  Session      — token refresh / validation                       (35 → 60%)
- *   C  Preload data — profile + dashboard in parallel (if authed)      (60 → 90%)
- *   D  Finish       — brief visual completion pause                    (90 →100%)
+ *   A  Local init   — token read, theme, ads SDK          (0  → 35%)
+ *   B  Session      — validate token / fetch profile      (35 → 60%)
+ *   C  Preload data — dashboard + certs + notifs          (60 → 90%)
+ *   D  Finish       — hide native splash, navigate        (90 →100%)
  *
- * No fake timers. Progress only advances when a task actually finishes.
- * Optional tasks (ads, push) never block progress — they complete or skip.
+ * Phase C has a 5-second timeout per call so a slow/cold free-tier MongoDB
+ * server never stalls the bar. If a call times out the task is marked
+ * "skipped" and Dashboard loads that data in the background after navigation.
  */
 
 import { useCallback, useRef, useState } from "react";
 import Constants, { ExecutionEnvironment } from "expo-constants";
 import * as SplashScreen from "expo-splash-screen";
 
-import { getToken, getUser }         from "../utils/storage";
-import { fetchCurrentUser }          from "../services/authService";
-import { getSecurityDashboard }      from "../services/securityService";
+import { getToken, getUser }          from "../utils/storage";
+import { fetchCurrentUser }           from "../services/authService";
+import { getSecurityDashboard }       from "../services/securityService";
 import { getUnreadNotificationCount } from "../services/notificationService";
-import { getCertificates }           from "../services/certificateService";
+import { getCertificates }            from "../services/certificateService";
 
 const IS_EXPO_GO =
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
+/**
+ * Race a promise against a timeout.
+ * Returns null when the timeout fires first — never rejects.
+ * This keeps the progress bar moving even when the free MongoDB
+ * cold-start takes 5-8 seconds.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  return Promise.race<T | null>([
+    promise,
+    new Promise<null>(resolve => setTimeout(() => resolve(null), ms)),
+  ]);
+}
+
+// Max ms to wait for any single Phase C backend call.
+const PHASE_C_MS = 5000;
+
 // ─────────────────────────────────────────────────────────────────────────────
-// Task definitions
+// Types
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type TaskStatus = "pending" | "running" | "done" | "failed" | "skipped";
@@ -37,26 +53,22 @@ export type TaskStatus = "pending" | "running" | "done" | "failed" | "skipped";
 export interface StartupTask {
   id:       string;
   label:    string;
-  weight:   number;          // contributes this many % to overall progress when done
-  required: boolean;         // if true, failure shows retry; if false, skipped silently
+  weight:   number;
+  required: boolean;
   status:   TaskStatus;
   error?:   string;
 }
 
 // Weights must sum to 100.
 const INITIAL_TASKS: StartupTask[] = [
-  { id: "token",     label: "Restoring session…",        weight: 15, required: true,  status: "pending" },
-  { id: "theme",     label: "Loading preferences…",      weight: 10, required: false, status: "pending" },
-  { id: "ads",       label: "Initializing services…",    weight: 10, required: false, status: "pending" },
-  { id: "refresh",   label: "Validating session…",       weight: 25, required: false, status: "pending" },
-  { id: "profile",   label: "Loading your profile…",     weight: 15, required: false, status: "pending" },
-  { id: "dashboard", label: "Loading your dashboard…",   weight: 15, required: false, status: "pending" },
-  { id: "finish",    label: "Almost ready!",             weight: 10, required: false, status: "pending" },
+  { id: "token",     label: "Restoring session…",      weight: 15, required: true,  status: "pending" },
+  { id: "theme",     label: "Loading preferences…",    weight: 10, required: false, status: "pending" },
+  { id: "ads",       label: "Initializing services…",  weight: 10, required: false, status: "pending" },
+  { id: "refresh",   label: "Validating session…",     weight: 25, required: false, status: "pending" },
+  { id: "profile",   label: "Loading your profile…",   weight: 15, required: false, status: "pending" },
+  { id: "dashboard", label: "Loading your dashboard…", weight: 15, required: false, status: "pending" },
+  { id: "finish",    label: "Almost ready!",           weight: 10, required: false, status: "pending" },
 ];
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Preloaded data shape — passed to Dashboard to avoid refetch
-// ─────────────────────────────────────────────────────────────────────────────
 
 export interface StartupData {
   user:              any | null;
@@ -66,37 +78,35 @@ export interface StartupData {
   isAuthenticated:   boolean;
 }
 
+export interface StartupState {
+  progress:      number;
+  currentLabel:  string;
+  tasks:         StartupTask[];
+  isDone:        boolean;
+  hasFatalError: boolean;
+  fatalMessage:  string;
+  data:          StartupData;
+  retry:         () => void;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Hook
 // ─────────────────────────────────────────────────────────────────────────────
 
-export interface StartupState {
-  progress:     number;          // 0–100
-  currentLabel: string;
-  tasks:        StartupTask[];
-  isDone:       boolean;
-  hasFatalError:boolean;
-  fatalMessage: string;
-  data:         StartupData;
-  retry:        () => void;
-}
-
 export function useStartup(
   onComplete: (data: StartupData) => void
 ): StartupState {
-  const [tasks,    setTasks]   = useState<StartupTask[]>(INITIAL_TASKS);
-  const [isDone,   setIsDone]  = useState(false);
-  const [fatalMsg, setFatalMsg]= useState("");
-  const hasRun = useRef(false);
+  const [tasks,    setTasks]    = useState<StartupTask[]>(INITIAL_TASKS);
+  const [isDone,   setIsDone]   = useState(false);
+  const [fatalMsg, setFatalMsg] = useState("");
+  const hasRun    = useRef(false);
+  const startedRef = useRef(false);
 
-  // Stable data ref — avoids stale closure issues with setState batching
   const dataRef = useRef<StartupData>({
     user: null, dashboard: null,
     certificateCount: 0, notificationCount: 0,
     isAuthenticated: false,
   });
-
-  // ── helpers ──────────────────────────────────────────────────────────────
 
   const updateTask = useCallback((id: string, patch: Partial<StartupTask>) => {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, ...patch } : t));
@@ -110,8 +120,8 @@ export function useStartup(
   const currentLabel = (() => {
     const running = tasks.find(t => t.status === "running");
     if (running) return running.label;
-    const nextPending = tasks.find(t => t.status === "pending");
-    if (nextPending) return nextPending.label;
+    const next = tasks.find(t => t.status === "pending");
+    if (next) return next.label;
     return "Ready!";
   })();
 
@@ -123,7 +133,6 @@ export function useStartup(
     if (hasRun.current) return;
     hasRun.current = true;
 
-    // Reset on retry
     setTasks(INITIAL_TASKS);
     setIsDone(false);
     setFatalMsg("");
@@ -133,15 +142,14 @@ export function useStartup(
       isAuthenticated: false,
     };
 
-    // ── Phase A: Local init ──────────────────────────────────────────────────
+    // ── Phase A ──────────────────────────────────────────────────────────────
 
-    // Task: token
+    // Token
     updateTask("token", { status: "running" });
     let hasToken = false;
     try {
       const token = await getToken();
       hasToken = !!token;
-      // Also load cached user from SecureStore as immediate fallback
       const cachedUser = await getUser();
       if (cachedUser) dataRef.current.user = cachedUser;
       dataRef.current.isAuthenticated = hasToken;
@@ -152,18 +160,17 @@ export function useStartup(
       return;
     }
 
-    // Task: theme — always succeeds (AsyncStorage read, non-critical)
+    // Theme (AsyncStorage warm-up)
     updateTask("theme", { status: "running" });
     try {
-      // AsyncStorage is a default export — import correctly
       const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
-      await AsyncStorage.getItem("@app_theme_dark"); // warm the AsyncStorage cache
+      await AsyncStorage.getItem("@app_theme_dark");
       updateTask("theme", { status: "done" });
     } catch {
       updateTask("theme", { status: "skipped" });
     }
 
-    // Task: ads — non-blocking, skip in Expo Go
+    // Ads SDK (skip in Expo Go, 3 s cap)
     updateTask("ads", { status: "running" });
     if (!IS_EXPO_GO) {
       try {
@@ -174,28 +181,24 @@ export function useStartup(
         ]);
         updateTask("ads", { status: "done" });
       } catch {
-        updateTask("ads", { status: "skipped" }); // never block startup for ads
+        updateTask("ads", { status: "skipped" });
       }
     } else {
       updateTask("ads", { status: "skipped" });
     }
 
-    // ── Phase B: Session validation ──────────────────────────────────────────
+    // ── Phase B — Session validation ─────────────────────────────────────────
 
     updateTask("refresh", { status: "running" });
     if (hasToken) {
       try {
-        // Make a lightweight profile call — if the token is expired, the Axios
-        // interceptor will transparently refresh it. If refresh fails, the
-        // interceptor calls triggerForcedSignOut() and we treat as logged-out.
         const user = await fetchCurrentUser();
         if (user) {
-          dataRef.current.user          = user;
+          dataRef.current.user = user;
           dataRef.current.isAuthenticated = true;
         }
         updateTask("refresh", { status: "done" });
       } catch {
-        // Session invalid / network failure — treat as logged-out, not fatal
         dataRef.current.isAuthenticated = false;
         updateTask("refresh", { status: "skipped" });
       }
@@ -203,64 +206,63 @@ export function useStartup(
       updateTask("refresh", { status: "skipped" });
     }
 
-    // ── Phase C: Preload data (only if authenticated) ────────────────────────
+    // ── Phase C — Preload data ────────────────────────────────────────────────
+    // All calls are raced against PHASE_C_MS (5 s). A free-tier MongoDB cold
+    // start can take 5-8 s; we treat a timeout as a skipped task so the bar
+    // never stalls. Dashboard will load the data in the background instead.
 
     if (dataRef.current.isAuthenticated) {
-      // Profile + dashboard in parallel
-      updateTask("profile", { status: "running" });
+      updateTask("profile",   { status: "running" });
       updateTask("dashboard", { status: "running" });
 
       const [profileResult, dashResult, certResult, notifResult] =
         await Promise.allSettled([
-          fetchCurrentUser(),
-          getSecurityDashboard(),
-          getCertificates(),
-          getUnreadNotificationCount(),
+          withTimeout(fetchCurrentUser(),           PHASE_C_MS),
+          withTimeout(getSecurityDashboard(),       PHASE_C_MS),
+          withTimeout(getCertificates(),            PHASE_C_MS),
+          withTimeout(getUnreadNotificationCount(), PHASE_C_MS),
         ]);
 
       if (profileResult.status === "fulfilled" && profileResult.value) {
         dataRef.current.user = profileResult.value;
         updateTask("profile", { status: "done" });
       } else {
-        updateTask("profile", { status: "skipped" }); // cached user still available
+        updateTask("profile", { status: "skipped" });
       }
 
-      if (dashResult.status === "fulfilled") {
-        dataRef.current.dashboard =
-          dashResult.value?.data ?? dashResult.value ?? null;
+      if (dashResult.status === "fulfilled" && dashResult.value !== null) {
+        const d = dashResult.value as any;
+        dataRef.current.dashboard = d?.data ?? d ?? null;
         updateTask("dashboard", { status: "done" });
       } else {
         updateTask("dashboard", { status: "skipped" });
       }
 
-      if (certResult.status === "fulfilled") {
-        dataRef.current.certificateCount =
-          certResult.value?.data?.length ?? certResult.value?.length ?? 0;
+      if (certResult.status === "fulfilled" && certResult.value !== null) {
+        const c = certResult.value as any;
+        dataRef.current.certificateCount = c?.data?.length ?? c?.length ?? 0;
       }
 
-      if (notifResult.status === "fulfilled") {
-        dataRef.current.notificationCount =
-          notifResult.value?.data?.count ?? notifResult.value?.count ?? 0;
+      if (notifResult.status === "fulfilled" && notifResult.value !== null) {
+        const n = notifResult.value as any;
+        dataRef.current.notificationCount = n?.data?.count ?? n?.count ?? 0;
       }
     } else {
       updateTask("profile",   { status: "skipped" });
       updateTask("dashboard", { status: "skipped" });
     }
 
-    // ── Phase D: Finish ──────────────────────────────────────────────────────
+    // ── Phase D — Finish ─────────────────────────────────────────────────────
 
     updateTask("finish", { status: "running" });
 
-    // Hide native splash now — custom splash is fully rendered and progress bar
-    // is at 90%. This eliminates the white-screen gap.
+    // Hide native splash — our custom splash is visible at ~90% progress.
     try { await SplashScreen.hideAsync(); } catch { /* already hidden */ }
 
-    // Give the progress bar a brief moment to visually reach ~90% before
-    // snapping to 100% — purely for UX smoothness, not a fake delay.
+    // Brief pause so the bar visually reaches 90% before snapping to 100%.
     await new Promise(r => setTimeout(r, 250));
 
     updateTask("finish", { status: "done" });
-
     setIsDone(true);
     onComplete({ ...dataRef.current });
   }, [updateTask, onComplete]);
@@ -270,17 +272,9 @@ export function useStartup(
     run();
   }, [run]);
 
-  // Start on first mount via useEffect — never during the render phase.
-  // Using useEffect ensures this runs exactly once after mount, avoids
-  // double-firing in React Strict Mode, and prevents the setTimeout
-  // side-effect-during-render anti-pattern.
-  // NOTE: The SplashScreen must call useStartup() at the top level so
-  // this effect fires on its first render.
-  const startedRef = useRef(false);
+  // Trigger on first render via a microtask (never during render phase).
   if (!startedRef.current) {
     startedRef.current = true;
-    // Defer to next tick so setState calls inside run() don't fire
-    // synchronously during the parent's render.
     Promise.resolve().then(() => {
       if (!hasRun.current) run();
     });
