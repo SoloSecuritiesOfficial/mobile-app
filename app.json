@@ -1,8 +1,8 @@
 {
   "expo": {
     "name": "SoloSecurities",
-    "slug": "soloji",
-    "scheme": "soloji",
+    "slug": "mobile-app",
+    "scheme": "mobile-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,7 +10,6 @@
 
     "ios": {
       "supportsTablet": true,
-      "icon": "./assets/icon.png",
       "bundleIdentifier": "com.solosecurities.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
@@ -46,7 +45,7 @@
       "favicon": "./assets/favicon.png"
     },
 
-    "owner": "janemun",
+    "owner": "reshavji",
 
     "plugins": [
       "expo-secure-store",
@@ -134,7 +133,7 @@
 
     "extra": {
       "eas": {
-        "projectId": "fc4b736f-a9bb-44cc-84cb-bd61af68422c"
+        "projectId": "77f1b468-080f-40ef-a4fd-167151d08d04"
       }
     }
   }
