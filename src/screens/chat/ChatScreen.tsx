@@ -54,7 +54,6 @@ interface Message {
   receiver:  { _id: string; username: string };
   isRead:    boolean;
   readAt?:   string;
-  isDeleted: boolean;
   createdAt: string;
   reactions?: Record<string, string>;   // { userId: emoji }
   replyTo?: {
@@ -257,14 +256,12 @@ function MessageBubble({
             style={[
               mb.bubble,
               isMe ? mb.bubbleMe : mb.bubbleThem,
-              msg.isDeleted && mb.bubbleDeleted,
             ]}
           >
             <Text
               style={[
                 mb.content,
                 isMe ? mb.contentMe : mb.contentThem,
-                msg.isDeleted && mb.contentDeleted,
               ]}
             >
               {msg.content}
