@@ -585,7 +585,7 @@ export default function ChatScreen({ route, navigation }: any) {
         onPress: async () => {
           try {
             await deleteMessage(msgId);
-            // Remove message completely from UI
+            // Remove message completely from UI - filter out deleted message
             setMessages(prev => prev.filter(m => m._id !== msgId));
           } catch {
             Alert.alert("Error", "Could not delete message.");
