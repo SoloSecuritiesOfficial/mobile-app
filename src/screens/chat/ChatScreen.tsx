@@ -318,12 +318,10 @@ const mb = StyleSheet.create({
   bubble:        { borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10, maxWidth: "100%" },
   bubbleMe:      { backgroundColor: Colors.primary, borderBottomRightRadius: 4 },
   bubbleThem:    { backgroundColor: Colors.surface, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: Colors.border },
-  bubbleDeleted: { opacity: 0.5 },
 
   content:        { fontSize: 15, lineHeight: 22 },
   contentMe:      { color: "#FFF" },
   contentThem:    { color: Colors.text },
-  contentDeleted: { fontStyle: "italic" },
 
   meta:     { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
   time:     { fontSize: 10, color: Colors.textMuted },
@@ -504,7 +502,6 @@ export default function ChatScreen({ route, navigation }: any) {
       sender:   { _id: currentUserId, username: "Me" },
       receiver: { _id: userId, username },
       isRead:   false,
-      isDeleted:false,
       createdAt:new Date().toISOString(),
       replyTo: replyTo
         ? { _id: replyTo._id, content: replyTo.content, sender: { username: replyTo.senderName } }
@@ -538,9 +535,8 @@ export default function ChatScreen({ route, navigation }: any) {
     const isMe = menuMsg.sender._id === currentUserId;
     const items: MenuItem[] = [];
 
-    if (!menuMsg.isDeleted) {
-      items.push({
-        label: "Reply",
+    items.push({
+      label: "Reply",
         icon: "↩️",
         action: () => setReplyTo({
           _id: menuMsg._id,
@@ -568,7 +564,7 @@ export default function ChatScreen({ route, navigation }: any) {
       });
     }
 
-    if (isMe && !menuMsg.isDeleted) {
+    if (isMe) {
       items.push({
         label:  "Delete message",
         icon:   "🗑️",
@@ -581,7 +577,7 @@ export default function ChatScreen({ route, navigation }: any) {
   };
 
   const confirmDeleteMessage = (msgId: string) => {
-    Alert.alert("Delete Message", "This will remove the message for everyone.", [
+    Alert.alert("Delete Message", "This will permanently remove the message for everyone.", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
@@ -589,13 +585,8 @@ export default function ChatScreen({ route, navigation }: any) {
         onPress: async () => {
           try {
             await deleteMessage(msgId);
-            setMessages(prev =>
-              prev.map(m =>
-                m._id === msgId
-                  ? { ...m, content: "This message was deleted", isDeleted: true }
-                  : m
-              )
-            );
+            // Remove message completely from UI
+            setMessages(prev => prev.filter(m => m._id !== msgId));
           } catch {
             Alert.alert("Error", "Could not delete message.");
           }
