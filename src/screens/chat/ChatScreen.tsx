@@ -562,7 +562,6 @@ export default function ChatScreen({ route, navigation }: any) {
           }
         },
       });
-    }
 
     if (isMe) {
       items.push({
