@@ -54,16 +54,18 @@ export function generateCertificateHtml(
     "Certificate Holder";
 
   const title =
-    certificate.title?.trim() || "Certificate of Achievement";
+    certificate.title?.trim() || "Cybersecurity Achievement";
 
   const issuer =
     certificate.issuedBy?.trim() || "SoloSecurities";
 
   const category =
-    certificate.category?.trim() || "Professional Achievement";
+    certificate.category?.trim() || "Cybersecurity";
 
   const certificateId =
-    certificate.certificateId?.trim() || "Not available";
+    certificate.certificateId?.trim() ||
+    certificate._id?.trim() ||
+    "Not available";
 
   const issueDate = formatDate(
     certificate.issueDate || certificate.createdAt
@@ -71,13 +73,18 @@ export function generateCertificateHtml(
 
   const description =
     certificate.description?.trim() ||
-    `This certificate recognizes the successful completion of ${title}.`;
+    "In recognition of demonstrated knowledge, practical learning, and achievement in cybersecurity.";
+
+  const verified =
+    certificate.verified === true ||
+    certificate.status?.toLowerCase() === "verified";
 
   const skills = (certificate.skills || [])
     .filter(
       (skill) =>
         typeof skill === "string" && skill.trim().length > 0
     )
+    .slice(0, 6)
     .map(
       (skill) =>
         `<span class="skill">${escapeHtml(skill.trim())}</span>`
@@ -89,24 +96,34 @@ export function generateCertificateHtml(
         options.logoDataUri
       )}" alt="SoloSecurities logo" />`
     : `
-      <div class="logoFallback">
-        <span>S</span>
+      <div class="logoFallback" aria-label="SoloSecurities shield">
+        <svg viewBox="0 0 64 72" aria-hidden="true">
+          <path
+            d="M32 3 L57 13 V32 C57 49 46 61 32 68 C18 61 7 49 7 32 V13 Z"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="3"
+          />
+          <path
+            d="M20 35 L28 43 L45 25"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
       </div>
     `;
-
-  const verified =
-    certificate.verified === true ||
-    certificate.status?.toLowerCase() === "verified";
 
   const verificationUrl = certificate.verificationUrl?.trim();
 
   const verification = verificationUrl
     ? `
       <div class="verification">
-        <span class="verificationLabel">VERIFY CERTIFICATE</span>
-        <span class="verificationValue">
-          ${escapeHtml(verificationUrl)}
-        </span>
+        <span class="verificationDot"></span>
+        <span class="verificationLabel">VERIFY ONLINE</span>
+        <span class="verificationUrl">${escapeHtml(verificationUrl)}</span>
       </div>
     `
     : "";
@@ -123,7 +140,7 @@ export function generateCertificateHtml(
 
   <meta name="color-scheme" content="light" />
 
-  <title>${escapeHtml(title)}</title>
+  <title>${escapeHtml(title)} | SoloSecurities</title>
 
   <style>
     * {
@@ -135,56 +152,48 @@ export function generateCertificateHtml(
     html,
     body {
       width: 100%;
-      height: 100%;
+      min-height: 100%;
       margin: 0;
       padding: 0;
-      overflow: hidden;
-      background: #000000;
-      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background: #f0f2f5;
+      font-family: Arial, Helvetica, sans-serif;
       -webkit-text-size-adjust: 100%;
     }
 
     body {
-      display: flex;
-      align-items: stretch;
-      justify-content: stretch;
+      padding: 12px;
     }
 
-    /*
-      Premium cybersecurity certificate with black, red, and white color scheme.
-      Landscape orientation with modern, professional design.
-    */
+    .stage {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
 
     .certificate {
       position: relative;
       isolation: isolate;
-      display: flex;
-      flex-direction: column;
       width: 100%;
-      height: 100%;
-      min-width: 0;
+      aspect-ratio: 1.414 / 1;
       min-height: 0;
       overflow: hidden;
-      background: #FFFFFF;
-      color: #000000;
-      padding: 3.5% 5%;
+      background: #ffffff;
+      color: #101010;
+      border: 1px solid #d8d8d8;
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
     }
 
-    /* Premium black and red frame */
+    /* Technical background */
 
-    .frame {
+    .darkPanel {
       position: absolute;
-      z-index: -1;
-      inset: 2%;
-      border: 3px solid #000000;
-      pointer-events: none;
-    }
-
-    .frameInner {
-      position: absolute;
-      inset: 0.8%;
-      border: 1px solid #DC143C;
-      pointer-events: none;
+      z-index: -2;
+      top: 0;
+      right: 0;
+      width: 23%;
+      height: 100%;
+      background: #090909;
+      clip-path: polygon(28% 0, 100% 0, 100% 100%, 0 100%, 16% 77%, 0 57%);
     }
 
     .topAccent {
@@ -192,15 +201,13 @@ export function generateCertificateHtml(
       top: 0;
       left: 0;
       right: 0;
-      height: 8px;
+      height: 7px;
       background: linear-gradient(
         90deg,
-        #000000 0%,
-        #000000 40%,
-        #DC143C 40%,
-        #DC143C 60%,
-        #000000 60%,
-        #000000 100%
+        #090909 0%,
+        #090909 55%,
+        #dc143c 55%,
+        #dc143c 100%
       );
     }
 
@@ -209,331 +216,290 @@ export function generateCertificateHtml(
       bottom: 0;
       left: 0;
       right: 0;
-      height: 8px;
-      background: linear-gradient(
-        90deg,
-        #000000 0%,
-        #000000 40%,
-        #DC143C 40%,
-        #DC143C 60%,
-        #000000 60%,
-        #000000 100%
-      );
+      height: 6px;
+      background: #dc143c;
+    }
+
+    .outerFrame {
+      position: absolute;
+      inset: 12px;
+      border: 1px solid #171717;
+      pointer-events: none;
+    }
+
+    .innerFrame {
+      position: absolute;
+      inset: 17px;
+      border: 1px solid rgba(220, 20, 60, 0.7);
+      pointer-events: none;
+    }
+
+    .circuitPattern {
+      position: absolute;
+      z-index: -1;
+      right: 1%;
+      top: 5%;
+      width: 27%;
+      height: 37%;
+      opacity: 0.8;
+      pointer-events: none;
     }
 
     .watermark {
       position: absolute;
       z-index: -1;
-      right: 5%;
-      bottom: 10%;
-      color: rgba(220, 20, 60, 0.04);
-      font-size: clamp(100px, 25vw, 200px);
-      font-weight: 900;
-      line-height: 1;
+      left: 27%;
+      bottom: 13%;
+      width: 35%;
+      opacity: 0.045;
       pointer-events: none;
-      transform: rotate(-8deg);
-    }
-
-    .cornerAccent {
-      position: absolute;
-      width: 40px;
-      height: 40px;
-      border: 2px solid #DC143C;
-    }
-
-    .cornerAccent.topLeft {
-      top: 3%;
-      left: 3%;
-      border-right: none;
-      border-bottom: none;
-    }
-
-    .cornerAccent.topRight {
-      top: 3%;
-      right: 3%;
-      border-left: none;
-      border-bottom: none;
-    }
-
-    .cornerAccent.bottomLeft {
-      bottom: 3%;
-      left: 3%;
-      border-right: none;
-      border-top: none;
-    }
-
-    .cornerAccent.bottomRight {
-      bottom: 3%;
-      right: 3%;
-      border-left: none;
-      border-top: none;
     }
 
     /* Header */
 
     .header {
+      position: absolute;
+      top: 7%;
+      left: 7%;
+      right: 7%;
       display: flex;
-      flex-direction: row;
       align-items: center;
       justify-content: space-between;
-      flex-shrink: 0;
       gap: 12px;
-      padding-bottom: 2%;
-      border-bottom: 2px solid #000000;
     }
 
     .brand {
       display: flex;
-      flex-direction: row;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       min-width: 0;
     }
 
-    .logo {
-      display: block;
-      width: clamp(30px, 6vw, 50px);
-      height: clamp(30px, 6vw, 50px);
-      object-fit: contain;
+    .logo,
+    .logoFallback {
+      width: clamp(28px, 5vw, 48px);
+      height: clamp(28px, 5vw, 48px);
       flex-shrink: 0;
+      object-fit: contain;
     }
 
     .logoFallback {
-      width: clamp(30px, 6vw, 50px);
-      height: clamp(30px, 6vw, 50px);
-      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #000000;
-      border: 2px solid #DC143C;
-      flex-shrink: 0;
+      color: #dc143c;
     }
 
-    .logoFallback span {
-      color: #FFFFFF;
-      font-size: clamp(18px, 4vw, 30px);
-      font-weight: 900;
+    .logoFallback svg {
+      width: 100%;
+      height: 100%;
     }
 
     .brandName {
-      color: #000000;
-      font-size: clamp(10px, 2.5vw, 18px);
+      color: #090909;
+      font-size: clamp(10px, 1.8vw, 18px);
       font-weight: 900;
       letter-spacing: 1.5px;
       overflow-wrap: anywhere;
     }
 
     .brandTagline {
-      color: #DC143C;
-      font-size: clamp(6px, 1.3vw, 10px);
-      font-weight: 700;
-      letter-spacing: 0.8px;
-      margin-top: 2px;
+      margin-top: 4px;
+      color: #dc143c;
+      font-size: clamp(6px, 0.9vw, 9px);
+      font-weight: 800;
+      letter-spacing: 1.5px;
     }
 
-    .statusBadge {
-      flex-shrink: 0;
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      border-radius: 4px;
-      border: 2px solid ${verified ? "#000000" : "#DC143C"};
-      background: ${verified ? "#000000" : "#FFFFFF"};
-      color: ${verified ? "#FFFFFF" : "#DC143C"};
-      font-size: clamp(6px, 1.3vw, 10px);
-      font-weight: 900;
+    .headerCode {
+      text-align: right;
+      color: #ffffff;
+      font-size: clamp(6px, 0.9vw, 9px);
+      line-height: 1.7;
       letter-spacing: 1px;
+      overflow-wrap: anywhere;
     }
 
-    /* Main certificate content */
+    .headerCode strong {
+      display: block;
+      color: #ff4b69;
+      font-size: clamp(7px, 1vw, 11px);
+    }
+
+    /* Main content */
 
     .content {
+      position: absolute;
+      top: 23%;
+      left: 9%;
+      right: 24%;
+      bottom: 24%;
       display: flex;
-      flex: 1;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       text-align: center;
       min-height: 0;
-      padding: 3% 4%;
     }
 
-    .ornament {
-      color: #DC143C;
-      font-size: clamp(14px, 3.5vw, 24px);
-      line-height: 1;
-      margin-bottom: 1.5%;
-      font-weight: 300;
-    }
-
-    .eyebrow {
-      color: #DC143C;
-      font-size: clamp(7px, 1.6vw, 11px);
+    .microLabel {
+      margin-bottom: 8px;
+      color: #dc143c;
+      font-size: clamp(7px, 1vw, 11px);
       font-weight: 900;
       letter-spacing: 3px;
-      margin-bottom: 1.5%;
-    }
-
-    .mainTitle {
-      max-width: 100%;
-      color: #000000;
-      font-family: 'Georgia', 'Times New Roman', serif;
-      font-size: clamp(18px, 5vw, 36px);
-      font-weight: 700;
-      line-height: 1.15;
-      overflow-wrap: anywhere;
-      margin: 0 0 2%;
       text-transform: uppercase;
-      letter-spacing: 1px;
     }
 
-    .titleRule {
-      width: 25%;
-      min-width: 50px;
-      height: 3px;
-      background: #DC143C;
-      margin-bottom: 2%;
+    .title {
+      margin: 0;
+      max-width: 100%;
+      color: #090909;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(20px, 3.5vw, 42px);
+      font-weight: 700;
+      line-height: 1.08;
+      letter-spacing: 0.5px;
+      overflow-wrap: anywhere;
     }
 
-    .subtitle {
-      color: #333333;
-      font-size: clamp(7px, 1.6vw, 12px);
-      line-height: 1.4;
-      margin-bottom: 1.8%;
-      font-weight: 500;
+    .titleUnderline {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 120px;
+      max-width: 40%;
+      margin: 12px 0;
+    }
+
+    .titleUnderline::before,
+    .titleUnderline::after {
+      content: "";
+      height: 1px;
+      flex: 1;
+      background: #dc143c;
+    }
+
+    .titleUnderline span {
+      width: 7px;
+      height: 7px;
+      background: #dc143c;
+      transform: rotate(45deg);
+    }
+
+    .presentedText {
+      margin: 0;
+      color: #5b5b5b;
+      font-size: clamp(8px, 1.1vw, 12px);
+      letter-spacing: 1.3px;
+      text-transform: uppercase;
     }
 
     .recipientName {
       width: 100%;
       max-width: 100%;
-      color: #000000;
-      font-family: 'Georgia', 'Times New Roman', serif;
-      font-size: clamp(20px, 5.5vw, 40px);
+      margin: 8px 0;
+      color: #090909;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(19px, 3.4vw, 39px);
       font-weight: 700;
-      line-height: 1.2;
+      line-height: 1.12;
       overflow-wrap: anywhere;
       word-break: normal;
-      margin: 0 0 1.5%;
-      border-bottom: 3px solid #000000;
-      padding-bottom: 8px;
-      display: inline-block;
     }
 
-    .recipientUnderline {
-      width: 40%;
+    .recipientRule {
+      width: 68%;
       height: 2px;
-      background: #DC143C;
-      margin-bottom: 2%;
+      margin-bottom: 10px;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        #dc143c,
+        transparent
+      );
     }
 
     .description {
-      max-width: 88%;
-      color: #1a1a1a;
-      font-size: clamp(7px, 1.6vw, 12px);
-      line-height: 1.6;
-      overflow-wrap: anywhere;
-      margin: 0 0 2%;
-      font-weight: 400;
-    }
-
-    .infoGrid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: clamp(8px, 2vw, 16px);
       max-width: 90%;
-      margin: 2% 0;
-      width: 100%;
+      margin: 0;
+      color: #3f3f3f;
+      font-size: clamp(8px, 1.05vw, 12px);
+      line-height: 1.55;
+      overflow-wrap: anywhere;
     }
 
-    .infoItem {
-      background: #f8f8f8;
-      border: 1px solid #e0e0e0;
-      border-left: 3px solid #DC143C;
-      padding: clamp(6px, 1.5vw, 12px);
-      text-align: left;
-    }
-
-    .infoLabel {
-      color: #DC143C;
-      font-size: clamp(5px, 1.2vw, 8px);
+    .courseTitle {
+      max-width: 100%;
+      margin-top: 8px;
+      color: #dc143c;
+      font-size: clamp(10px, 1.6vw, 17px);
       font-weight: 900;
-      letter-spacing: 1px;
-      margin-bottom: 4px;
-      text-transform: uppercase;
-    }
-
-    .infoValue {
-      color: #000000;
-      font-size: clamp(6px, 1.4vw, 10px);
-      font-weight: 600;
+      line-height: 1.3;
       overflow-wrap: anywhere;
     }
 
     .skills {
       display: flex;
-      flex-direction: row;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 6px;
-      max-width: 90%;
-      margin-top: 1.5%;
+      gap: 5px;
+      margin-top: 9px;
+      max-width: 100%;
     }
 
     .skill {
-      display: inline-block;
-      padding: 4px 10px;
-      color: #FFFFFF;
-      background: #000000;
-      border: 1px solid #DC143C;
-      border-radius: 3px;
-      font-size: clamp(6px, 1.3vw, 9px);
+      padding: 4px 8px;
+      border: 1px solid #d6d6d6;
+      border-left: 3px solid #dc143c;
+      background: #f7f7f7;
+      color: #171717;
+      font-size: clamp(6px, 0.8vw, 9px);
       font-weight: 700;
-      letter-spacing: 0.5px;
     }
 
-    /* Footer */
+    /* Right-side security identity */
 
-    .bottom {
+    .securityPanel {
+      position: absolute;
+      top: 26%;
+      right: 5.3%;
+      width: 15%;
       display: flex;
-      flex-direction: row;
-      align-items: flex-end;
-      justify-content: space-between;
-      flex-shrink: 0;
-      gap: 12px;
-      padding-top: 2%;
-      border-top: 2px solid #000000;
+      flex-direction: column;
+      align-items: center;
+      color: #ffffff;
+      text-align: center;
     }
 
-    .signature {
-      flex: 1;
-      min-width: 0;
+    .shield {
+      width: clamp(48px, 8vw, 86px);
+      height: auto;
+      color: #ff3157;
+      margin-bottom: 12px;
+      filter: drop-shadow(0 4px 12px rgba(220, 20, 60, 0.2));
     }
 
-    .signatureLine {
-      width: 85%;
-      max-width: 160px;
-      border-top: 2px solid #DC143C;
-      margin-bottom: 6px;
-    }
-
-    .signatureName {
-      color: #000000;
-      font-size: clamp(7px, 1.5vw, 11px);
+    .securityTitle {
+      color: #ffffff;
+      font-size: clamp(7px, 1vw, 11px);
       font-weight: 900;
-      overflow-wrap: anywhere;
-      letter-spacing: 0.5px;
+      letter-spacing: 1.2px;
+      line-height: 1.5;
     }
 
-    .signatureLabel {
-      color: #666666;
-      font-size: clamp(5px, 1.1vw, 8px);
-      letter-spacing: 1px;
-      margin-top: 4px;
-      font-weight: 700;
-      text-transform: uppercase;
+    .securityLine {
+      width: 35px;
+      height: 2px;
+      margin: 8px 0;
+      background: #dc143c;
+    }
+
+    .securitySub {
+      color: #bcbcbc;
+      font-size: clamp(5px, 0.75vw, 8px);
+      line-height: 1.6;
+      letter-spacing: 0.7px;
     }
 
     .seal {
@@ -541,79 +507,200 @@ export function generateCertificateHtml(
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      flex-shrink: 0;
-      width: clamp(40px, 9vw, 65px);
-      height: clamp(40px, 9vw, 65px);
-      border: 3px solid #DC143C;
-      background: #000000;
+      width: clamp(42px, 6vw, 64px);
+      aspect-ratio: 1;
+      margin-top: 16px;
+      border: 2px solid #dc143c;
+      outline: 1px solid rgba(255, 255, 255, 0.35);
+      outline-offset: 4px;
       border-radius: 50%;
-      color: #FFFFFF;
-      text-align: center;
-      position: relative;
-    }
-
-    .seal::before {
-      content: '';
-      position: absolute;
-      inset: -6px;
-      border: 1px solid #DC143C;
-      border-radius: 50%;
+      color: #ffffff;
+      background: #151515;
     }
 
     .sealIcon {
-      font-size: clamp(14px, 3.5vw, 24px);
-      line-height: 1;
+      color: #ff3157;
+      font-size: clamp(15px, 2vw, 24px);
       font-weight: 900;
-      color: #DC143C;
+      line-height: 1;
     }
 
     .sealText {
-      font-size: clamp(5px, 1vw, 7px);
-      font-weight: 900;
-      letter-spacing: 0.8px;
       margin-top: 4px;
+      font-size: clamp(4px, 0.6vw, 7px);
+      font-weight: 900;
+      letter-spacing: 1px;
     }
 
-    .metadata {
-      flex: 1;
+    /* Footer */
+
+    .footer {
+      position: absolute;
+      bottom: 7%;
+      left: 7%;
+      right: 7%;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      align-items: end;
+      gap: 14px;
+    }
+
+    .footerBlock {
       min-width: 0;
+    }
+
+    .footerBlock.center {
+      text-align: center;
+    }
+
+    .footerBlock.right {
       text-align: right;
     }
 
-    .metadataLabel {
-      color: #666666;
-      font-size: clamp(5px, 1.1vw, 8px);
+    .footerLabel {
+      margin-bottom: 5px;
+      color: #777777;
+      font-size: clamp(6px, 0.85vw, 9px);
+      font-weight: 800;
       letter-spacing: 1px;
-      margin-bottom: 4px;
-      font-weight: 700;
       text-transform: uppercase;
     }
 
-    .metadataValue {
-      color: #000000;
-      font-size: clamp(7px, 1.5vw, 11px);
+    .footerValue {
+      color: #101010;
+      font-size: clamp(7px, 1vw, 11px);
       font-weight: 900;
+      line-height: 1.4;
       overflow-wrap: anywhere;
+    }
+
+    .footerRule {
+      width: 75%;
+      height: 2px;
+      margin-bottom: 6px;
+      background: #dc143c;
+    }
+
+    .center .footerRule {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .right .footerRule {
+      margin-left: auto;
     }
 
     .verification {
-      display: flex;
-      flex-direction: column;
       margin-top: 6px;
-    }
-
-    .verificationLabel {
-      color: #666666;
-      font-size: clamp(5px, 1vw, 7px);
-      font-weight: 700;
-      text-transform: uppercase;
-    }
-
-    .verificationValue {
-      color: #DC143C;
-      font-size: clamp(5px, 1vw, 7px);
+      color: #dc143c;
+      font-size: clamp(5px, 0.75vw, 8px);
+      font-weight: 800;
+      line-height: 1.5;
       overflow-wrap: anywhere;
-      font-weight: 600;
+    }
+
+    .verifiedDot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      margin-right: 4px;
+      border-radius: 50%;
+      background: #dc143c;
+    }
+
+    /* Compact responsive layout */
+
+    @media (max-width: 600px) {
+      body {
+        padding: 5px;
+      }
+
+      .outerFrame {
+        inset: 6px;
+      }
+
+      .innerFrame {
+        inset: 10px;
+      }
+
+      .header {
+        top: 7%;
+        left: 7%;
+        right: 7%;
+        gap: 5px;
+      }
+
+      .brand {
+        gap: 5px;
+      }
+
+      .brandName {
+        letter-spacing: 0.6px;
+      }
+
+      .brandTagline {
+        letter-spacing: 0.5px;
+      }
+
+      .content {
+        top: 24%;
+        left: 7%;
+        right: 24%;
+        bottom: 23%;
+      }
+
+      .microLabel {
+        letter-spacing: 1.5px;
+        margin-bottom: 5px;
+      }
+
+      .titleUnderline {
+        margin: 7px 0;
+      }
+
+      .recipientName {
+        margin: 5px 0;
+      }
+
+      .recipientRule {
+        margin-bottom: 6px;
+      }
+
+      .description {
+        max-width: 96%;
+        line-height: 1.35;
+      }
+
+      .courseTitle {
+        margin-top: 5px;
+      }
+
+      .skills {
+        gap: 3px;
+        margin-top: 5px;
+      }
+
+      .skill {
+        padding: 3px 5px;
+      }
+
+      .securityPanel {
+        right: 5%;
+        top: 31%;
+      }
+
+      .shield {
+        margin-bottom: 5px;
+      }
+
+      .seal {
+        margin-top: 7px;
+      }
+
+      .footer {
+        bottom: 7%;
+        gap: 6px;
+      }
     }
 
     @media print {
@@ -626,179 +713,219 @@ export function generateCertificateHtml(
       body {
         width: 297mm;
         height: 210mm;
+        padding: 0;
         overflow: hidden;
+        background: #ffffff;
+      }
+
+      .stage {
+        width: 297mm;
+        height: 210mm;
+        max-width: none;
       }
 
       .certificate {
         width: 297mm;
         height: 210mm;
-        padding: 10mm 16mm;
-        border: 3mm solid #101E3A;
+        aspect-ratio: auto;
+        box-shadow: none;
+        border: none;
       }
 
-      .frame {
-        inset: 5mm;
-        border-width: 0.5mm;
-      }
-
-      .frameInner {
-        inset: 8mm;
-      }
-
-      .topAccent {
-        height: 2mm;
-      }
-
-      .logo,
-      .logoFallback {
-        width: 12mm;
-        height: 12mm;
-      }
-
-      .brandName {
-        font-size: 12pt;
-      }
-
-      .brandTagline {
-        font-size: 7pt;
-      }
-
-      .mainTitle {
-        font-size: 28pt;
-      }
-
-      .recipientName {
-        font-size: 25pt;
-      }
-
-      .description {
-        font-size: 9pt;
-      }
-
-      .skill {
-        font-size: 7pt;
-      }
-
-      .metadataValue,
-      .signatureName {
-        font-size: 9pt;
+      .header,
+      .footer,
+      .content,
+      .securityPanel {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
     }
   </style>
 </head>
 
 <body>
-  <main class="certificate">
-    <div class="topAccent"></div>
-    <div class="bottomAccent"></div>
-    <div class="frame"></div>
-    <div class="frameInner"></div>
-    <div class="watermark">SS</div>
-    <div class="cornerAccent topLeft"></div>
-    <div class="cornerAccent topRight"></div>
-    <div class="cornerAccent bottomLeft"></div>
-    <div class="cornerAccent bottomRight"></div>
+  <main class="stage">
+    <article class="certificate">
+      <div class="darkPanel"></div>
+      <div class="topAccent"></div>
+      <div class="bottomAccent"></div>
+      <div class="outerFrame"></div>
+      <div class="innerFrame"></div>
 
-    <header class="header">
-      <div class="brand">
-        ${logo}
+      <svg
+        class="circuitPattern"
+        viewBox="0 0 300 250"
+        fill="none"
+        aria-hidden="true"
+      >
+        <g stroke="#DC143C" stroke-width="2">
+          <path d="M30 0 V40 H90 V80 H140 V120 H200 V170 H300" />
+          <path d="M100 0 V25 H155 V65 H220 V105 H300" />
+          <path d="M0 150 H55 V190 H120 V230 H185 V250" />
+          <path d="M190 0 V35 H245 V65 H300" />
+        </g>
+        <g fill="#DC143C">
+          <circle cx="90" cy="40" r="5" />
+          <circle cx="140" cy="80" r="5" />
+          <circle cx="200" cy="120" r="5" />
+          <circle cx="155" cy="25" r="5" />
+          <circle cx="220" cy="65" r="5" />
+          <circle cx="55" cy="150" r="5" />
+          <circle cx="120" cy="190" r="5" />
+          <circle cx="245" cy="35" r="5" />
+        </g>
+      </svg>
 
-        <div>
-          <div class="brandName">SOLOSECURITIES</div>
-          <div class="brandTagline">
-            CYBERSECURITY EXCELLENCE
+      <svg
+        class="watermark"
+        viewBox="0 0 64 72"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M32 3 L57 13 V32 C57 49 46 61 32 68 C18 61 7 49 7 32 V13 Z"
+          stroke="#DC143C"
+          stroke-width="3"
+        />
+        <path
+          d="M20 35 L28 43 L45 25"
+          stroke="#DC143C"
+          stroke-width="4"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+
+      <header class="header">
+        <div class="brand">
+          ${logo}
+
+          <div>
+            <div class="brandName">SOLOSECURITIES</div>
+            <div class="brandTagline">
+              CYBERSECURITY · LEARNING · DEFENSE
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="statusBadge">
-        ${verified ? "✓ VERIFIED" : "◈ CERTIFIED"}
-      </div>
-    </header>
-
-    <section class="content">
-      <div class="ornament">◆</div>
-
-      <div class="eyebrow">
-        CERTIFICATE OF ACHIEVEMENT
-      </div>
-
-      <h1 class="mainTitle">
-        ${escapeHtml(title)}
-      </h1>
-
-      <div class="titleRule"></div>
-
-      <div class="subtitle">
-        This certificate is proudly awarded to
-      </div>
-
-      <h2 class="recipientName">
-        ${escapeHtml(recipientName)}
-      </h2>
-
-      <p class="description">
-        ${escapeHtml(description)}
-      </p>
-
-      <div class="infoGrid">
-        <div class="infoItem">
-          <div class="infoLabel">CATEGORY</div>
-          <div class="infoValue">${escapeHtml(category)}</div>
+        <div class="headerCode">
+          SECURITY CREDENTIAL
+          <strong>SS-${escapeHtml(certificateId)}</strong>
         </div>
-        <div class="infoItem">
-          <div class="infoLabel">ISSUED BY</div>
-          <div class="infoValue">${escapeHtml(issuer)}</div>
-        </div>
-        <div class="infoItem">
-          <div class="infoLabel">CERTIFICATE ID</div>
-          <div class="infoValue">${escapeHtml(certificateId)}</div>
-        </div>
-        <div class="infoItem">
-          <div class="infoLabel">DATE ISSUED</div>
-          <div class="infoValue">${escapeHtml(issueDate)}</div>
-        </div>
-      </div>
+      </header>
 
-      ${
-        skills
-          ? `<div class="skills">${skills}</div>`
-          : ""
-      }
-    </section>
-
-    <footer class="bottom">
-      <div class="signature">
-        <div class="signatureLine"></div>
-
-        <div class="signatureName">
-          ${escapeHtml(issuer)}
+      <section class="content">
+        <div class="microLabel">
+          Certificate of Achievement
         </div>
 
-        <div class="signatureLabel">
-          AUTHORIZED SIGNATORY
+        <h1 class="title">
+          ${escapeHtml(title)}
+        </h1>
+
+        <div class="titleUnderline"><span></span></div>
+
+        <p class="presentedText">
+          This credential is awarded to
+        </p>
+
+        <h2 class="recipientName">
+          ${escapeHtml(recipientName)}
+        </h2>
+
+        <div class="recipientRule"></div>
+
+        <p class="description">
+          ${escapeHtml(description)}
+        </p>
+
+        <div class="courseTitle">
+          ${escapeHtml(category)}
         </div>
-      </div>
 
-      <div class="seal">
-        <div class="sealIcon">✓</div>
-        <div class="sealText">CERTIFIED</div>
-      </div>
+        ${skills ? `<div class="skills">${skills}</div>` : ""}
+      </section>
 
-      <div class="metadata">
-        ${
-          verified
-            ? `<div style="margin-bottom: 8px;">
-                <div class="metadataLabel">STATUS</div>
-                <div class="metadataValue" style="color: #DC143C;">VERIFIED ✓</div>
-               </div>`
-            : ""
-        }
+      <aside class="securityPanel">
+        <svg
+          class="shield"
+          viewBox="0 0 100 116"
+          fill="none"
+          aria-label="Cybersecurity shield"
+        >
+          <path
+            d="M50 4 L91 20 V49 C91 76 73 98 50 110 C27 98 9 76 9 49 V20 Z"
+            stroke="currentColor"
+            stroke-width="4"
+          />
+          <path
+            d="M50 15 L80 27 V49 C80 69 67 87 50 97 C33 87 20 69 20 49 V27 Z"
+            stroke="currentColor"
+            stroke-width="1.5"
+            opacity="0.65"
+          />
+          <path
+            d="M33 55 L44 66 L67 42"
+            stroke="currentColor"
+            stroke-width="5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
 
-        ${verification}
-      </div>
-    </footer>
+        <div class="securityTitle">
+          DIGITAL<br />SECURITY
+        </div>
+
+        <div class="securityLine"></div>
+
+        <div class="securitySub">
+          SKILLS<br />
+          KNOWLEDGE<br />
+          ACHIEVEMENT
+        </div>
+
+        <div class="seal">
+          <div class="sealIcon">✓</div>
+          <div class="sealText">
+            ${verified ? "VERIFIED" : "AWARDED"}
+          </div>
+        </div>
+      </aside>
+
+      <footer class="footer">
+        <div class="footerBlock">
+          <div class="footerRule"></div>
+          <div class="footerLabel">Issued by</div>
+          <div class="footerValue">${escapeHtml(issuer)}</div>
+        </div>
+
+        <div class="footerBlock center">
+          <div class="footerRule"></div>
+          <div class="footerLabel">Date of issue</div>
+          <div class="footerValue">${escapeHtml(issueDate)}</div>
+        </div>
+
+        <div class="footerBlock right">
+          <div class="footerRule"></div>
+          <div class="footerLabel">Certificate ID</div>
+          <div class="footerValue">${escapeHtml(certificateId)}</div>
+
+          ${
+            verified
+              ? `<div class="verification">
+                   <span class="verifiedDot"></span> VERIFIED
+                 </div>`
+              : ""
+          }
+
+          ${verification}
+        </div>
+      </footer>
+    </article>
   </main>
 </body>
 </html>`;
 }
+
+export default generateCertificateHtml;

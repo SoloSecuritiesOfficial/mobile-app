@@ -1,4 +1,3 @@
-
 import React, {
   useCallback,
   useEffect,
@@ -10,16 +9,14 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
-  Animated,
-  Linking,
-  Platform,
+  Dimensions,
   ScrollView,
   Share,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  useWindowDimensions,
 } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -29,20 +26,12 @@ import { captureRef } from "react-native-view-shot";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 
-// MediaLibrary is optional — only available in development/custom builds, not Expo Go
-let MediaLibrary: any = null;
-try {
-  MediaLibrary = require("expo-media-library");
-} catch {
-  console.log("[CertificateDetails] expo-media-library not available");
-}
-
 import { RootStackParamList } from "../../navigation/types";
+import Colors from "../../theme/colors";
 import { getCertificateById } from "../../services/certificateService";
 import { getCurrentUser } from "../../services/authService";
-import { generateCertificateHtml } from "../../utils/certificateHtml";
-import Colors from "../../theme/colors";
 import AdBanner from "../../components/AdBanner";
+import { generateCertificateHtml } from "../../utils/certificateHtml";
 
 type Props = NativeStackScreenProps<
   RootStackParamList,
@@ -50,13 +39,12 @@ type Props = NativeStackScreenProps<
 >;
 
 type Certificate = {
-  _id?: string;
-  id?: string;
+  _id: string;
   title: string;
   category: string;
   certificateId: string;
-  issuedBy: string;
-  issuedTo: string;
+  issuedBy?: string;
+  issuedTo?: string;
   description?: string;
   skills?: string[];
   issueDate?: string;
@@ -66,81 +54,115 @@ type Certificate = {
   verificationUrl?: string;
 };
 
-type ExportMode = "pdf" | "png";
-
-const PRIMARY = Colors.primary || "#C62828";
-const INK = "#182230";
-const MUTED = "#667085";
-const BORDER = "#E6E9EF";
-const SURFACE = "#FFFFFF";
-const BACKGROUND = "#F5F7FB";
-const GOLD = "#C7A24B";
-const GREEN = "#178653";
-const LANDSCAPE_RATIO = 297 / 210;
-
-const CATEGORY_COLORS: Record<string, string> = {
-  "Web Security": "#1565C0",
-  "Network Security": "#6A1B9A",
-  "Cloud Security": "#00838F",
-  "Bug Bounty": "#C62828",
-  CTF: "#E65100",
-  Learning: "#2E7D32",
-  Other: "#455A64",
+type UserProfile = {
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  fullName?: string;
+  name?: string;
+  username?: string;
+  displayName?: string;
+  isPremium?: boolean;
+  profile?: UserProfile;
+  user?: UserProfile;
 };
 
-function normalizeCertificate(response: any): Certificate | null {
-  const candidates = [
-    response?.data?.data,
-    response?.data?.certificate,
-    response?.data,
-    response?.certificate,
-    response,
-  ];
+type ExportType = "pdf" | "png" | null;
 
-  for (const item of candidates) {
+const BRAND = "#D92D3A";
+const INK = "#172033";
+const MUTED = "#667085";
+const BORDER = "#E7EAF0";
+const PAGE = "#F4F6FA";
+
+const SCREEN_WIDTH = Dimensions.get("window").width;
+
+/**
+ * A landscape certificate is approximately 1.414 times as wide as it is high.
+ * Keep the preview width responsive to smaller phones.
+ */
+const PREVIEW_WIDTH = Math.max(
+  220,
+  Math.min(SCREEN_WIDTH - 36, 560)
+);
+
+const PREVIEW_HEIGHT = PREVIEW_WIDTH / 1.4142;
+
+function unwrapResponse(value: any): any {
+  let current = value;
+
+  for (let i = 0; i < 3; i += 1) {
     if (
-      item &&
-      typeof item === "object" &&
-      typeof item.title === "string" &&
-      typeof item.certificateId === "string"
+      current &&
+      typeof current === "object" &&
+      !Array.isArray(current) &&
+      current.data !== undefined
     ) {
-      return {
-        ...item,
-        _id: item._id ? String(item._id) : undefined,
-        title: item.title || "Certificate of Achievement",
-        category: item.category || "Other",
-        certificateId: item.certificateId || "Not available",
-        issuedBy: item.issuedBy || "SoloSecurities",
-        issuedTo: item.issuedTo || "Valued Member",
-        description: item.description || "",
-        skills: Array.isArray(item.skills)
-          ? item.skills.filter(
-              (skill: unknown): skill is string =>
-                typeof skill === "string"
-            )
-          : [],
-        issueDate:
-          item.issueDate ||
-          item.createdAt ||
-          new Date().toISOString(),
-        createdAt: item.createdAt,
-        verified: item.verified === true,
-        status: item.status || "active",
-        verificationUrl: item.verificationUrl || "",
-      } as Certificate;
+      current = current.data;
+    } else {
+      break;
     }
   }
 
-  return null;
+  return current;
+}
+
+function getFullName(profileValue: any): string {
+  const profile = unwrapResponse(profileValue);
+
+  if (!profile || typeof profile !== "object") {
+    return "";
+  }
+
+  const candidates = [
+    profile,
+    profile.profile,
+    profile.user,
+    profile.data,
+  ].filter(
+    (candidate): candidate is Record<string, any> =>
+      !!candidate && typeof candidate === "object"
+  );
+
+  for (const candidate of candidates) {
+    const parts = [
+      candidate.firstName,
+      candidate.middleName,
+      candidate.lastName,
+    ]
+      .filter(
+        (part) =>
+          typeof part === "string" && part.trim().length > 0
+      )
+      .map((part: string) => part.trim());
+
+    if (parts.length > 0) {
+      return parts.join(" ");
+    }
+
+    const directName =
+      candidate.fullName ||
+      candidate.name ||
+      candidate.displayName;
+
+    if (
+      typeof directName === "string" &&
+      directName.trim().length > 0
+    ) {
+      return directName.trim();
+    }
+  }
+
+  return "";
 }
 
 function formatDate(value?: string): string {
-  if (!value) return "Not available";
+  if (!value) return "Date unavailable";
 
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return "Not available";
+    return "Date unavailable";
   }
 
   return date.toLocaleDateString("en-IN", {
@@ -150,15 +172,27 @@ function formatDate(value?: string): string {
   });
 }
 
-function safeFileName(value: string): string {
-  const result = value
-    .replace(/[\\/:*?"<>|]+/g, "-")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80);
+function normalizeCertificate(response: any): Certificate | null {
+  const result = unwrapResponse(response);
 
-  return result || "SoloSecurities-Certificate";
+  if (!result || typeof result !== "object") {
+    return null;
+  }
+
+  const candidate =
+    result.certificate ||
+    result.item ||
+    result;
+
+  if (
+    !candidate ||
+    typeof candidate !== "object" ||
+    !candidate._id
+  ) {
+    return null;
+  }
+
+  return candidate as Certificate;
 }
 
 export default function CertificateDetailsScreen({
@@ -166,344 +200,144 @@ export default function CertificateDetailsScreen({
   route,
 }: Props) {
   const { id } = route.params;
-  const { width: windowWidth } = useWindowDimensions();
+
+  const previewCaptureRef = useRef<View>(null);
+  const webViewRef = useRef<WebView>(null);
 
   const [certificate, setCertificate] =
     useState<Certificate | null>(null);
 
+  const [currentUser, setCurrentUser] =
+    useState<UserProfile | null>(null);
+
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [isPremium, setIsPremium] = useState(false);
-  const [exporting, setExporting] = useState<ExportMode | null>(
-    null
-  );
   const [previewReady, setPreviewReady] = useState(false);
-  const [showFullPreview, setShowFullPreview] = useState(false);
-
-  const requestIdRef = useRef(0);
-  const previewCaptureRef = useRef<View>(null);
-
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(12)).current;
-
-  const previewWidth = Math.max(220, windowWidth - 36);
-  const previewHeight = previewWidth / LANDSCAPE_RATIO;
-
-  const isRevoked =
-    certificate?.status?.toLowerCase() === "revoked";
-
-  const isVerified =
-    certificate?.verified === true && !isRevoked;
-
-  const categoryColor =
-    CATEGORY_COLORS[certificate?.category || "Other"] ||
-    CATEGORY_COLORS.Other;
+  const [exporting, setExporting] = useState<ExportType>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isPremium, setIsPremium] = useState(false);
 
   const loadCertificate = useCallback(async () => {
-    const requestId = ++requestIdRef.current;
-
     setLoading(true);
-    setError("");
-    setCertificate(null);
+    setError(null);
     setPreviewReady(false);
 
     try {
-      const response = await getCertificateById(id);
+      const [certificateResponse, userResponse] =
+        await Promise.all([
+          getCertificateById(id),
+          getCurrentUser().catch(() => null),
+        ]);
 
-      if (requestId !== requestIdRef.current) return;
+      const loadedCertificate =
+        normalizeCertificate(certificateResponse);
 
-      const parsed = normalizeCertificate(response);
-
-      if (!parsed) {
-        setError("We couldn't read the certificate information.");
-        return;
+      if (!loadedCertificate) {
+        throw new Error(
+          "The certificate could not be found."
+        );
       }
 
-      setCertificate(parsed);
-    } catch (err: any) {
-      if (requestId !== requestIdRef.current) return;
+      const user = unwrapResponse(userResponse);
 
+      setCertificate(loadedCertificate);
+      setCurrentUser(user ?? null);
+      setIsPremium(Boolean(user?.isPremium));
+    } catch (err: any) {
       setError(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Unable to load the certificate. Check your connection and retry."
+        err?.message ||
+          "Unable to load this certificate. Please try again."
       );
     } finally {
-      if (requestId === requestIdRef.current) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   }, [id]);
 
   useEffect(() => {
     loadCertificate();
-
-    return () => {
-      requestIdRef.current += 1;
-    };
   }, [loadCertificate]);
 
-  useEffect(() => {
-    let active = true;
+  /**
+   * Prefer the complete name from the profile.
+   * Fall back to the name stored on the certificate if the profile
+   * does not contain a full name.
+   */
+  const fullUserName = useMemo(() => {
+    const profileName = getFullName(currentUser);
 
-    getCurrentUser()
-      .then((user: any) => {
-        if (active) {
-          setIsPremium(Boolean(user?.isPremium));
-        }
-      })
-      .catch(() => {
-        if (active) setIsPremium(false);
-      });
+    if (profileName) {
+      return profileName;
+    }
 
-    return () => {
-      active = false;
-    };
-  }, []);
+    const issuedTo = certificate?.issuedTo?.trim();
 
-  useEffect(() => {
-    if (loading || error || !certificate) return;
+    if (issuedTo) {
+      return issuedTo;
+    }
 
-    fadeAnim.setValue(0);
-    slideAnim.setValue(12);
+    return "Certificate Holder";
+  }, [currentUser, certificate]);
 
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 350,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        friction: 8,
-        tension: 55,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [loading, error, certificate, fadeAnim, slideAnim]);
-
+  /**
+   * This HTML is shared by the on-screen preview and PDF export
+   * to keep the certificate design consistent.
+   */
   const certificateHtml = useMemo(() => {
     if (!certificate) return "";
 
-    try {
-      return generateCertificateHtml({
-        title: certificate.title,
-        category: certificate.category,
-        issuedTo: certificate.issuedTo,
-        issuedBy: certificate.issuedBy,
-        certificateId: certificate.certificateId,
-        description: certificate.description || "",
-        skills: certificate.skills || [],
-        issueDate: formatDate(
-          certificate.issueDate || certificate.createdAt
-        ),
-        verificationUrl: certificate.verificationUrl || "",
-      });
-    } catch (err) {
-      console.error("Certificate HTML error:", err);
-      return "";
+    return generateCertificateHtml(
+      {
+        ...certificate,
+        issuedTo: fullUserName,
+      },
+      {
+        recipientName: fullUserName,
+      }
+    );
+  }, [certificate, fullUserName]);
+
+  const handlePdfExport = useCallback(async () => {
+    if (!certificate || !certificateHtml) {
+      Alert.alert(
+        "Certificate unavailable",
+        "Load the certificate before exporting it."
+      );
+      return;
     }
-  }, [certificate]);
-
-  const shareCertificateDetails = useCallback(async () => {
-    if (!certificate) return;
-
-    const message = [
-      "SoloSecurities Certificate",
-      "",
-      `Title: ${certificate.title}`,
-      `Category: ${certificate.category}`,
-      `Issued to: ${certificate.issuedTo}`,
-      `Issued by: ${certificate.issuedBy}`,
-      `Certificate ID: ${certificate.certificateId}`,
-      `Issue date: ${formatDate(
-        certificate.issueDate || certificate.createdAt
-      )}`,
-      `Status: ${
-        isRevoked
-          ? "Revoked"
-          : isVerified
-            ? "Verified"
-            : "Unverified"
-      }`,
-      certificate.verificationUrl
-        ? `Verification: ${certificate.verificationUrl}`
-        : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    try {
-      await Share.share({ message });
-    } catch (err) {
-      Alert.alert("Unable to share", "Please try again.");
-    }
-  }, [certificate, isRevoked, isVerified]);
-
-  const savePdf = useCallback(async () => {
-    if (!certificateHtml || !certificate || exporting) return;
 
     setExporting("pdf");
 
     try {
-      if (Platform.OS === "android") {
-        // Use Android's native print interface. The user can
-        // select "Save as PDF" and choose a destination.
-        await Print.printAsync({
-          html: certificateHtml,
-        });
-
-        return;
-      }
-
-      // On iOS, create the PDF and open the system share sheet.
-      const result = await Print.printToFileAsync({
+      await Print.printAsync({
         html: certificateHtml,
-        width: 1122,
-        height: 794,
-        base64: false,
-      });
-
-      if (!result?.uri) {
-        throw new Error("The PDF could not be generated.");
-      }
-
-      if (!(await Sharing.isAvailableAsync())) {
-        Alert.alert(
-          "Sharing unavailable",
-          "PDF sharing is not available on this device."
-        );
-        return;
-      }
-
-      await Sharing.shareAsync(result.uri, {
-        mimeType: "application/pdf",
-        dialogTitle: "Save or share certificate",
-        UTI: "com.adobe.pdf",
       });
     } catch (err: any) {
-      console.error("PDF export error:", err);
-
       Alert.alert(
-        "PDF error",
-        err?.message || "Unable to export the certificate."
+        "PDF export failed",
+        err?.message ||
+          "Unable to open the PDF print dialog."
       );
     } finally {
       setExporting(null);
     }
-  }, [certificate, certificateHtml, exporting]);
+  }, [certificate, certificateHtml]);
 
-  const savePng = useCallback(async () => {
-    if (!certificate || !certificateHtml || exporting) return;
+  /**
+   * PNG sharing does not depend on expo-media-library.
+   * It captures the preview and opens the system share sheet.
+   */
+  const handlePngExport = useCallback(async () => {
+    if (!certificate || !previewReady) {
+      Alert.alert(
+        "Preview not ready",
+        "Wait for the certificate preview to finish loading."
+      );
+      return;
+    }
 
-    if (!WebView) {
+    if (!previewCaptureRef.current) {
       Alert.alert(
         "Preview unavailable",
-        "Install react-native-webview to preview and capture the certificate."
-      );
-      return;
-    }
-
-    if (!previewReady) {
-      Alert.alert(
-        "Preview is loading",
-        "Wait until the certificate preview has finished loading, then try again."
-      );
-      return;
-    }
-
-    setExporting("png");
-
-    try {
-      const node = previewCaptureRef.current;
-
-      if (!node) {
-        throw new Error("The certificate preview is not ready.");
-      }
-
-      // Capture the rendered certificate, not the surrounding screen.
-      const imageUri = await captureRef(node, {
-        format: "png",
-        quality: 1,
-        result: "tmpfile",
-      });
-
-      if (!imageUri) {
-        throw new Error("Unable to capture the certificate image.");
-      }
-
-      if (Platform.OS === "web") {
-        throw new Error(
-          "Saving to the photo gallery is supported in the native mobile app."
-        );
-      }
-
-      if (!MediaLibrary) {
-        throw new Error(
-          "Media library is not available. Build a development build to use this feature."
-        );
-      }
-
-      const permission =
-        await MediaLibrary.requestPermissionsAsync();
-
-      if (!permission.granted) {
-        Alert.alert(
-          "Photo permission required",
-          "Allow photo-library access to save the certificate PNG."
-        );
-        return;
-      }
-
-      const asset = await MediaLibrary.createAssetAsync(imageUri);
-
-      // Optionally put the image in a dedicated gallery album.
-      try {
-        const albumName = "SoloSecurities Certificates";
-        const album = await MediaLibrary.getAlbumAsync(albumName);
-
-        if (album) {
-          await MediaLibrary.addAssetsToAlbumAsync(
-            [asset],
-            album,
-            false
-          );
-        } else {
-          await MediaLibrary.createAlbumAsync(
-            albumName,
-            asset,
-            false
-          );
-        }
-      } catch (albumError) {
-        // The image is already saved, even if album creation fails.
-        console.warn("Certificate album could not be created:", albumError);
-      }
-
-      Alert.alert(
-        "PNG saved",
-        "The certificate image has been saved to your photo gallery."
-      );
-    } catch (err: any) {
-      console.error("PNG export error:", err);
-
-      Alert.alert(
-        "PNG error",
-        err?.message ||
-          "Unable to save the certificate image. Please try again."
-      );
-    } finally {
-      setExporting(null);
-    }
-  }, [certificate, certificateHtml, exporting, previewReady]);
-
-  const sharePng = useCallback(async () => {
-    if (!certificate || !certificateHtml || exporting) return;
-
-    if (!previewReady || !previewCaptureRef.current) {
-      Alert.alert(
-        "Preview is loading",
-        "Wait for the certificate preview to finish loading."
+        "Please wait and try again."
       );
       return;
     }
@@ -520,581 +354,443 @@ export default function CertificateDetailsScreen({
         }
       );
 
-      if (!(await Sharing.isAvailableAsync())) {
-        Alert.alert(
-          "Sharing unavailable",
-          "Image sharing is not available on this device."
-        );
+      const canShare = await Sharing.isAvailableAsync();
+
+      if (!canShare) {
+        await Share.share({
+          message: `Certificate: ${certificate.title}\nCertificate ID: ${certificate.certificateId}`,
+        });
+
         return;
       }
 
       await Sharing.shareAsync(imageUri, {
         mimeType: "image/png",
-        dialogTitle: "Share certificate image",
+        dialogTitle: "Share certificate PNG",
         UTI: "public.png",
       });
     } catch (err: any) {
-      console.error("PNG sharing error:", err);
-
       Alert.alert(
-        "Unable to share image",
-        err?.message || "Please try again."
+        "PNG export failed",
+        err?.message ||
+          "Unable to capture or share the certificate image."
       );
     } finally {
       setExporting(null);
     }
-  }, [certificate, certificateHtml, exporting, previewReady]);
+  }, [certificate, previewReady]);
 
-  const openVerificationUrl = useCallback(async () => {
-    if (!certificate?.verificationUrl) {
-      Alert.alert(
-        "Verification link unavailable",
-        "This certificate does not have a verification URL."
-      );
-      return;
-    }
+  const handleShareDetails = useCallback(async () => {
+    if (!certificate) return;
 
     try {
-      await Linking.openURL(certificate.verificationUrl);
-    } catch {
+      await Share.share({
+        title: certificate.title,
+        message: [
+          `Certificate: ${certificate.title}`,
+          `Issued to: ${fullUserName}`,
+          `Issued by: ${certificate.issuedBy || "SoloSecurities"}`,
+          `Certificate ID: ${certificate.certificateId}`,
+          `Category: ${certificate.category}`,
+          `Issue date: ${formatDate(
+            certificate.issueDate || certificate.createdAt
+          )}`,
+          certificate.verificationUrl
+            ? `Verify: ${certificate.verificationUrl}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      });
+    } catch (err: any) {
       Alert.alert(
-        "Unable to open link",
-        "Please check the verification URL."
+        "Share failed",
+        err?.message || "Unable to share certificate details."
       );
     }
-  }, [certificate]);
+  }, [certificate, fullUserName]);
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-          >
-            <Text style={styles.backIcon}>‹</Text>
-          </TouchableOpacity>
-
-          <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>Certificate</Text>
-            <Text style={styles.headerSubtitle}>
-              Your achievements
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.centerState}>
-          <ActivityIndicator size="large" color={PRIMARY} />
-          <Text style={styles.stateTitle}>
-            Preparing certificate
-          </Text>
-          <Text style={styles.stateDescription}>
-            Loading your certificate details and preview.
-          </Text>
-        </View>
+      <SafeAreaView style={styles.stateContainer}>
+        <StatusBar
+          barStyle="dark-content"
+          backgroundColor="#FFFFFF"
+        />
+        <ActivityIndicator size="large" color={BRAND} />
+        <Text style={styles.stateTitle}>
+          Loading certificate…
+        </Text>
+        <Text style={styles.stateSubtitle}>
+          Preparing your certificate preview.
+        </Text>
       </SafeAreaView>
     );
   }
 
   if (error || !certificate) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-            accessibilityRole="button"
-          >
-            <Text style={styles.backIcon}>‹</Text>
-          </TouchableOpacity>
+      <SafeAreaView style={styles.stateContainer}>
+        <StatusBar
+          barStyle="dark-content"
+          backgroundColor="#FFFFFF"
+        />
 
-          <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>Certificate</Text>
-            <Text style={styles.headerSubtitle}>
-              Your achievements
-            </Text>
-          </View>
-        </View>
+        <Text style={styles.errorIcon}>!</Text>
 
-        <View style={styles.centerState}>
-          <View style={styles.errorIcon}>
-            <Text style={styles.errorIconText}>!</Text>
-          </View>
+        <Text style={styles.stateTitle}>
+          Unable to load certificate
+        </Text>
 
-          <Text style={styles.stateTitle}>
-            Certificate unavailable
+        <Text style={styles.stateSubtitle}>
+          {error || "This certificate is not available."}
+        </Text>
+
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={loadCertificate}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.primaryButtonText}>
+            Try Again
           </Text>
+        </TouchableOpacity>
 
-          <Text style={styles.stateDescription}>
-            {error || "We couldn't find this certificate."}
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.secondaryButtonText}>
+            Go Back
           </Text>
-
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={loadCertificate}
-            accessibilityRole="button"
-          >
-            <Text style={styles.primaryButtonText}>
-              Try again
-            </Text>
-          </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.screen}>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="#FFFFFF"
+      />
+
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
           style={styles.backButton}
-          accessibilityRole="button"
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.8}
           accessibilityLabel="Go back"
         >
           <Text style={styles.backIcon}>‹</Text>
         </TouchableOpacity>
 
-        <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>My certificate</Text>
-          <Text style={styles.headerSubtitle}>
-            Preview · Export · Share
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.headerTitle}>
+            Certificate
+          </Text>
+          <Text
+            style={styles.headerSubtitle}
+            numberOfLines={1}
+          >
+            Preview and export
           </Text>
         </View>
 
         <TouchableOpacity
-          style={styles.headerShare}
-          onPress={shareCertificateDetails}
-          accessibilityRole="button"
+          style={styles.shareButton}
+          onPress={handleShareDetails}
+          activeOpacity={0.8}
+          accessibilityLabel="Share certificate details"
         >
-          <Text style={styles.headerShareText}>Share</Text>
+          <Text style={styles.shareIcon}>↗</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView
+        style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View
-          style={{
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          }}
-        >
-          <View style={styles.heroCard}>
-            <View style={styles.heroTopRow}>
-              <View style={styles.heroIcon}>
-                <Text style={styles.heroIconText}>✦</Text>
-              </View>
-
-              <View
-                style={[
-                  styles.statusBadge,
-                  isRevoked
-                    ? styles.revokedBadge
-                    : isVerified
-                      ? styles.verifiedBadge
-                      : styles.pendingBadge,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.statusText,
-                    isRevoked
-                      ? styles.revokedText
-                      : isVerified
-                        ? styles.verifiedText
-                        : styles.pendingText,
-                  ]}
-                >
-                  {isRevoked
-                    ? "Revoked"
-                    : isVerified
-                      ? "✓ Verified"
-                      : "Unverified"}
-                </Text>
-              </View>
-            </View>
-
-            <Text style={styles.heroTitle}>
-              Your hard work deserves recognition.
-            </Text>
-
-            <Text style={styles.heroDescription}>
-              Preview your achievement and save a copy for your
-              professional portfolio.
-            </Text>
-
-            <View style={styles.heroMetadata}>
-              <View style={styles.heroMetadataItem}>
-                <Text style={styles.heroMetadataLabel}>CATEGORY</Text>
-                <Text style={styles.heroMetadataValue}>
-                  {certificate.category}
-                </Text>
-              </View>
-
-              <View style={styles.heroMetadataDivider} />
-
-              <View style={styles.heroMetadataItem}>
-                <Text style={styles.heroMetadataLabel}>ISSUED ON</Text>
-                <Text style={styles.heroMetadataValue}>
-                  {formatDate(
-                    certificate.issueDate || certificate.createdAt
-                  )}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </Animated.View>
-
         <AdBanner
           isPremium={isPremium}
-          marginVertical={8}
+          marginVertical={6}
         />
 
-        <View style={styles.sectionHeader}>
+        <View style={styles.intro}>
+          <View style={styles.introIcon}>
+            <Text style={styles.introIconText}>✦</Text>
+          </View>
+
+          <View style={styles.introText}>
+            <Text style={styles.introTitle}>
+              Your achievement
+            </Text>
+            <Text style={styles.introDescription}>
+              Review your certificate and export a copy.
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.certificateInfoCard}>
+          <Text style={styles.infoEyebrow}>
+            CERTIFICATE TITLE
+          </Text>
+
+          <Text style={styles.certificateTitle}>
+            {certificate.title}
+          </Text>
+
+          <View style={styles.metaRow}>
+            <View style={styles.categoryPill}>
+              <Text style={styles.categoryPillText}>
+                {certificate.category || "Certification"}
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.statusPill,
+                certificate.verified
+                  ? styles.verifiedPill
+                  : styles.pendingPill,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.statusPillText,
+                  certificate.verified
+                    ? styles.verifiedText
+                    : styles.pendingText,
+                ]}
+              >
+                {certificate.verified
+                  ? "✓ Verified"
+                  : "Pending verification"}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.recipientRow}>
+            <View style={styles.recipientIcon}>
+              <Text style={styles.recipientIconText}>
+                ✓
+              </Text>
+            </View>
+
+            <View style={styles.recipientText}>
+              <Text style={styles.recipientLabel}>
+                ISSUED TO
+              </Text>
+              <Text style={styles.recipientName}>
+                {fullUserName}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.previewHeading}>
           <View>
             <Text style={styles.sectionTitle}>
               Certificate preview
             </Text>
             <Text style={styles.sectionSubtitle}>
-              A4 landscape format
+              Complete certificate · no inner scrolling
             </Text>
           </View>
 
-          <TouchableOpacity
-            onPress={() => setShowFullPreview((value) => !value)}
-            style={styles.previewToggle}
-            accessibilityRole="button"
-          >
-            <Text style={styles.previewToggleText}>
-              {showFullPreview ? "Fit screen" : "Preview"}
-            </Text>
-          </TouchableOpacity>
+          {previewReady && (
+            <View style={styles.readyPill}>
+              <View style={styles.readyDot} />
+              <Text style={styles.readyText}>Ready</Text>
+            </View>
+          )}
         </View>
 
-        {showFullPreview ? (
-          <View style={styles.fullPreviewContainer}>
-            <TouchableOpacity
-              style={styles.closePreview}
-              onPress={() => setShowFullPreview(false)}
-              accessibilityRole="button"
-            >
-              <Text style={styles.closePreviewText}>
-                Close preview ✕
-              </Text>
-            </TouchableOpacity>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator
-              contentContainerStyle={styles.fullPreviewScroll}
-            >
-              <View
-                ref={previewCaptureRef}
-                collapsable={false}
-                style={[
-                  styles.previewFrame,
-                  {
-                    width: Math.max(700, windowWidth - 36),
-                    height: Math.max(700, windowWidth - 36) /
-                      LANDSCAPE_RATIO,
-                  },
-                ]}
-              >
-                {certificateHtml ? (
-                  <WebView
-                    source={{ html: certificateHtml }}
-                    style={styles.webView}
-                    originWhitelist={["*"]}
-                    javaScriptEnabled={false}
-                    scrollEnabled={false}
-                    bounces={false}
-                    onLoadEnd={() => setPreviewReady(true)}
-                    onError={() => setPreviewReady(true)}
-                  />
-                ) : (
-                  <Text style={styles.fallbackTitle}>
-                    Certificate HTML is unavailable.
-                  </Text>
-                )}
-              </View>
-            </ScrollView>
-          </View>
-        ) : (
+        <View style={styles.previewOuter}>
           <View
             ref={previewCaptureRef}
             collapsable={false}
             style={[
-              styles.previewFrame,
+              styles.previewCapture,
               {
-                width: previewWidth,
-                height: previewHeight,
+                width: PREVIEW_WIDTH,
+                height: PREVIEW_HEIGHT,
               },
             ]}
           >
-            {certificateHtml ? (
-              <WebView
-                key={`${certificate.certificateId}-${windowWidth}`}
-                source={{ html: certificateHtml }}
-                style={styles.webView}
-                originWhitelist={["*"]}
-                javaScriptEnabled={false}
-                scrollEnabled={false}
-                bounces={false}
-                scalesPageToFit={Platform.OS === "android"}
-                setSupportMultipleWindows={false}
-                onLoadEnd={() => setPreviewReady(true)}
-                onError={() => setPreviewReady(true)}
-              />
-            ) : (
-              <View style={styles.previewFallback}>
-                <Text style={styles.fallbackTitle}>
-                  Preview unavailable
+            {!previewReady && (
+              <View style={styles.previewLoading}>
+                <ActivityIndicator
+                  size="large"
+                  color={BRAND}
+                />
+                <Text style={styles.previewLoadingText}>
+                  Preparing certificate…
                 </Text>
               </View>
             )}
 
-            {!previewReady && certificateHtml ? (
-              <View style={styles.previewLoading}>
-                <ActivityIndicator size="large" color={PRIMARY} />
-                <Text style={styles.previewLoadingText}>
-                  Rendering certificate…
-                </Text>
-              </View>
-            ) : null}
+            <WebView
+              ref={webViewRef}
+              source={{ html: certificateHtml }}
+              style={[
+                styles.webView,
+                !previewReady && styles.webViewLoading,
+              ]}
+              originWhitelist={["*"]}
+              javaScriptEnabled
+              domStorageEnabled={false}
+              scrollEnabled={false}
+              bounces={false}
+              showsVerticalScrollIndicator={false}
+              showsHorizontalScrollIndicator={false}
+              automaticallyAdjustContentInsets={false}
+              scalesPageToFit={false}
+              onLoadEnd={() => setPreviewReady(true)}
+              onError={() => {
+                setPreviewReady(false);
+              }}
+            />
           </View>
-        )}
+        </View>
 
-        <Text style={styles.previewCaption}>
-          The exported files use the same certificate HTML as this
-          preview.
+        <Text style={styles.previewFootnote}>
+          The certificate is scaled to fit the preview. The PDF
+          uses the same certificate design.
         </Text>
 
-        <View style={styles.exportSection}>
-          <Text style={styles.exportTitle}>Export certificate</Text>
-          <Text style={styles.exportDescription}>
-            Choose the format you need.
-          </Text>
-
-          <TouchableOpacity
-            style={[
-              styles.exportCard,
-              exporting === "pdf" && styles.exportCardBusy,
-            ]}
-            onPress={savePdf}
-            disabled={exporting !== null}
-            accessibilityRole="button"
-          >
-            <View style={[styles.exportIcon, styles.pdfIcon]}>
-              <Text style={styles.exportIconText}>PDF</Text>
-            </View>
-
-            <View style={styles.exportCardContent}>
-              <Text style={styles.exportCardTitle}>Save as PDF</Text>
-              <Text style={styles.exportCardDescription}>
-                Print-quality document for applications and records.
-              </Text>
-            </View>
-
-            {exporting === "pdf" ? (
-              <ActivityIndicator color={PRIMARY} />
-            ) : (
-              <Text style={styles.exportArrow}>›</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.exportCard,
-              exporting === "png" && styles.exportCardBusy,
-            ]}
-            onPress={savePng}
-            disabled={exporting !== null}
-            accessibilityRole="button"
-          >
-            <View style={[styles.exportIcon, styles.pngIcon]}>
-              <Text style={styles.exportIconText}>PNG</Text>
-            </View>
-
-            <View style={styles.exportCardContent}>
-              <Text style={styles.exportCardTitle}>Save as PNG</Text>
-              <Text style={styles.exportCardDescription}>
-                Certificate image saved to your photo gallery.
-              </Text>
-            </View>
-
-            {exporting === "png" ? (
-              <ActivityIndicator color={PRIMARY} />
-            ) : (
-              <Text style={styles.exportArrow}>›</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.shareImageButton}
-            onPress={sharePng}
-            disabled={exporting !== null}
-            accessibilityRole="button"
-          >
-            <Text style={styles.shareImageText}>
-              Share certificate image ↗
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         <View style={styles.detailsCard}>
-          <Text style={styles.detailsTitle}>
-            Achievement details
+          <Text style={styles.detailsHeading}>
+            Certificate details
           </Text>
 
-          <View style={styles.categoryLine}>
-            <View
-              style={[
-                styles.categoryDot,
-                { backgroundColor: categoryColor },
-              ]}
-            />
-            <Text
-              style={[
-                styles.categoryText,
-                { color: categoryColor },
-              ]}
-            >
-              {certificate.category}
-            </Text>
-          </View>
+          <DetailRow
+            label="Certificate ID"
+            value={certificate.certificateId || "Not available"}
+          />
 
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Certificate ID</Text>
-            <Text selectable style={styles.detailValue}>
-              {certificate.certificateId}
-            </Text>
-          </View>
+          <DetailRow
+            label="Issued to"
+            value={fullUserName}
+          />
 
-          <View style={styles.detailDivider} />
+          <DetailRow
+            label="Issued by"
+            value={certificate.issuedBy || "SoloSecurities"}
+          />
 
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Issued to</Text>
-            <Text style={styles.detailValue}>
-              {certificate.issuedTo}
-            </Text>
-          </View>
+          <DetailRow
+            label="Category"
+            value={certificate.category || "Certification"}
+          />
 
-          <View style={styles.detailDivider} />
+          <DetailRow
+            label="Issue date"
+            value={formatDate(
+              certificate.issueDate || certificate.createdAt
+            )}
+          />
 
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Issued by</Text>
-            <Text style={styles.detailValue}>
-              {certificate.issuedBy}
-            </Text>
-          </View>
+          {!!certificate.description && (
+            <View style={styles.descriptionBlock}>
+              <Text style={styles.detailLabel}>
+                Description
+              </Text>
+              <Text style={styles.descriptionText}>
+                {certificate.description}
+              </Text>
+            </View>
+          )}
 
-          <View style={styles.detailDivider} />
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Issue date</Text>
-            <Text style={styles.detailValue}>
-              {formatDate(
-                certificate.issueDate || certificate.createdAt
-              )}
-            </Text>
-          </View>
-
-          <View style={styles.detailDivider} />
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Status</Text>
-            <Text
-              style={[
-                styles.detailValue,
-                {
-                  color: isRevoked
-                    ? "#B42318"
-                    : isVerified
-                      ? GREEN
-                      : "#A15C00",
-                },
-              ]}
-            >
-              {isRevoked
-                ? "Revoked"
-                : isVerified
-                  ? "Verified"
-                  : "Unverified"}
-            </Text>
-          </View>
-
-          {certificate.description ? (
-            <>
-              <View style={styles.detailDivider} />
-
-              <View style={styles.descriptionSection}>
-                <Text style={styles.detailLabel}>Description</Text>
-                <Text style={styles.descriptionText}>
-                  {certificate.description}
-                </Text>
+          {!!certificate.skills?.length && (
+            <View style={styles.skillsBlock}>
+              <Text style={styles.detailLabel}>Skills</Text>
+              <View style={styles.skillsRow}>
+                {certificate.skills.map((skill, index) => (
+                  <View
+                    key={`${skill}-${index}`}
+                    style={styles.skillChip}
+                  >
+                    <Text style={styles.skillChipText}>
+                      {skill}
+                    </Text>
+                  </View>
+                ))}
               </View>
-            </>
-          ) : null}
+            </View>
+          )}
 
-          {certificate.skills?.length ? (
-            <>
-              <View style={styles.detailDivider} />
-
-              <View style={styles.skillsSection}>
-                <Text style={styles.detailLabel}>Skills covered</Text>
-                <View style={styles.skillsWrap}>
-                  {certificate.skills.map((skill, index) => (
-                    <View
-                      key={`${skill}-${index}`}
-                      style={styles.skillChip}
-                    >
-                      <Text style={styles.skillText}>{skill}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            </>
-          ) : null}
-
-          {certificate.verificationUrl ? (
-            <>
-              <View style={styles.detailDivider} />
-
-              <TouchableOpacity
-                style={styles.verifyLink}
-                onPress={openVerificationUrl}
-                accessibilityRole="button"
-              >
-                <Text style={styles.verifyLinkText}>
-                  Verify certificate online ↗
-                </Text>
-              </TouchableOpacity>
-            </>
-          ) : null}
+          {!!certificate.verificationUrl && (
+            <View style={styles.descriptionBlock}>
+              <Text style={styles.detailLabel}>
+                Verification URL
+              </Text>
+              <Text style={styles.verificationUrl}>
+                {certificate.verificationUrl}
+              </Text>
+            </View>
+          )}
         </View>
 
-        <View style={styles.infoCard}>
-          <Text style={styles.infoIcon}>i</Text>
-          <View style={styles.infoContent}>
-            <Text style={styles.infoTitle}>
-              Keep your achievement safe
-            </Text>
-            <Text style={styles.infoText}>
-              Save a PDF for documents or a PNG for quick sharing.
-              Use the verification link, when available, to check
-              the certificate's current status.
-            </Text>
-          </View>
-        </View>
+        <View style={styles.exportCard}>
+          <Text style={styles.exportTitle}>
+            Export certificate
+          </Text>
+          <Text style={styles.exportSubtitle}>
+            Choose a format to print or share your achievement.
+          </Text>
 
-        <AdBanner
-          isPremium={isPremium}
-          marginVertical={12}
-        />
+          <TouchableOpacity
+            style={[
+              styles.primaryButton,
+              (!previewReady || exporting !== null) &&
+                styles.disabledButton,
+            ]}
+            onPress={handlePdfExport}
+            disabled={exporting !== null}
+            activeOpacity={0.85}
+          >
+            {exporting === "pdf" ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.primaryButtonIcon}>▤</Text>
+            )}
+            <Text style={styles.primaryButtonText}>
+              {exporting === "pdf"
+                ? "Preparing PDF…"
+                : "Save / Print as PDF"}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.pngButton,
+              (!previewReady || exporting !== null) &&
+                styles.disabledPngButton,
+            ]}
+            onPress={handlePngExport}
+            disabled={!previewReady || exporting !== null}
+            activeOpacity={0.85}
+          >
+            {exporting === "png" ? (
+              <ActivityIndicator color={BRAND} />
+            ) : (
+              <Text style={styles.pngButtonIcon}>▧</Text>
+            )}
+            <Text style={styles.pngButtonText}>
+              {exporting === "png"
+                ? "Preparing PNG…"
+                : "Share as PNG"}
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={styles.exportNote}>
+            PDF opens the device print dialog, where available you
+            can choose Save as PDF. PNG opens the system share menu.
+          </Text>
+        </View>
 
         <View style={styles.bottomSpace} />
       </ScrollView>
@@ -1102,20 +798,34 @@ export default function CertificateDetailsScreen({
   );
 }
 
+function DetailRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <View style={styles.detailRow}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    backgroundColor: BACKGROUND,
+    backgroundColor: PAGE,
   },
 
   header: {
-    minHeight: 72,
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: SURFACE,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: 1,
     borderBottomColor: BORDER,
   },
 
@@ -1123,575 +833,539 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 14,
-    backgroundColor: "#F3F4F7",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
+    backgroundColor: "#F4F5F8",
   },
 
   backIcon: {
-    color: INK,
     fontSize: 32,
-    lineHeight: 36,
+    color: INK,
+    lineHeight: 35,
     marginTop: -3,
   },
 
-  headerText: {
+  headerTextContainer: {
     flex: 1,
+    marginLeft: 12,
   },
 
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "800",
     color: INK,
+    fontSize: 19,
+    fontWeight: "800",
   },
 
   headerSubtitle: {
-    marginTop: 3,
     color: MUTED,
-    fontSize: 11,
-  },
-
-  headerShare: {
-    backgroundColor: "#FFF0EF",
-    paddingHorizontal: 13,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-
-  headerShareText: {
-    color: PRIMARY,
     fontSize: 12,
+    marginTop: 2,
+  },
+
+  shareButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: "#FFF0F1",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
+  },
+
+  shareIcon: {
+    color: BRAND,
+    fontSize: 24,
     fontWeight: "800",
   },
 
-  scrollContent: {
-    paddingHorizontal: 18,
-    paddingTop: 16,
+  scroll: {
+    flex: 1,
   },
 
-  heroCard: {
-    backgroundColor: SURFACE,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: BORDER,
-    padding: 18,
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 24,
+  },
+
+  intro: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
     marginBottom: 14,
   },
 
-  heroTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
-
-  heroIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 15,
-    backgroundColor: "#FFF2D9",
+  introIcon: {
+    width: 43,
+    height: 43,
+    borderRadius: 14,
+    backgroundColor: "#FFF0F1",
     alignItems: "center",
     justifyContent: "center",
   },
 
-  heroIconText: {
-    color: GOLD,
-    fontSize: 27,
+  introIconText: {
+    color: BRAND,
+    fontSize: 25,
+    fontWeight: "900",
   },
 
-  statusBadge: {
+  introText: {
+    flex: 1,
+    marginLeft: 11,
+  },
+
+  introTitle: {
+    color: INK,
+    fontSize: 18,
+    fontWeight: "800",
+  },
+
+  introDescription: {
+    color: MUTED,
+    fontSize: 12,
+    marginTop: 3,
+  },
+
+  certificateInfoCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    padding: 17,
+    borderWidth: 1,
+    borderColor: BORDER,
+    marginBottom: 20,
+  },
+
+  infoEyebrow: {
+    color: MUTED,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    fontWeight: "800",
+  },
+
+  certificateTitle: {
+    color: INK,
+    fontSize: 21,
+    fontWeight: "900",
+    lineHeight: 28,
+    marginTop: 7,
+  },
+
+  metaRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 12,
+  },
+
+  categoryPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 20,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
+    backgroundColor: "#EEF2FF",
   },
 
-  verifiedBadge: {
-    backgroundColor: "#E7F7EE",
+  categoryPillText: {
+    color: "#5145CD",
+    fontSize: 11,
+    fontWeight: "700",
   },
 
-  revokedBadge: {
-    backgroundColor: "#FEE4E2",
+  statusPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
 
-  pendingBadge: {
-    backgroundColor: "#FFF1D6",
+  verifiedPill: {
+    backgroundColor: "#E9F8EF",
   },
 
-  statusText: {
+  pendingPill: {
+    backgroundColor: "#FFF4DB",
+  },
+
+  statusPillText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+
+  verifiedText: {
+    color: "#18794E",
+  },
+
+  pendingText: {
+    color: "#9A6700",
+  },
+
+  recipientRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+    paddingTop: 14,
+    marginTop: 15,
+  },
+
+  recipientIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    backgroundColor: "#E9F8EF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  recipientIconText: {
+    color: "#18794E",
+    fontSize: 17,
+    fontWeight: "900",
+  },
+
+  recipientText: {
+    flex: 1,
+    marginLeft: 10,
+  },
+
+  recipientLabel: {
+    color: MUTED,
+    fontSize: 9,
+    letterSpacing: 1.2,
+    fontWeight: "800",
+  },
+
+  recipientName: {
+    color: INK,
+    fontSize: 16,
+    fontWeight: "800",
+    marginTop: 4,
+  },
+
+  previewHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+
+  sectionTitle: {
+    color: INK,
+    fontSize: 17,
+    fontWeight: "800",
+  },
+
+  sectionSubtitle: {
+    color: MUTED,
+    fontSize: 11,
+    marginTop: 4,
+  },
+
+  readyPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: 18,
+    backgroundColor: "#E9F8EF",
+  },
+
+  readyDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#15945A",
+    marginRight: 5,
+  },
+
+  readyText: {
+    color: "#18794E",
     fontSize: 10,
     fontWeight: "800",
   },
 
-  verifiedText: {
-    color: "#187447",
-  },
-
-  revokedText: {
-    color: "#B42318",
-  },
-
-  pendingText: {
-    color: "#945600",
-  },
-
-  heroTitle: {
-    fontSize: 22,
-    lineHeight: 29,
-    fontWeight: "900",
-    color: INK,
-    letterSpacing: -0.5,
-  },
-
-  heroDescription: {
-    fontSize: 12,
-    lineHeight: 19,
-    color: MUTED,
-    marginTop: 8,
-  },
-
-  heroMetadata: {
-    flexDirection: "row",
+  previewOuter: {
+    width: "100%",
     alignItems: "center",
-    marginTop: 18,
-    paddingTop: 15,
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
-  },
-
-  heroMetadataItem: {
-    flex: 1,
-  },
-
-  heroMetadataLabel: {
-    color: MUTED,
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-    marginBottom: 6,
-  },
-
-  heroMetadataValue: {
-    color: INK,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-
-  heroMetadataDivider: {
-    width: 1,
-    height: 35,
-    backgroundColor: BORDER,
-    marginHorizontal: 12,
-  },
-
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 20,
-    marginBottom: 12,
-  },
-
-  sectionTitle: {
-    fontSize: 17,
-    color: INK,
-    fontWeight: "900",
-  },
-
-  sectionSubtitle: {
-    fontSize: 11,
-    color: MUTED,
-    marginTop: 4,
-  },
-
-  previewToggle: {
-    borderRadius: 11,
-    backgroundColor: "#FFF0EF",
-    paddingHorizontal: 13,
-    paddingVertical: 9,
-  },
-
-  previewToggleText: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: PRIMARY,
-  },
-
-  fullPreviewContainer: {
-    backgroundColor: SURFACE,
+    justifyContent: "center",
+    backgroundColor: "#E9EDF4",
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 16,
-    padding: 10,
-    marginBottom: 8,
+    borderColor: "#DDE3EC",
   },
 
-  closePreview: {
-    alignSelf: "flex-end",
-    padding: 8,
-  },
-
-  closePreviewText: {
-    fontSize: 11,
-    color: PRIMARY,
-    fontWeight: "800",
-  },
-
-  fullPreviewScroll: {
-    paddingBottom: 6,
-  },
-
-  previewFrame: {
-    backgroundColor: SURFACE,
+  previewCapture: {
+    backgroundColor: "#FFFFFF",
     borderRadius: 5,
     overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#D9DEE7",
-    elevation: 3,
-    shadowColor: "#000000",
-    shadowOpacity: 0.08,
-    shadowRadius: 7,
+    elevation: 4,
+    shadowColor: "#101828",
     shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 7,
   },
 
   webView: {
     flex: 1,
-    backgroundColor: SURFACE,
+    backgroundColor: "#FFFFFF",
+  },
+
+  webViewLoading: {
+    opacity: 0.02,
   },
 
   previewLoading: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: SURFACE,
+    zIndex: 2,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#FFFFFF",
   },
 
   previewLoadingText: {
     color: MUTED,
     fontSize: 11,
-    marginTop: 10,
+    marginTop: 8,
   },
 
-  previewFallback: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-
-  fallbackTitle: {
-    color: INK,
-    fontSize: 14,
+  previewFootnote: {
+    color: MUTED,
+    fontSize: 11,
     textAlign: "center",
-    fontWeight: "800",
-  },
-
-  previewCaption: {
-    fontSize: 10,
-    lineHeight: 16,
-    color: MUTED,
+    lineHeight: 17,
     marginTop: 9,
-    marginBottom: 10,
-  },
-
-  exportSection: {
-    marginTop: 14,
-    marginBottom: 10,
-  },
-
-  exportTitle: {
-    fontSize: 17,
-    color: INK,
-    fontWeight: "900",
-  },
-
-  exportDescription: {
-    color: MUTED,
-    fontSize: 12,
-    marginTop: 5,
-    marginBottom: 12,
-  },
-
-  exportCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: SURFACE,
-    borderRadius: 17,
-    borderWidth: 1,
-    borderColor: BORDER,
-    padding: 14,
-    marginBottom: 10,
-    minHeight: 78,
-  },
-
-  exportCardBusy: {
-    opacity: 0.65,
-  },
-
-  exportIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-
-  pdfIcon: {
-    backgroundColor: "#FDEBEA",
-  },
-
-  pngIcon: {
-    backgroundColor: "#E9F2FF",
-  },
-
-  exportIconText: {
-    color: PRIMARY,
-    fontSize: 12,
-    fontWeight: "900",
-  },
-
-  exportCardContent: {
-    flex: 1,
-  },
-
-  exportCardTitle: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: INK,
-  },
-
-  exportCardDescription: {
-    color: MUTED,
-    fontSize: 10,
-    lineHeight: 16,
-    marginTop: 4,
-  },
-
-  exportArrow: {
-    color: MUTED,
-    fontSize: 27,
-    paddingLeft: 8,
-  },
-
-  shareImageButton: {
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-
-  shareImageText: {
-    color: PRIMARY,
-    fontSize: 12,
-    fontWeight: "800",
+    marginBottom: 20,
   },
 
   detailsCard: {
-    backgroundColor: SURFACE,
-    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: BORDER,
-    padding: 17,
-    marginTop: 14,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 16,
   },
 
-  detailsTitle: {
-    fontSize: 17,
-    fontWeight: "900",
+  detailsHeading: {
     color: INK,
-  },
-
-  categoryLine: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 10,
-    marginBottom: 7,
-  },
-
-  categoryDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 7,
-  },
-
-  categoryText: {
-    fontSize: 11,
+    fontSize: 16,
     fontWeight: "800",
+    marginBottom: 8,
   },
 
   detailRow: {
-    paddingVertical: 13,
-    gap: 8,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    paddingVertical: 11,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F2F6",
+    gap: 16,
   },
 
   detailLabel: {
+    flex: 0.8,
     color: MUTED,
-    fontSize: 11,
-    fontWeight: "600",
+    fontSize: 12,
+    lineHeight: 18,
   },
 
   detailValue: {
+    flex: 1.2,
     color: INK,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12,
+    lineHeight: 18,
     fontWeight: "700",
-    flexShrink: 1,
+    textAlign: "right",
   },
 
-  detailDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: BORDER,
-  },
-
-  descriptionSection: {
-    paddingVertical: 14,
-    gap: 7,
+  descriptionBlock: {
+    paddingTop: 13,
   },
 
   descriptionText: {
-    color: "#475467",
+    color: INK,
     fontSize: 12,
     lineHeight: 19,
+    marginTop: 6,
   },
 
-  skillsSection: {
-    paddingTop: 14,
-    paddingBottom: 4,
+  verificationUrl: {
+    color: "#2764D8",
+    fontSize: 11,
+    lineHeight: 17,
+    marginTop: 6,
   },
 
-  skillsWrap: {
+  skillsBlock: {
+    paddingTop: 13,
+  },
+
+  skillsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
-    marginTop: 9,
+    gap: 7,
+    marginTop: 7,
   },
 
   skillChip: {
-    borderRadius: 10,
+    backgroundColor: "#F1F4F9",
     borderWidth: 1,
     borderColor: BORDER,
-    backgroundColor: "#F9FAFB",
     paddingHorizontal: 10,
-    paddingVertical: 7,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
 
-  skillText: {
+  skillChipText: {
     color: "#344054",
     fontSize: 11,
     fontWeight: "600",
   },
 
-  verifyLink: {
-    paddingTop: 15,
-    paddingBottom: 3,
-  },
-
-  verifyLinkText: {
-    color: PRIMARY,
-    fontSize: 12,
-    fontWeight: "800",
-  },
-
-  infoCard: {
-    flexDirection: "row",
-    backgroundColor: "#FFF9ED",
+  exportCard: {
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#F3E3BF",
-    borderRadius: 16,
-    padding: 14,
-    marginTop: 14,
+    borderColor: BORDER,
+    borderRadius: 18,
+    padding: 16,
   },
 
-  infoIcon: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: "#F5E3B9",
-    color: "#805B13",
-    textAlign: "center",
-    textAlignVertical: "center",
-    overflow: "hidden",
-    fontWeight: "900",
-    fontSize: 15,
-    marginRight: 10,
-  },
-
-  infoContent: {
-    flex: 1,
-  },
-
-  infoTitle: {
-    color: "#694A0B",
-    fontSize: 12,
-    fontWeight: "800",
-    marginBottom: 5,
-  },
-
-  infoText: {
-    color: "#80652D",
-    fontSize: 11,
-    lineHeight: 17,
-  },
-
-  bottomSpace: {
-    height: 24,
-  },
-
-  centerState: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 30,
-  },
-
-  stateTitle: {
+  exportTitle: {
     color: INK,
-    fontSize: 18,
-    fontWeight: "800",
-    textAlign: "center",
-    marginTop: 18,
-  },
-
-  stateDescription: {
-    color: MUTED,
-    fontSize: 13,
-    lineHeight: 20,
-    textAlign: "center",
-    marginTop: 8,
-    maxWidth: 320,
-  },
-
-  errorIcon: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: "#FEE4E2",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  errorIconText: {
-    color: "#B42318",
-    fontSize: 26,
+    fontSize: 17,
     fontWeight: "900",
+  },
+
+  exportSubtitle: {
+    color: MUTED,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 5,
+    marginBottom: 14,
   },
 
   primaryButton: {
-    marginTop: 22,
-    backgroundColor: PRIMARY,
-    borderRadius: 13,
-    paddingHorizontal: 28,
+    minHeight: 49,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: BRAND,
+    paddingHorizontal: 16,
     paddingVertical: 13,
+    borderRadius: 13,
+    gap: 9,
+    marginTop: 5,
+  },
+
+  primaryButtonIcon: {
+    color: "#FFFFFF",
+    fontSize: 19,
   },
 
   primaryButtonText: {
     color: "#FFFFFF",
-    fontWeight: "800",
     fontSize: 13,
+    fontWeight: "800",
+  },
+
+  secondaryButton: {
+    marginTop: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: "#F4F5F8",
+  },
+
+  secondaryButtonText: {
+    color: INK,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  pngButton: {
+    minHeight: 49,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF0F1",
+    borderWidth: 1,
+    borderColor: "#F6C9CD",
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    borderRadius: 13,
+    gap: 9,
+    marginTop: 10,
+  },
+
+  pngButtonIcon: {
+    color: BRAND,
+    fontSize: 19,
+  },
+
+  pngButtonText: {
+    color: BRAND,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+
+  disabledButton: {
+    opacity: 0.6,
+  },
+
+  disabledPngButton: {
+    opacity: 0.55,
+  },
+
+  exportNote: {
+    color: MUTED,
+    fontSize: 10,
+    lineHeight: 16,
+    textAlign: "center",
+    marginTop: 12,
+  },
+
+  bottomSpace: {
+    height: 18,
+  },
+
+  stateContainer: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 28,
+  },
+
+  stateTitle: {
+    color: INK,
+    fontSize: 17,
+    fontWeight: "800",
+    textAlign: "center",
+    marginTop: 14,
+  },
+
+  stateSubtitle: {
+    color: MUTED,
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: "center",
+    marginTop: 7,
+    marginBottom: 14,
+  },
+
+  errorIcon: {
+    width: 48,
+    height: 48,
+    lineHeight: 48,
+    textAlign: "center",
+    overflow: "hidden",
+    borderRadius: 24,
+    color: BRAND,
+    backgroundColor: "#FFF0F1",
+    fontSize: 30,
+    fontWeight: "900",
   },
 });
