@@ -275,7 +275,7 @@ export default function SplashScreen({ navigation }: Props) {
           <Animated.View style={[styles.logoHalo, { opacity: haloOpacity }]} />
           <SecurityOrbit opacity={orbitOpacity} />
           <Animated.View style={[styles.logoWrap, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
-            <Image source={require("../../../assets/images/logo.png")} style={styles.logo} resizeMode="contain" />
+            <Image source={require("../../../assets/logo.png")} style={styles.logo} resizeMode="contain" />
           </Animated.View>
           <Animated.View style={[styles.securePill, { opacity: titleOpacity }]}>
             <View style={styles.securePillDot} />
